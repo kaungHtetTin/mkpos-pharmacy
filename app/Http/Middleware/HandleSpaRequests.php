@@ -35,7 +35,6 @@ class HandleSpaRequests
 
         return [
             'business' => app(\App\Tenancy\BusinessContext::class)->business()?->only(['id','name','slug','status']),
-            'businesses' => $request->user() ? $request->user()->businesses()->wherePivot('status','Active')->where('businesses.status','Active')->orderBy('name')->get(['businesses.id','businesses.name','businesses.slug']) : [],
             'csrf_token' => csrf_token(),
             'errors' => $request->session()->get('errors')?->getBag('default')->getMessages() ?? [],
             'auth' => [

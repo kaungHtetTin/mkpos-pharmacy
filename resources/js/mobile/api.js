@@ -7,8 +7,6 @@ export class ApiError extends Error {
         this.name = 'ApiError';
         this.status = status;
         this.errors = errors;
-        this.businesses = payload.businesses;
-        this.businessSelectionRequired = Boolean(payload.business_selection_required);
     }
 }
 

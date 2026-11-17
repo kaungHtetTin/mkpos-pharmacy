@@ -25,6 +25,11 @@ class User extends Authenticatable
                 $query->whereHas('memberships', fn ($memberships) => $memberships->where('business_id', $id));
             }
         });
+        static::saving(function (User $user) {
+            if ($user->is_platform_admin && $user->exists && $user->memberships()->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['account' => 'Business accounts cannot become platform office accounts. Use a separate account.']);
+            }
+        });
         static::saved(function (User $user) {
             $context = app(\App\Tenancy\BusinessContext::class);
             if (!$context->id()) return;
@@ -46,7 +51,14 @@ class User extends Authenticatable
     }
 
     public function memberships() { return $this->hasMany(BusinessMembership::class); }
-    public function businesses() { return $this->belongsToMany(Business::class, 'business_memberships')->withPivot(['status','branch_id','active_branch_id'])->withTimestamps(); }
+    public function businessMembership() { return $this->hasOne(BusinessMembership::class); }
+
+    public function assignedBusiness(): ?Business
+    {
+        if ($this->is_platform_admin || $this->getRawOriginal('status') !== 'Active') return null;
+        $membership = $this->businessMembership()->where('status', 'Active')->with('business')->first();
+        return $membership?->business?->status === 'Active' ? $membership->business : null;
+    }
     public function currentMembership(): ?BusinessMembership
     {
         $id = app(\App\Tenancy\BusinessContext::class)->id();

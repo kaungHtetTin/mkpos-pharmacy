@@ -134,8 +134,3 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
 });
-
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/account/businesses', [\App\Http\Controllers\BusinessController::class,'apiIndex']);
-    Route::post('/account/businesses/switch', [\App\Http\Controllers\BusinessController::class,'select']);
-});

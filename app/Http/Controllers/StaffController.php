@@ -128,13 +128,6 @@ class StaffController extends Controller
             abort(403);
         }
 
-        if (($staff->is_platform_admin || $staff->memberships()->count() > 1) && $staff->id !== $request->user()->id) {
-            foreach (['name','email','phone'] as $field) {
-                if ((string) $request->input($field) !== (string) $staff->$field) abort(422,'Shared account details must be updated by the account holder.');
-            }
-            abort_if($request->filled('password') || $request->hasFile('image'),422,'Shared account security must be updated by the account holder.');
-        }
-
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class.',email,'.$staff->id,

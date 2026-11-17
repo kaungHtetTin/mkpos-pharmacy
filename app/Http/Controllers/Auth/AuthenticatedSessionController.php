@@ -35,7 +35,7 @@ class AuthenticatedSessionController extends Controller
         \App\Support\PlatformAudit::record('identity.login',$request->user());
         ActivityLogger::log($request, 'auth.login', 'User logged in.');
 
-        return redirect()->route($request->user()->is_platform_admin ? 'platform.businesses.index' : 'businesses.index');
+        return redirect()->route($request->user()->is_platform_admin ? 'platform.businesses.index' : 'dashboard');
     }
 
     /**

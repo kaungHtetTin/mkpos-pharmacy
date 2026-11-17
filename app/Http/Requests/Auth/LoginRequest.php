@@ -49,6 +49,11 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (!Auth::user()->is_platform_admin && !Auth::user()->assignedBusiness()) {
+            Auth::guard('web')->logout();
+            throw ValidationException::withMessages(['email' => 'Your account has no active business access. Contact your administrator.']);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

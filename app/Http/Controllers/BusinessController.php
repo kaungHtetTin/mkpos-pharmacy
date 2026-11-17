@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Business, BusinessMembership, User, Role, Branch};
+use App\Models\{Business, User, Role, Branch};
 use App\Support\Spa;
 use App\Tenancy\BusinessContext;
 use Illuminate\Http\Request;
@@ -11,56 +11,13 @@ use Illuminate\Validation\Rule;
 
 class BusinessController extends Controller
 {
-    public function index(Request $request)
-    {
-        return Spa::render('Businesses/Select', ['businesses'=>$this->available($request->user()), 'selected_business_id'=>$request->session()->get('business_id')]);
-    }
-    public function available(User $user)
-    {
-        if ($user->getRawOriginal('status') !== 'Active') return collect();
-        return $user->businesses()->wherePivot('status','Active')->where('businesses.status','Active')->orderBy('name')->get(['businesses.id','businesses.name','businesses.slug']);
-    }
-    public function select(Request $request)
-    {
-        $data=$request->validate(['business_id'=>'required|uuid']);
-        $business=$this->available($request->user())->firstWhere('id',$data['business_id']);
-        abort_unless($business,403,'You cannot access that business.');
-        \App\Support\PlatformAudit::record('business.selected',$request->user(),$business->id,['channel'=>$request->is('api/*') ? 'api' : 'web']);
-        if ($request->is('api/*')) {
-            $token=$request->user()->currentAccessToken();
-            abort_unless($token instanceof \App\Models\BusinessToken,403);
-            $token->forceFill(['business_id'=>$business->id])->save();
-            return response()->json(['business'=>$business->only('id','name','slug')]);
-        }
-        $request->session()->put('business_id',$business->id);
-        $request->session()->forget(['locale','errors']);
-        return redirect()->route('dashboard');
-    }
-    public function apiIndex(Request $request) { return response()->json(['businesses'=>$this->available($request->user())]); }
-
     public function members(Request $request)
     {
         $this->authorizeOwner($request);
-        $id=app(BusinessContext::class)->requireId();
         return Spa::render('Businesses/Members', [
             'members'=>User::with(['roles','branches'])->get()->map(fn ($user)=>['id'=>$user->id,'name'=>$user->name,'email'=>$user->email,'status'=>$user->currentMembership()?->status,'roles'=>$user->roles->map->only(['id','name']),'branch_id'=>$user->branch_id]),
             'roles'=>Role::orderBy('name')->get(['id','name']), 'branches'=>Branch::orderBy('name')->get(['id','name']),
         ]);
-    }
-    public function storeMember(Request $request)
-    {
-        $this->authorizeOwner($request);
-        $data=$request->validate(['email'=>'required|email|max:255','role_id'=>'required|exists:roles,id','branch_id'=>'required|exists:branches,id']);
-        $user=User::withoutGlobalScopes()->where('email',mb_strtolower($data['email']))->first();
-        abort_unless($user,422,'The account must already exist. New staff can be created in Staff Management.');
-        $id=app(BusinessContext::class)->requireId();
-        abort_if($user->memberships()->where('business_id',$id)->exists(),422,'This user already has a membership.');
-        DB::transaction(function () use ($user,$id,$data) {
-            $user->memberships()->create(['business_id'=>$id,'status'=>'Active','branch_id'=>$data['branch_id'],'active_branch_id'=>$data['branch_id']]);
-            $user->roles()->attach($data['role_id']);
-            $user->branches()->attach($data['branch_id']);
-        });
-        return redirect()->back()->with('success','Business member added.');
     }
     public function updateMember(Request $request, string $user)
     {
@@ -81,7 +38,7 @@ class BusinessController extends Controller
             abort_if($member->id===$request->user()->id && $data['status']!=='Active',422,'You cannot deactivate your own membership.');
             $member->memberships()->where('business_id',$id)->update(['status'=>$data['status'],'branch_id'=>$data['branch_id'],'active_branch_id'=>$data['branch_id']]);
             $member->roles()->sync([$data['role_id']]);
-            $member->branches()->sync([$data['branch_id']]);
+            $member->branches()->syncWithoutDetaching([$data['branch_id']]);
         });
         return redirect()->back()->with('success','Business membership updated.');
     }

@@ -18,6 +18,7 @@ class CreatePlatformAdministrator extends Command
             if (!$name || strlen($password ?? '')<12) { $this->error('Name and a password of at least 12 characters are required.'); return self::FAILURE; }
             $user=User::create(['name'=>$name,'email'=>$email,'password'=>Hash::make($password)]);
         }
+        if ($user->memberships()->exists()) { $this->error('Use a separate account for platform office administration. This account belongs to a business.'); return self::FAILURE; }
         $user->forceFill(['is_platform_admin'=>true])->save();
         $this->info('Platform administrator ready. Sign in and open /platform/businesses.');
         return self::SUCCESS;

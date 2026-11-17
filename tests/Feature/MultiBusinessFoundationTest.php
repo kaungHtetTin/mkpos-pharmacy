@@ -83,7 +83,7 @@ class MultiBusinessFoundationTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
         DB::table('products')->where('id',$product->id)->update(['category_id'=>$category->id]);
     }
-    public function test_web_requests_bind_models_and_reports_to_the_selected_business(): void
+    public function test_web_requests_bind_models_and_reports_to_the_assigned_business(): void
     {
         $a=$this->product($this->a,'ALPHA');$b=$this->product($this->b,'BETA');
         $this->actingAs($this->alice)->withSession(['business_id'=>$this->a->id])->withHeader('X-SPA','true')
@@ -97,12 +97,11 @@ class MultiBusinessFoundationTest extends TestCase
         $this->actingAs($this->alice)->withSession(['business_id'=>$this->a->id])->withHeader('X-Business-ID',$this->b->id)->postJson('/categories',['name'=>'Wrong tab'])->assertStatus(409);
         $this->within($this->a,fn()=> $this->assertSame(0,Category::count()));
     }
-    public function test_token_is_business_bound_and_foreign_switch_is_denied(): void
+    public function test_token_is_business_bound_and_cannot_read_foreign_products(): void
     {
         $a=$this->product($this->a,'ALPHA');$this->product($this->b,'BETA');
         $token=$this->token($this->alice,$this->a);
         $this->withToken($token)->getJson('/api/account/profile')->assertOk()->assertJsonPath('business_id',$this->a->id);
-        $this->postJson('/api/account/businesses/switch',['business_id'=>$this->b->id])->assertForbidden();
         $this->getJson('/api/cashier/products')->assertOk()->assertJsonFragment(['id'=>$a->id])->assertJsonMissing(['barcode'=>'BETA']);
     }
     public function test_suspended_business_and_inactive_membership_are_blocked(): void
@@ -114,54 +113,54 @@ class MultiBusinessFoundationTest extends TestCase
         $this->a->memberships()->where('user_id',$this->alice->id)->update(['status'=>'Inactive']);
         $this->getJson('/api/cashier/products')->assertForbidden();
     }
-    public function test_multi_membership_has_separate_branch_and_role_context(): void
+    public function test_an_account_cannot_join_a_second_business_even_when_inactive(): void
     {
-        $this->a->memberships()->create(['user_id'=>$this->bob->id,'status'=>'Active','branch_id'=>$this->branch($this->a),'active_branch_id'=>$this->branch($this->a)]);
-        $this->within($this->a,fn()=> $this->bob->roles()->attach($this->role($this->a,'Cashier')));
-        $this->within($this->a,function () { $this->assertTrue($this->bob->hasRole('Cashier'));$this->assertFalse($this->bob->hasRole('Owner'));$this->assertSame($this->branch($this->a),$this->bob->currentBranchId()); });
-        $this->within($this->b,function () { $this->assertTrue($this->bob->hasRole('Owner'));$this->assertSame($this->branch($this->b),$this->bob->currentBranchId()); });
-        $this->within($this->a,fn()=> $this->bob->roles()->sync([$this->role($this->a,'Manager')]));
-        $this->within($this->b,fn()=> $this->assertTrue($this->bob->hasRole('Owner')));
+        $this->a->memberships()->where('user_id',$this->alice->id)->update(['status'=>'Inactive']);
+        $this->expectException(ValidationException::class);
+        $this->b->memberships()->create(['user_id'=>$this->alice->id,'status'=>'Active']);
     }
-    public function test_only_platform_admin_can_provision_and_suspend_businesses(): void
+
+    public function test_only_separate_platform_accounts_can_provision_and_suspend_businesses(): void
     {
-        $this->actingAs($this->alice)->withSession(['business_id'=>$this->a->id])->get('/platform/businesses')->assertForbidden();
-        $this->alice->forceFill(['is_platform_admin'=>true])->save();
-        $this->post('/platform/businesses',['name'=>'Gamma','slug'=>'gamma','owner_name'=>'Bob','owner_email'=>$this->bob->email,'currency_symbol'=>'K'])->assertRedirect();
+        $this->actingAs($this->alice)->get('/platform/businesses')->assertForbidden();
+        $admin=User::factory()->create();$admin->forceFill(['is_platform_admin'=>true])->save();
+        $this->actingAs($admin)->post('/platform/businesses',['name'=>'Gamma','slug'=>'gamma','owner_name'=>'Gamma Owner','owner_email'=>'gamma-owner@example.test','owner_password'=>'gamma-test-password','currency_symbol'=>'K'])->assertRedirect()->assertSessionHasNoErrors();
         $this->assertDatabaseHas('businesses',['slug'=>'gamma']);
         $this->put('/platform/businesses/'.$this->b->id,['status'=>'Suspended'])->assertRedirect();
         $this->assertSame('Suspended',$this->b->fresh()->status);
-        $this->assertDatabaseHas('platform_activity_logs',['action'=>'business.created','actor_id'=>$this->alice->id]);
+        $this->assertDatabaseHas('platform_activity_logs',['action'=>'business.created','actor_id'=>$admin->id]);
         $this->assertDatabaseHas('platform_activity_logs',['action'=>'business.status_changed','business_id'=>$this->b->id]);
+        $this->postJson('/platform/businesses',['name'=>'Another','slug'=>'another','owner_name'=>'Alice','owner_email'=>$this->alice->email,'owner_password'=>'gamma-test-password','currency_symbol'=>'K'])->assertUnprocessable()->assertJsonValidationErrors('owner_email');
+        $this->assertDatabaseMissing('businesses',['slug'=>'another']);
     }
+
     public function test_last_owner_cannot_be_removed(): void
     {
         $this->actingAs($this->alice)->withSession(['business_id'=>$this->a->id])->putJson('/business-members/'.$this->alice->id,['status'=>'Active','role_id'=>$this->role($this->a,'Cashier'),'branch_id'=>$this->branch($this->a)])->assertStatus(422);
         $this->within($this->a,fn()=> $this->assertTrue($this->alice->hasRole('Owner')));
     }
-    public function test_business_switch_redirect_accepts_old_tab_header_but_changes_workspace(): void
+    public function test_web_login_opens_assigned_business_and_ignores_forged_session_selection(): void
     {
-        $this->b->memberships()->create(['user_id'=>$this->alice->id,'status'=>'Active','branch_id'=>$this->branch($this->b),'active_branch_id'=>$this->branch($this->b)]);
-        $this->within($this->b,fn()=> $this->alice->roles()->attach($this->role($this->b,'Cashier')));
-        $this->actingAs($this->alice)->withSession(['business_id'=>$this->a->id])->withHeader('X-Business-ID',$this->a->id)->followingRedirects()->post('/businesses/select',['business_id'=>$this->b->id])->assertOk();
-        $this->assertSame($this->b->id,session('business_id'));
+        $this->post('/login',['email'=>$this->alice->email,'password'=>'password'])->assertRedirect(route('dashboard'));
+        $this->withSession(['business_id'=>$this->b->id])->withHeader('X-SPA','true')->get('/products')->assertOk()->assertJsonPath('props.business.id',$this->a->id)->assertJsonMissingPath('props.businesses');
     }
-    public function test_api_login_requires_explicit_choice_for_multiple_businesses(): void
+
+    public function test_api_login_automatically_binds_the_accounts_single_business(): void
     {
-        $this->b->memberships()->create(['user_id'=>$this->alice->id,'status'=>'Active']);
-        $this->alice->forceFill(['password'=>bcrypt('phase1-password')])->save();
-        $this->postJson('/api/login',['email'=>$this->alice->email,'password'=>'phase1-password'])->assertStatus(409)->assertJsonCount(2,'businesses')->assertJsonMissingPath('token');
-        $response=$this->postJson('/api/login',['email'=>$this->alice->email,'password'=>'phase1-password','business_id'=>$this->a->id])->assertOk();
+        $this->postJson('/api/login',['email'=>$this->alice->email,'password'=>'password'])->assertOk()->assertJsonPath('business.id',$this->a->id)->assertJsonMissingPath('businesses');
         $this->assertDatabaseHas('personal_access_tokens',['business_id'=>$this->a->id]);
+        $this->postJson('/api/login',['email'=>$this->alice->email,'password'=>'password','business_id'=>$this->b->id])->assertUnprocessable()->assertJsonValidationErrors('business_id');
     }
-    public function test_switching_one_token_does_not_change_another_devices_business(): void
+
+    public function test_business_switching_and_account_linking_endpoints_are_removed(): void
     {
-        $this->b->memberships()->create(['user_id'=>$this->alice->id,'status'=>'Active']);
-        $one=$this->token($this->alice,$this->a);$two=$this->token($this->alice,$this->a);
-        $this->withToken($one)->postJson('/api/account/businesses/switch',['business_id'=>$this->b->id])->assertOk();
-        $this->assertDatabaseHas('personal_access_tokens',['token'=>hash('sha256',explode('|',$one,2)[1]),'business_id'=>$this->b->id]);
-        $this->assertDatabaseHas('personal_access_tokens',['token'=>hash('sha256',explode('|',$two,2)[1]),'business_id'=>$this->a->id]);
+        $this->withToken($this->token($this->alice,$this->a))->getJson('/api/account/businesses')->assertNotFound();
+        $this->postJson('/api/account/businesses/switch',['business_id'=>$this->b->id])->assertNotFound();
+        $this->actingAs($this->alice)->get('/businesses')->assertNotFound();
+        $this->postJson('/businesses/select',['business_id'=>$this->b->id])->assertNotFound();
+        $this->postJson('/business-members',['email'=>$this->bob->email])->assertStatus(405);
     }
+
     public function test_business_media_is_private_and_signature_expires(): void
     {
         \Illuminate\Support\Facades\Storage::fake('local');
@@ -227,15 +226,60 @@ class MultiBusinessFoundationTest extends TestCase
         $this->patchJson('/roles/'.$this->role($this->a,'Cashier'),['name'=>'Root','permissions'=>[]])->assertUnprocessable();
     }
 
-    public function test_tenant_staff_manager_cannot_reset_platform_administrator_credentials(): void
+    public function test_platform_accounts_cannot_be_added_to_a_business(): void
     {
         $admin=User::factory()->create();$admin->forceFill(['is_platform_admin'=>true])->save();
-        $this->a->memberships()->create(['user_id'=>$admin->id,'status'=>'Active','branch_id'=>$this->branch($this->a),'active_branch_id'=>$this->branch($this->a)]);
-        $this->within($this->a,fn()=> $admin->roles()->attach($this->role($this->a,'Cashier')));
-        $oldHash=$admin->password;
-        $this->actingAs($this->alice)->withSession(['business_id'=>$this->a->id])
-            ->postJson('/staff/'.$admin->id,['name'=>$admin->name,'email'=>$admin->email,'phone'=>$admin->phone,'password'=>'different-password','password_confirmation'=>'different-password','branch_id'=>$this->branch($this->a),'role_id'=>$this->role($this->a,'Cashier')])->assertUnprocessable();
-        $this->assertSame($oldHash,$admin->fresh()->password);
+        $this->actingAs($this->alice)->postJson('/staff/'.$admin->id,['name'=>'Changed'])->assertNotFound();
+        $this->expectException(ValidationException::class);
+        $this->a->memberships()->create(['user_id'=>$admin->id,'status'=>'Active']);
     }
+
+    public function test_business_accounts_cannot_be_promoted_to_platform_accounts(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->alice->forceFill(['is_platform_admin'=>true])->save();
+    }
+
+    public function test_database_rejects_a_second_business_assignment(): void
+    {
+        $this->expectException(\Illuminate\Database\QueryException::class);
+        DB::table('business_memberships')->insert(['id'=>(string)\Illuminate\Support\Str::uuid(),'user_id'=>$this->alice->id,'business_id'=>$this->b->id,'status'=>'Active']);
+    }
+
+    public function test_existing_assignment_cannot_be_moved_to_a_different_business(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->alice->businessMembership()->firstOrFail()->update(['business_id'=>$this->b->id]);
+    }
+
+    public function test_provisioning_cannot_reuse_an_owner_from_another_business(): void
+    {
+        try {
+            app(ProvisionBusiness::class)->create(['name'=>'Wrong','slug'=>'wrong'],$this->alice);
+            $this->fail('An existing owner was reused.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('owner_email',$exception->errors());
+        }
+        $this->assertDatabaseCount('businesses',2);
+    }
+
+    public function test_multiple_branches_and_branch_switching_remain_inside_one_business(): void
+    {
+        $branch=$this->within($this->a,function () {
+            $branch=Branch::create(['name'=>'Second Branch','address'=>'Test','status'=>'Active']);
+            $this->alice->branches()->attach($branch->id);
+            return $branch;
+        });
+        $this->withToken($this->token($this->alice,$this->a))->postJson('/api/account/branches/switch',['branch_id'=>$branch->id])->assertSuccessful();
+        $this->getJson('/api/account/profile')->assertOk()->assertJsonPath('business_id',$this->a->id)->assertJsonPath('current_branch_id',$branch->id);
+        $this->postJson('/api/account/branches/switch',['branch_id'=>$this->branch($this->b)])->assertUnprocessable();
+        $this->assertSame(1,$this->alice->memberships()->count());
+    }
+
+    public function test_a_token_bound_to_another_business_cannot_override_account_assignment(): void
+    {
+        $this->withToken($this->token($this->alice,$this->b))->getJson('/api/account/profile')->assertForbidden();
+    }
+
 
 }

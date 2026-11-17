@@ -100,8 +100,6 @@ function PullToRefresh({ onRefresh, children }) {
 function Login({ onLogin, online, install }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [businesses,setBusinesses] = useState([]);
-    const [businessId,setBusinessId] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -118,11 +116,10 @@ function Login({ onLogin, online, install }) {
         try {
             const result = await apiRequest('/login', {
                 method: 'POST',
-                json: { email, password, device_name: 'Cashier PWA', business_id: businessId || undefined },
+                json: { email, password, device_name: 'Cashier PWA' },
             });
             await onLogin(result.token);
         } catch (requestError) {
-            if (Array.isArray(requestError.businesses)) setBusinesses(requestError.businesses);
             setError(requestError.message || 'Unable to sign in.');
         } finally {
             setLoading(false);
@@ -150,10 +147,9 @@ function Login({ onLogin, online, install }) {
                 {error && <div className="form-alert" role="alert">{error}</div>}
 
                 <form onSubmit={submit} className="form-stack">
-                    {businesses.length > 0 && <label className="field"><span>Business</span><select aria-label="Business" required value={businessId} onChange={event=>setBusinessId(event.target.value)}><option value="">Choose business</option>{businesses.map(business=><option key={business.id} value={business.id}>{business.name}</option>)}</select></label>}
                     <label className="field">
                         <span>Email address</span>
-                        <input type="email" inputMode="email" autoComplete="username" value={email} onChange={(event) => { setEmail(event.target.value); setBusinesses([]); setBusinessId(''); }} placeholder="cashier@example.com" required autoFocus />
+                        <input type="email" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="cashier@example.com" required autoFocus />
                     </label>
                     <label className="field">
                         <span>Password</span>

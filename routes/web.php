@@ -348,10 +348,7 @@ Route::middleware('auth')->group(function () {
 
 // Central identity and platform office routes are separate from the tenant workspace.
 Route::middleware('auth')->group(function () {
-    Route::get('/businesses', [\App\Http\Controllers\BusinessController::class,'index'])->name('businesses.index');
-    Route::post('/businesses/select', [\App\Http\Controllers\BusinessController::class,'select'])->name('businesses.select');
     Route::get('/business-members', [\App\Http\Controllers\BusinessController::class,'members'])->name('business-members.index');
-    Route::post('/business-members', [\App\Http\Controllers\BusinessController::class,'storeMember'])->name('business-members.store');
     Route::put('/business-members/{user}', [\App\Http\Controllers\BusinessController::class,'updateMember'])->name('business-members.update');
     Route::middleware('platform.admin')->prefix('platform')->name('platform.')->group(function () {
         Route::get('/businesses', [\App\Http\Controllers\Platform\BusinessController::class,'index'])->name('businesses.index');
