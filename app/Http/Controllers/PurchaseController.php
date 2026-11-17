@@ -99,7 +99,7 @@ class PurchaseController extends Controller
             },
         ]);
 
-        $productUnitRows = DB::table('product_units')
+        $productUnitRows = \App\Tenancy\BusinessQuery::table('product_units')
             ->select('product_id', 'unit_id', 'selling_price', 'wholesale_price', 'conversion_factor')
             ->whereIn('product_id', $purchase->items->pluck('product_id')->unique()->values())
             ->whereIn('unit_id', $purchase->items->pluck('unit_id')->unique()->values())
@@ -198,7 +198,7 @@ class PurchaseController extends Controller
         $items = collect($validated['items']);
         $productIds = $items->pluck('product_id')->unique()->values();
 
-        $productUnitRows = DB::table('product_units')
+        $productUnitRows = \App\Tenancy\BusinessQuery::table('product_units')
             ->select('product_id', 'unit_id', 'conversion_factor')
             ->whereIn('product_id', $productIds)
             ->get();
@@ -399,7 +399,7 @@ class PurchaseController extends Controller
         $items = collect($validated['items']);
         $productIds = $items->pluck('product_id')->unique()->values();
 
-        $productUnitRows = DB::table('product_units')
+        $productUnitRows = \App\Tenancy\BusinessQuery::table('product_units')
             ->select('product_id', 'unit_id', 'conversion_factor')
             ->whereIn('product_id', $productIds)
             ->get();

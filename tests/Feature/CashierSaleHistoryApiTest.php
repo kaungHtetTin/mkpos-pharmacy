@@ -111,6 +111,7 @@ class CashierSaleHistoryApiTest extends TestCase
         ]);
 
         Sanctum::actingAs($user);
+        $user->currentAccessToken()->forceFill(['business_id'=>app(\App\Tenancy\BusinessContext::class)->requireId()]);
 
         $listResponse = $this->getJson('http://localhost/api/cashier/sales?search=HISTORY');
 

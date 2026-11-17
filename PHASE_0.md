@@ -2,7 +2,8 @@
 
 The baseline is now upgraded from Laravel 9.52.21 to Laravel 13.42.0 and has a
 new workspace interface. See UPGRADE_LARAVEL_13.md for setup, verification and
-remaining issues. Multi-business tenancy and subscriptions are later phases.
+remaining issues. Multi-business tenancy is implemented in [Phase 1](PHASE_1.md);
+subscriptions remain a later phase. This file records the earlier baseline.
 
 The full baseline is not production-approved: 66 failing cases in the inherited
 test suite remain. A comparison run of the unchanged Laravel 9 source on PHP 8.2

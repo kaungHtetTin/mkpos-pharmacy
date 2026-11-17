@@ -24,7 +24,7 @@ function RuleEditor({ rule, onDirty }) {
         try {
             const response = await fetch(route('pricing.preview', rule.code), {
                 method: 'POST', credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf_token },
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': csrf_token, 'X-Business-ID': window.__mkposBusinessId || '' },
                 body: JSON.stringify(form.data),
             });
             const payload = await response.json();

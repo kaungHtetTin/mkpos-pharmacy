@@ -345,3 +345,20 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/products/labels/print', [ProductController::class, 'printLabels'])->name('products.labels.print')->middleware('permission:manage_products');
 });
+
+// Central identity and platform office routes are separate from the tenant workspace.
+Route::middleware('auth')->group(function () {
+    Route::get('/businesses', [\App\Http\Controllers\BusinessController::class,'index'])->name('businesses.index');
+    Route::post('/businesses/select', [\App\Http\Controllers\BusinessController::class,'select'])->name('businesses.select');
+    Route::get('/business-members', [\App\Http\Controllers\BusinessController::class,'members'])->name('business-members.index');
+    Route::post('/business-members', [\App\Http\Controllers\BusinessController::class,'storeMember'])->name('business-members.store');
+    Route::put('/business-members/{user}', [\App\Http\Controllers\BusinessController::class,'updateMember'])->name('business-members.update');
+    Route::middleware('platform.admin')->prefix('platform')->name('platform.')->group(function () {
+        Route::get('/businesses', [\App\Http\Controllers\Platform\BusinessController::class,'index'])->name('businesses.index');
+        Route::post('/businesses', [\App\Http\Controllers\Platform\BusinessController::class,'store'])->name('businesses.store');
+        Route::put('/businesses/{business}', [\App\Http\Controllers\Platform\BusinessController::class,'update'])->name('businesses.update');
+    });
+});
+
+Route::get('/business-media/{business}/{path}', [\App\Http\Controllers\BusinessFileController::class,'show'])->where('path','.*')->middleware('signed')->name('business-files.signed');
+Route::get('/storage/businesses/{business}/{path}', [\App\Http\Controllers\BusinessFileController::class,'show'])->where('path','.*')->middleware('auth')->name('business-files.show');

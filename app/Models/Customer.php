@@ -8,6 +8,8 @@ use App\Traits\HasUuid;
 
 class Customer extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasFactory, HasUuid;
 
     protected $fillable = [

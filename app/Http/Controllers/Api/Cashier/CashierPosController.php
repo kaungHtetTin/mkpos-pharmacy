@@ -83,7 +83,7 @@ class CashierPosController extends Controller
                     'name' => $product->name,
                     'generic_name' => $product->generic_name,
                     'barcode' => $product->barcode,
-                    'image_url' => $product->image_path ? url('storage/' . $product->image_path) : null,
+                    'image_url' => \App\Tenancy\BusinessFiles::url($product->image_path),
                     'stock_quantity' => $product->stock_quantity ?? 0,
                     'tax_method' => $product->tax_method,
                     'discount_percentage' => (float) ($product->discount_percentage ?? 0),

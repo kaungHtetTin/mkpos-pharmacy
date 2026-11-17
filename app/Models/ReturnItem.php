@@ -8,6 +8,8 @@ use App\Traits\HasUuid;
 
 class ReturnItem extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasFactory, HasUuid;
 
     public $timestamps = false;

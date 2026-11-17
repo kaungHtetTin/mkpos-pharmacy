@@ -8,6 +8,8 @@ use App\Traits\HasUuid;
 
 class ProductUnit extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasFactory, HasUuid;
 
     protected $fillable = [

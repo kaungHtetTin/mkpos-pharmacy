@@ -24,25 +24,7 @@ return new class extends Migration
                 ->onDelete('set null');
         });
 
-        $existing = DB::table('expense_categories')->where('name', 'General')->first();
-        $categoryId = $existing?->id ?: (string) Str::uuid();
 
-        if (!$existing) {
-            DB::table('expense_categories')->insert([
-                'id' => $categoryId,
-                'name' => 'General',
-                'description' => 'Default expense category',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-        DB::table('expenses')
-            ->whereNull('expense_category_id')
-            ->update([
-                'expense_category_id' => $categoryId,
-                'updated_at' => now(),
-            ]);
     }
 
     /**

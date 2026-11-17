@@ -32,9 +32,10 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        \App\Support\PlatformAudit::record('identity.login',$request->user());
         ActivityLogger::log($request, 'auth.login', 'User logged in.');
 
-        return redirect()->route('dashboard');
+        return redirect()->route($request->user()->is_platform_admin ? 'platform.businesses.index' : 'businesses.index');
     }
 
     /**
@@ -43,6 +44,7 @@ class AuthenticatedSessionController extends Controller
     public function destroy(Request $request): RedirectResponse
     {
         ActivityLogger::log($request, 'auth.logout', 'User logged out.');
+        \App\Support\PlatformAudit::record('identity.logout',$request->user());
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();

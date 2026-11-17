@@ -3,6 +3,11 @@
 Pharmacy operations on Laravel 13, React and Material UI, with a redesigned
 workspace, point of sale and handheld cashier experience.
 
+Phase 1 adds independent businesses, global user memberships, platform office,
+business switching and business-bound cashier access. Start with
+[Phase 1 setup and verification](PHASE_1.md): this branch requires a fresh
+database and must not be migrated over the existing single-business deployment.
+
 Start with [upgrade and setup instructions](UPGRADE_LARAVEL_13.md). That document
 includes the verified checks, comparison against the original Laravel 9 baseline
 and unresolved legacy test failures.

@@ -117,6 +117,7 @@ export const router = {
         };
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
         if (csrf) headers['X-CSRF-TOKEN'] = csrf;
+        if (window.__mkposBusinessId) headers['X-Business-ID'] = window.__mkposBusinessId;
 
         options.onStart?.();
         emit('start', { url: target, method: 'post' });
@@ -166,6 +167,7 @@ export function SpaProvider({ initialPage, resolve, children }) {
     const [navigationError, setNavigationError] = useState('');
     const requestRef = useRef(null);
     const pageRef = useRef(initialPage);
+    window.__mkposBusinessId = page.props?.business?.id || null;
 
     const loadComponent = useCallback(async (name) => {
         const module = await resolve(name);
@@ -213,6 +215,7 @@ export function SpaProvider({ initialPage, resolve, children }) {
             };
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
             if (csrf) headers['X-CSRF-TOKEN'] = csrf;
+            if (window.__mkposBusinessId) headers['X-Business-ID'] = window.__mkposBusinessId;
 
             const fetchOptions = {
                 method: isGet ? 'GET' : 'POST',

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ExpenseCategory extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasFactory, HasUuid;
 
     protected $fillable = [

@@ -60,7 +60,7 @@ class PricingRuleController extends Controller
                     $stats['cost_required'] += $result['cost_required'];
                 }
             });
-            DB::table('pricing_states')->where('id', 1)->increment('version');
+            \App\Tenancy\BusinessQuery::table('pricing_states')->where('id', 1)->increment('version');
             return $stats;
         });
         return redirect()->route('settings.index', ['section' => 'prices'], 303)->with('success',

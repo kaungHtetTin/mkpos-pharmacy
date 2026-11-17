@@ -14,6 +14,55 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, HasUuid;
 
+    protected $attributes = ['status'=>'Active', 'is_platform_admin'=>false];
+    protected array $pendingMembership = [];
+    protected $appends = ['branch_id', 'active_branch_id'];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('business_member', function ($query) {
+            if ($id = app(\App\Tenancy\BusinessContext::class)->id()) {
+                $query->whereHas('memberships', fn ($memberships) => $memberships->where('business_id', $id));
+            }
+        });
+        static::saved(function (User $user) {
+            $context = app(\App\Tenancy\BusinessContext::class);
+            if (!$context->id()) return;
+            $values = $user->pendingMembership;
+            foreach (['branch_id','active_branch_id'] as $column) {
+                if (!empty($values[$column]) && !Branch::whereKey($values[$column])->exists()) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([$column=>'The branch is not in this business.']);
+                }
+            }
+            $user->memberships()->updateOrCreate(['business_id'=>$context->id()], $values);
+            $user->pendingMembership = [];
+            $user->unsetRelation('roles')->unsetRelation('branches')->unsetRelation('branch')->unsetRelation('activeBranch');
+        });
+        static::deleting(function (User $user) {
+            if (\Illuminate\Support\Facades\DB::table('role_user')->join('roles','roles.id','=','role_user.role_id')->where('user_id',$user->id)->whereIn('roles.name',['Owner','Root'])->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['account'=>'Transfer business ownership before deleting this account.']);
+            }
+        });
+    }
+
+    public function memberships() { return $this->hasMany(BusinessMembership::class); }
+    public function businesses() { return $this->belongsToMany(Business::class, 'business_memberships')->withPivot(['status','branch_id','active_branch_id'])->withTimestamps(); }
+    public function currentMembership(): ?BusinessMembership
+    {
+        $id = app(\App\Tenancy\BusinessContext::class)->id();
+        return $id ? $this->memberships()->where('business_id',$id)->first() : null;
+    }
+    public function getBranchIdAttribute($value) { return array_key_exists('branch_id',$this->pendingMembership) ? $this->pendingMembership['branch_id'] : $this->currentMembership()?->branch_id; }
+    public function getActiveBranchIdAttribute($value) { return array_key_exists('active_branch_id',$this->pendingMembership) ? $this->pendingMembership['active_branch_id'] : $this->currentMembership()?->active_branch_id; }
+    public function setBranchIdAttribute($value): void { $this->pendingMembership['branch_id'] = $value; }
+    public function setActiveBranchIdAttribute($value): void { $this->pendingMembership['active_branch_id'] = $value; }
+    public function getStatusAttribute($value) { return $this->pendingMembership['status'] ?? $this->currentMembership()?->status ?? $value; }
+    public function setStatusAttribute($value): void
+    {
+        if (app(\App\Tenancy\BusinessContext::class)->id()) $this->pendingMembership['status']=$value;
+        else $this->attributes['status']=$value;
+    }
+
     /**
      * The attributes that are mass assignable.
      *
@@ -47,6 +96,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'is_platform_admin' => 'boolean',
     ];
 
     /**
@@ -54,7 +104,7 @@ class User extends Authenticatable
      */
     public function roles()
     {
-        return $this->belongsToMany(Role::class);
+        return $this->belongsToMany(Role::class)->withPivotValue('business_id', (app(\App\Tenancy\BusinessContext::class)->id() ?? '00000000-0000-4000-8000-000000000000'));
     }
 
     /**
@@ -67,7 +117,7 @@ class User extends Authenticatable
 
     public function branches()
     {
-        return $this->belongsToMany(Branch::class)->withTimestamps();
+        return $this->belongsToMany(Branch::class)->withPivotValue('business_id', (app(\App\Tenancy\BusinessContext::class)->id() ?? '00000000-0000-4000-8000-000000000000'))->withTimestamps();
     }
 
     public function activeBranch()

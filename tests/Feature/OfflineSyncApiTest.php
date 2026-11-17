@@ -69,6 +69,7 @@ class OfflineSyncApiTest extends TestCase
         ]);
 
         Sanctum::actingAs($user);
+        $user->currentAccessToken()->forceFill(['business_id'=>app(\App\Tenancy\BusinessContext::class)->requireId()]);
 
         $payload = [
             'sales' => [
@@ -235,6 +236,7 @@ class OfflineSyncApiTest extends TestCase
         ]);
 
         Sanctum::actingAs($user);
+        $user->currentAccessToken()->forceFill(['business_id'=>app(\App\Tenancy\BusinessContext::class)->requireId()]);
 
         $payload = [
             'purchases' => [

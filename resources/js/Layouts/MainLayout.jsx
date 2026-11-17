@@ -118,7 +118,7 @@ function EmbeddedPage({ children, header, shell }) {
 }
 
 function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarget }) {
-    const { auth, flash, settings = {}, nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
+    const { auth, flash, settings = {}, business, businesses = [], nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
     const { mode = 'light', toggleColorMode } = useContext(ColorModeContext);
     const pharmacyName = settings.invoice?.pharmacy_name || 'Pharmacy POS';
     const appBase = ziggy?.base || window.laravel_base || '';
@@ -626,6 +626,11 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
 
             <Menu id="appbar-account-menu" anchorEl={profileMenuAnchor} open={Boolean(profileMenuAnchor)} onClose={() => setProfileMenuAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} MenuListProps={{ 'aria-label': __('Account menu') }} slotProps={{ paper: { sx: { mt: 1, p: 0.5, width: 260, maxWidth: 'calc(100vw - 24px)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', '& .MuiMenuItem-root': { borderRadius: '7px', minHeight: 38, gap: 1, fontSize: 12 }, '& .MuiListItemIcon-root': { minWidth: '24px', color: 'inherit' } } } }}>
                 <Box component="li" role="presentation" sx={{ px: 1.25, py: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 700, overflowWrap: 'anywhere' }}>{auth.user?.name}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary', overflowWrap: 'anywhere' }}>{auth.user?.email}</Typography>{auth.user?.roles?.length > 0 && <Typography sx={{ mt: 0.5, fontSize: 10, color: 'text.secondary' }}>{auth.user.roles.map((role) => __(role)).join(', ')}</Typography>}</Box>
+                <Divider sx={{ my: 0.5 }} />
+                {business && <Box component="li" role="presentation" sx={{ px:1.25, py:0.75 }}><Typography variant="caption" color="text.secondary">Current business</Typography><Typography sx={{fontSize:12,fontWeight:700,overflowWrap:'anywhere'}}>{business.name}</Typography></Box>}
+                <MenuItem component={Link} href={route('businesses.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="arrows" size={16}/></ListItemIcon>Switch business</MenuItem>
+                {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('business-members.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="users" size={16}/></ListItemIcon>Business members</MenuItem>}
+                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.businesses.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="shieldCheck" size={16}/></ListItemIcon>Platform office</MenuItem>}
                 <Divider sx={{ my: 0.5 }} />
                 {[{ ...menuItems.profile, text: 'My profile' }, menuItems.dashboard, menuItems.settings, menuItems.manual].filter(canSee).map((item) => <MenuItem key={item.href} component={Link} href={item.href} onClick={() => setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name={item.icon} size={16} /></ListItemIcon>{__(item.text)}</MenuItem>)}
                 <Divider sx={{ my: 0.5 }} />

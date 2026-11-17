@@ -74,7 +74,7 @@ class PurchaseSyncService
             $pricing = app(\App\Services\AutomaticPricingService::class);
             $pricing->lock();
             $items = collect($validated['items']);
-            $productUnitRows = DB::table('product_units')
+            $productUnitRows = \App\Tenancy\BusinessQuery::table('product_units')
                 ->select('product_id', 'unit_id', 'conversion_factor')
                 ->whereIn('product_id', $items->pluck('product_id')->unique()->values())
                 ->whereIn('unit_id', $items->pluck('unit_id')->unique()->values())

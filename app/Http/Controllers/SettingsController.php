@@ -73,7 +73,7 @@ class SettingsController extends Controller
         return Spa::render('Settings/Index', [
             'initial_section' => request()->query('section', 'business'),
             'pricing_rules' => \App\Models\PricingRule::orderBy('code')->get(),
-            'price_changes' => \Illuminate\Support\Facades\DB::table('price_changes')->orderByDesc('id')->limit(30)->get(),
+            'price_changes' => \App\Tenancy\BusinessQuery::table('price_changes')->orderByDesc('id')->limit(30)->get(),
             'pos_behavior' => $posBehavior,
             'branch_preferences' => $branchPreferences,
             'active_branch' => request()->user()->activeBranch()->select('id', 'name')->first()
@@ -137,7 +137,7 @@ class SettingsController extends Controller
         Setting::set('invoice.pharmacy_name', $validated['pharmacy_name']);
         
         if ($request->hasFile('logo')) {
-            $path = $request->file('logo')->store('settings', 'public');
+            $path = \App\Tenancy\BusinessFiles::store($request->file('logo'), 'settings');
             Setting::set('invoice.logo_path', $path);
         }
 
@@ -217,7 +217,7 @@ class SettingsController extends Controller
         Setting::set('app.theme_primary_color', strtoupper($validated['theme_primary_color']));
 
         if ($request->hasFile('logo')) {
-            $path = $request->file('logo')->store('settings', 'public');
+            $path = \App\Tenancy\BusinessFiles::store($request->file('logo'), 'settings');
             Setting::set('invoice.logo_path', $path);
         }
 
@@ -233,7 +233,7 @@ class SettingsController extends Controller
 
         Setting::set('invoice.pharmacy_name', $validated['pharmacy_name']);
         if ($request->hasFile('logo')) {
-            Setting::set('invoice.logo_path', $request->file('logo')->store('settings', 'public'));
+            Setting::set('invoice.logo_path', \App\Tenancy\BusinessFiles::store($request->file('logo'), 'settings'));
         }
 
         return redirect()->back()->with('success', 'Business profile updated successfully.');

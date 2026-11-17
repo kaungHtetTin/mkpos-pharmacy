@@ -1,5 +1,9 @@
 # Laravel 13 upgrade and new workspace interface
 
+This is the historical Phase 0 report. The current multi-business branch uses
+[Phase 1 installation instructions](PHASE_1.md), which supersede the database
+and seeding steps below and require a new empty database.
+
 ## Runtime and packages
 
 Upgraded Laravel 9.52.21 to Laravel 13.42.0, the latest stable release returned by

@@ -417,3 +417,5 @@ body.modal-open { overflow: hidden; }
 .login-card .field input { min-height: 44px; padding: 9px 10px; }
 .login-card .button--large { min-height: 44px; padding: 10px 12px; }
 .login-footnote { margin-top: 12px; }
+
+.app-header__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

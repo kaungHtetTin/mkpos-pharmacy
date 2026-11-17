@@ -12,6 +12,7 @@ export default function ProfileScreen({ token, profile, setProfile, online, inst
     const [error, setError] = useState('');
     const [passwordOpen, setPasswordOpen] = useState(false);
     const [password, setPassword] = useState({ current_password: '', password: '', password_confirmation: '' });
+    const [businesses,setBusinesses] = useState([]);
     const [branches, setBranches] = useState([]);
     const [session, setSession] = useState(null);
     const [branchBusy, setBranchBusy] = useState(false);
@@ -36,6 +37,15 @@ export default function ProfileScreen({ token, profile, setProfile, online, inst
     useEffect(() => () => {
         if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
     }, [preview]);
+
+    useEffect(()=>{ if(online) apiRequest('/account/businesses',{token}).then(result=>setBusinesses(result.businesses || [])).catch(error=>setError(error.message)); },[online,token]);
+    const switchBusiness = async id => {
+        if (!id || id===profile.business_id) return;
+        if (pendingCount) return setError('Sync pending sales before switching business.');
+        setBranchBusy(true);setError('');
+        try { await apiRequest('/account/businesses/switch',{token,method:'POST',json:{business_id:id}}); window.location.assign(window.location.pathname); }
+        catch(error){setError(error.message);setBranchBusy(false);}
+    };
 
     const chooseImage = (event) => {
         const image = event.target.files?.[0];
@@ -134,6 +144,7 @@ export default function ProfileScreen({ token, profile, setProfile, online, inst
                 <button className="settings-row" type="button" onClick={() => { setError(''); setPasswordOpen(true); }}><span className="settings-row__icon"><Icon name="lock" size={19} /></span><span><strong>Change password</strong><small>Update account security</small></span><Icon name="chevron" size={18} /></button>
             </section>
 
+            <section className="settings-card"><div className="settings-card__title"><span><Icon name="store" size={19}/></span><div><h2>Business</h2><p>Separate records and access</p></div></div>{businesses.length>1 ? <label className="field"><span>Active business</span><select aria-label="Active business" value={profile.business_id || ''} onChange={event=>switchBusiness(event.target.value)} disabled={!online || branchBusy || pendingCount>0}>{businesses.map(business=><option key={business.id} value={business.id}>{business.name}</option>)}</select>{pendingCount>0&&<small>Sync pending sales before switching business.</small>}</label>:<strong>{profile.business?.name || 'Current business'}</strong>}</section>
             <section className="settings-card">
                 <div className="settings-card__title"><span><Icon name="store" size={19} /></span><div><h2>Register & branch</h2><p>Your current sales location</p></div></div>
                 {branches.length > 1 ? (

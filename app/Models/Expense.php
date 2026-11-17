@@ -8,6 +8,8 @@ use App\Traits\HasUuid;
 
 class Expense extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasFactory, HasUuid;
 
     protected $fillable = [

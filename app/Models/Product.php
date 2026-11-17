@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasFactory, HasUuid, SoftDeletes;
 
     protected $fillable = [
@@ -52,12 +54,13 @@ class Product extends Model
 
     public function taxes()
     {
-        return $this->belongsToMany(Tax::class)->withTimestamps();
+        return $this->belongsToMany(Tax::class)->withTimestamps()->withPivotValue('business_id', (app(\App\Tenancy\BusinessContext::class)->id() ?? '00000000-0000-4000-8000-000000000000'));
     }
 
     public function units()
     {
         return $this->belongsToMany(Unit::class, 'product_units')
+                    ->withPivotValue('business_id', (app(\App\Tenancy\BusinessContext::class)->id() ?? '00000000-0000-4000-8000-000000000000'))
                     ->withPivot(['id', 'conversion_factor', 'selling_price', 'wholesale_price', 'is_base_unit', 'is_default_selling_unit'])
                     ->withTimestamps();
     }

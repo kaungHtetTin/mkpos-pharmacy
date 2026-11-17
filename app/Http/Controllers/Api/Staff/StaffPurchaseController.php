@@ -286,7 +286,7 @@ class StaffPurchaseController extends Controller
 
         $purchase = DB::transaction(function () use ($validated, $userId) {
             $items = collect($validated['items']);
-            $productUnitRows = DB::table('product_units')
+            $productUnitRows = \App\Tenancy\BusinessQuery::table('product_units')
                 ->select('product_id', 'unit_id', 'conversion_factor')
                 ->whereIn('product_id', $items->pluck('product_id')->unique()->values())
                 ->whereIn('unit_id', $items->pluck('unit_id')->unique()->values())
@@ -410,7 +410,7 @@ class StaffPurchaseController extends Controller
                 ], ['quantity' => 0]);
                 $inventory->increment('quantity', $item['base_quantity']);
 
-                DB::table('product_units')
+                \App\Tenancy\BusinessQuery::table('product_units')
                     ->where('product_id', $item['product_id'])
                     ->where('unit_id', $item['unit_id'])
                     ->update([

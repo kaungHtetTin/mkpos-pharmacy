@@ -1,13 +1,21 @@
 const PREFIX = 'pharmacy.cashier.';
 
+let currentUser = null;
+let currentBusiness = null;
+export function configureBusinessStorage(userId, businessId) { currentUser=userId || null; currentBusiness=businessId || null; }
+export function storageBusinessId() { return currentBusiness; }
+const scoped = suffix => {
+    if (!currentUser || !currentBusiness) throw new Error('Select a business before reading cashier data.');
+    return `${PREFIX}${currentUser}.${currentBusiness}.${suffix}`;
+};
 export const keys = {
     token: `${PREFIX}token`,
     profile: `${PREFIX}profile`,
-    products: (branchId) => `${PREFIX}products.${branchId || 'none'}`,
-    customers: `${PREFIX}customers`,
-    session: (branchId) => `${PREFIX}session.${branchId || 'none'}`,
-    cart: (userId, branchId) => `${PREFIX}cart.${userId}.${branchId || 'none'}`,
-    pendingSales: `${PREFIX}pending-sales`,
+    products: branchId => scoped(`products.${branchId || 'none'}`),
+    get customers() { return scoped('customers'); },
+    session: branchId => scoped(`session.${branchId || 'none'}`),
+    cart: (userId, branchId) => scoped(`cart.${userId}.${branchId || 'none'}`),
+    get pendingSales() { return scoped('pending-sales'); },
 };
 
 export function loadJson(key, fallback = null) {

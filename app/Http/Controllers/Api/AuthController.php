@@ -21,9 +21,10 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required|string',
             'device_name' => 'nullable|string|max:255',
+            'business_id' => 'nullable|uuid',
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $user = User::withoutGlobalScopes()->where('email', $validated['email'])->first();
 
         if (!$user || !Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -37,14 +38,22 @@ class AuthController extends Controller
             ], 403);
         }
 
+        $businesses=$user->businesses()->wherePivot('status','Active')->where('businesses.status','Active')->orderBy('name')->get(['businesses.id','businesses.name','businesses.slug']);
+        $business=$validated['business_id'] ?? ($businesses->count()===1 ? $businesses->first()->id : null);
+        if (!$business || !$businesses->contains('id',$business)) return response()->json(['message'=>'Select an active business.','business_selection_required'=>true,'businesses'=>$businesses],409);
+
         // Create token (device_name is useful for managing multiple sessions)
         $deviceName = $validated['device_name'] ?? $request->userAgent() ?? 'Android App';
-        $token = $user->createToken($deviceName)->plainTextToken;
+        $issued = $user->createToken($deviceName);
+        $issued->accessToken->forceFill(['business_id'=>$business])->save();
+        $token = $issued->plainTextToken;
+        \App\Support\PlatformAudit::record('identity.api_login',$user,$business);
 
         return response()->json([
             'message' => 'Login successful',
+            'business' => $businesses->firstWhere('id',$business)->only(['id','name','slug']),
             'token' => $token,
-            'user' => $user->only('id', 'name', 'email', 'branch_id', 'active_branch_id'),
+            'user' => $user->only('id', 'name', 'email'),
         ]);
     }
 
@@ -54,7 +63,11 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+        \App\Support\PlatformAudit::record('identity.api_logout', $user);
+        if ($user->currentAccessToken() instanceof \App\Models\BusinessToken) {
+            $user->currentAccessToken()->delete();
+        }
 
         return response()->json([
             'message' => 'Logged out successfully',

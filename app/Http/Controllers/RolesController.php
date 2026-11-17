@@ -24,7 +24,7 @@ class RolesController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name',
+            'name' => ['required', 'string', 'max:255', 'unique:roles,name', 'not_regex:/^(owner|root)$/i'],
             'permissions' => 'array',
             'permissions.*' => 'exists:permissions,id',
         ]);
@@ -48,7 +48,7 @@ class RolesController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
+            'name' => ['required', 'string', 'max:255', 'unique:roles,name,' . $role->id, 'not_regex:/^(owner|root)$/i'],
             'permissions' => 'array',
             'permissions.*' => 'exists:permissions,id',
         ]);

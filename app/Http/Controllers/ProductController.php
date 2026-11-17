@@ -125,7 +125,7 @@ class ProductController extends Controller
             $validated['tax_id'] = $taxIds->first();
 
             if ($request->hasFile('image')) {
-                $validated['image_path'] = $request->file('image')->store('product-images', 'public');
+                $validated['image_path'] = \App\Tenancy\BusinessFiles::store($request->file('image'), 'product-images');
             }
 
             $product = Product::create($validated);
@@ -156,7 +156,7 @@ class ProductController extends Controller
     {
         $productModel = Product::with(['category', 'taxes', 'product_units.unit'])->findOrFail($product);
 
-        $productModel->setAttribute('pricing_has_purchase', DB::table('purchase_items')->where('product_id', $productModel->id)->exists());
+        $productModel->setAttribute('pricing_has_purchase', \App\Tenancy\BusinessQuery::table('purchase_items')->where('product_id', $productModel->id)->exists());
         $productModel->setAttribute('pricing_buying_cost', app(\App\Services\AutomaticPricingService::class)->readCost($productModel));
 
         return Spa::render('Products/Edit', [
@@ -236,9 +236,9 @@ class ProductController extends Controller
 
             if ($request->hasFile('image')) {
                 if ($product->image_path) {
-                    Storage::disk('public')->delete($product->image_path);
+                    \App\Tenancy\BusinessFiles::delete($product->image_path);
                 }
-                $validated['image_path'] = $request->file('image')->store('product-images', 'public');
+                $validated['image_path'] = \App\Tenancy\BusinessFiles::store($request->file('image'), 'product-images');
             }
 
             $product->update($validated);
@@ -263,7 +263,7 @@ class ProductController extends Controller
         }
 
         if ($product->image_path) {
-            Storage::disk('public')->delete($product->image_path);
+            \App\Tenancy\BusinessFiles::delete($product->image_path);
         }
 
         $product->delete();

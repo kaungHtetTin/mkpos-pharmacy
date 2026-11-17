@@ -52,7 +52,7 @@ class StaffController extends Controller
             ->whereHas('roles', function($q) {
                 $q->whereNotIn('name', self::PROTECTED_ROLES);
             })
-            ->whereIn('branch_id', $branchIds)
+            ->whereHas('memberships', fn ($q) => $q->where('business_id',app(\App\Tenancy\BusinessContext::class)->requireId())->whereIn('branch_id',$branchIds))
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('name', 'like', "%{$search}%")
@@ -128,6 +128,13 @@ class StaffController extends Controller
             abort(403);
         }
 
+        if (($staff->is_platform_admin || $staff->memberships()->count() > 1) && $staff->id !== $request->user()->id) {
+            foreach (['name','email','phone'] as $field) {
+                if ((string) $request->input($field) !== (string) $staff->$field) abort(422,'Shared account details must be updated by the account holder.');
+            }
+            abort_if($request->filled('password') || $request->hasFile('image'),422,'Shared account security must be updated by the account holder.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class.',email,'.$staff->id,
@@ -190,12 +197,9 @@ class StaffController extends Controller
             abort(403);
         }
 
-        // Delete image if exists
-        if ($staff->image_path) {
-            Storage::disk('public')->delete($staff->image_path);
-        }
-
-        $staff->delete();
+        $staff->roles()->detach();
+        $staff->branches()->detach();
+        $staff->memberships()->where('business_id',app(\App\Tenancy\BusinessContext::class)->requireId())->update(['status'=>'Inactive','branch_id'=>null,'active_branch_id'=>null]);
 
         return redirect()->back();
     }

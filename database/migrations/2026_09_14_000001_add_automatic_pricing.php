@@ -13,7 +13,6 @@ return new class extends Migration
             $table->unsignedInteger('id')->primary();
             $table->unsignedBigInteger('version')->default(1);
         });
-        DB::table('pricing_states')->insert(['id' => 1, 'version' => 1]);
         Schema::create('pricing_rules', function (Blueprint $table) {
             $table->string('code', 30)->primary();
             $table->string('name');
@@ -24,9 +23,6 @@ return new class extends Migration
             $table->unsignedBigInteger('version')->default(1);
             $table->timestamps();
         });
-        foreach (['selling_price' => 'Selling price', 'wholesale_price' => 'Wholesale price'] as $code => $name) {
-            DB::table('pricing_rules')->insert(['code' => $code, 'name' => $name, 'created_at' => now(), 'updated_at' => now()]);
-        }
         Schema::table('products', function (Blueprint $table) {
             $table->decimal('pricing_base_cost', 18, 6)->nullable();
             $table->decimal('pricing_buying_cost', 18, 6)->nullable();

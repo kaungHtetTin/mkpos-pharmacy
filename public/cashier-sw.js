@@ -1,20 +1,35 @@
-const CACHE_VERSION = 'cashier-shell-v2';
+const CACHE_VERSION = 'cashier-shell-v4';
 const APP_SCOPE = new URL(self.registration.scope).pathname;
 const APP_SHELL = APP_SCOPE;
+const ASSET_ROOT = new URL('../cashier-build/', self.registration.scope).pathname;
+const ICON_ROOT = new URL('../pwa/', self.registration.scope).pathname;
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_VERSION)
-            .then((cache) => cache.add(new Request(APP_SHELL, { cache: 'reload' })))
-            .catch(() => undefined)
-            .then(() => self.skipWaiting())
+        (async () => {
+            const cache=await caches.open(CACHE_VERSION);
+            await cache.add(new Request(APP_SHELL,{cache:'reload'}));
+            const manifestUrl=new URL('../cashier-build/manifest.json',self.registration.scope);
+            const response=await fetch(manifestUrl,{cache:'no-cache',credentials:'same-origin'});
+            if(!response.ok) throw new Error('Cashier assets unavailable');
+            const manifest=await response.json();
+            const root=new URL('./',manifestUrl);
+            const files=new Set();
+            for(const entry of Object.values(manifest)) for(const file of [entry.file,...(entry.css || [])]) {
+                const url=new URL(file,root);
+                if(url.origin!==self.location.origin || !url.pathname.startsWith(root.pathname)) throw new Error('Invalid cashier asset');
+                files.add(url.href);
+            }
+            await cache.addAll([...files].map(url=>new Request(url,{cache:'reload'})));
+            await self.skipWaiting();
+        })()
     );
 });
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys()
-            .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key))))
+            .then((keys) => Promise.all(keys.filter((key) => key.startsWith('cashier-shell-') && key !== CACHE_VERSION).map((key) => caches.delete(key))))
             .then(() => self.clients.claim())
     );
 });
@@ -42,7 +57,9 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    if (['script', 'style', 'font', 'image'].includes(request.destination)) {
+    // Cache public application assets only. Tenant images and signed media must
+    // never enter the shared shell cache used by another account or business.
+    if ((url.pathname.startsWith(ASSET_ROOT) || url.pathname.startsWith(ICON_ROOT)) && ['script', 'style', 'font', 'image'].includes(request.destination)) {
         event.respondWith(
             caches.match(request).then((cached) => {
                 const refreshed = fetch(request).then((response) => {

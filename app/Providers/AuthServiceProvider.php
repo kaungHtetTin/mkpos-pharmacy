@@ -25,6 +25,10 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
+        foreach (\App\Support\PharmacyAccess::permissionSlugs() as $slug) {
+            Gate::define($slug, fn ($user) => $user->hasPermission($slug));
+        }
+
         // Dynamically define Gates based on Permissions
         try {
             if (app()->runningInConsole() === false || app()->runningUnitTests()) {

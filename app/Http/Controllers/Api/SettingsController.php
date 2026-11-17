@@ -20,7 +20,7 @@ class SettingsController extends Controller
         return response()->json([
             'pharmacy_name' => Setting::get('invoice.pharmacy_name', config('app.name')),
             'logo_path' => $logoPath,
-            'logo_url' => $logoPath ? url('storage/' . $logoPath) : null,
+            'logo_url' => \App\Tenancy\BusinessFiles::url($logoPath),
             'default_tax_id' => Setting::get('invoice.default_tax_id', ''),
             'receipt_header' => Setting::get('invoice.receipt_header', ''),
             'receipt_footer' => Setting::get('invoice.receipt_footer', ''),

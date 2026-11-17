@@ -270,6 +270,7 @@ export default function PosIndex({
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
                     'X-Requested-With': 'XMLHttpRequest',
+                    'X-Business-ID': window.__mkposBusinessId || '',
                 },
                 body: JSON.stringify(newCustomerForm),
             });

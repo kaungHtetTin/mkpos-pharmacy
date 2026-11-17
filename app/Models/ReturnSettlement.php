@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReturnSettlement extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasUuid;
 
     protected $fillable = [

@@ -1,11 +1,14 @@
+import { storageBusinessId } from './storage';
 const config = window.cashierPwa || {};
 
 export class ApiError extends Error {
-    constructor(message, status = 0, errors = {}) {
+    constructor(message, status = 0, errors = {}, payload = {}) {
         super(message);
         this.name = 'ApiError';
         this.status = status;
         this.errors = errors;
+        this.businesses = payload.businesses;
+        this.businessSelectionRequired = Boolean(payload.business_selection_required);
     }
 }
 
@@ -14,6 +17,7 @@ const urlFor = (path) => `${String(config.apiUrl || '/api').replace(/\/$/, '')}/
 export async function apiRequest(path, { token, method = 'GET', json, body, signal } = {}) {
     const headers = { Accept: 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
+    if (token && storageBusinessId()) headers['X-Business-ID'] = storageBusinessId();
     if (json !== undefined) headers['Content-Type'] = 'application/json';
 
     let response;
@@ -38,6 +42,7 @@ export async function apiRequest(path, { token, method = 'GET', json, body, sign
             firstValidationError || payload?.message || `Request failed (${response.status}).`,
             response.status,
             payload?.errors || {},
+            payload || {},
         );
     }
 

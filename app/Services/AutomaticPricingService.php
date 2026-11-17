@@ -16,7 +16,7 @@ class AutomaticPricingService
     /** Acquire before product, purchase and inventory locks, inside a transaction. */
     public function lock(): int
     {
-        return (int) DB::table('pricing_states')->where('id', 1)->lockForUpdate()->value('version');
+        return (int) \App\Tenancy\BusinessQuery::table('pricing_states')->where('id', 1)->lockForUpdate()->value('version');
     }
 
     public function assertSellable(ProductUnit $unit, string $field): void
@@ -45,7 +45,7 @@ class AutomaticPricingService
     /** Latest dated purchase, then creation time/ID. Paid cost excludes FOC dilution. */
     public function readCost(Product $product): string
     {
-        $item = DB::table('purchase_items as items')->join('purchases', 'purchases.id', '=', 'items.purchase_id')
+        $item = \App\Tenancy\BusinessQuery::table('purchase_items as items')->join('purchases', 'purchases.id', '=', 'items.purchase_id')
             ->where('items.product_id', $product->id)->where('items.quantity', '>', 0)
             ->orderByDesc('purchases.purchase_date')->orderByDesc('purchases.created_at')
             ->orderByDesc('purchases.id')->orderByDesc('items.created_at')->orderByDesc('items.id')->first(['items.*']);
@@ -91,13 +91,14 @@ class AutomaticPricingService
             $unit->save();
         }
         $product->forceFill(['pricing_buying_cost' => $cost, 'pricing_version' => $product->pricing_version + 1])->save();
-        DB::table('pricing_states')->where('id', 1)->increment('version');
+        \App\Tenancy\BusinessQuery::table('pricing_states')->where('id', 1)->increment('version');
         return $stats;
     }
 
     public function record(Product $product, ProductUnit $unit, string $field, string $old, string $new, ?string $cost, string $trigger, ?string $actor, ?PricingRule $rule = null): void
     {
-        DB::table('price_changes')->insert([
+        \App\Tenancy\BusinessQuery::table('price_changes')->insert([
+            'business_id' => app(\App\Tenancy\BusinessContext::class)->requireId(),
             'product_id' => $product->id, 'product_unit_id' => $unit->id, 'product_name' => $product->name,
             'unit_name' => $unit->unit->name, 'price_type' => $field, 'old_price' => $old, 'new_price' => $new,
             'cost_used' => $cost, 'rule_snapshot' => $rule ? json_encode($rule->toArray()) : null,

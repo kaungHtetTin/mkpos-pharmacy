@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PricingRule extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     protected $primaryKey = 'code';
     public $incrementing = false;
     protected $keyType = 'string';

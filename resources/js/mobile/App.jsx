@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApiError, apiRequest, config } from './api';
-import { keys, loadJson, saveJson } from './storage';
+import { keys, loadJson, saveJson, configureBusinessStorage } from './storage';
 import Icon from './Icons';
 import SalesScreen from './SalesScreen';
 import HistoryScreen from './HistoryScreen';
@@ -100,6 +100,8 @@ function PullToRefresh({ onRefresh, children }) {
 function Login({ onLogin, online, install }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [businesses,setBusinesses] = useState([]);
+    const [businessId,setBusinessId] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -110,15 +112,17 @@ function Login({ onLogin, online, install }) {
             setError('Connect to the internet to sign in.');
             return;
         }
+        configureBusinessStorage(null,null);
         setLoading(true);
         setError('');
         try {
             const result = await apiRequest('/login', {
                 method: 'POST',
-                json: { email, password, device_name: 'Cashier PWA' },
+                json: { email, password, device_name: 'Cashier PWA', business_id: businessId || undefined },
             });
             await onLogin(result.token);
         } catch (requestError) {
+            if (Array.isArray(requestError.businesses)) setBusinesses(requestError.businesses);
             setError(requestError.message || 'Unable to sign in.');
         } finally {
             setLoading(false);
@@ -146,9 +150,10 @@ function Login({ onLogin, online, install }) {
                 {error && <div className="form-alert" role="alert">{error}</div>}
 
                 <form onSubmit={submit} className="form-stack">
+                    {businesses.length > 0 && <label className="field"><span>Business</span><select aria-label="Business" required value={businessId} onChange={event=>setBusinessId(event.target.value)}><option value="">Choose business</option>{businesses.map(business=><option key={business.id} value={business.id}>{business.name}</option>)}</select></label>}
                     <label className="field">
                         <span>Email address</span>
-                        <input type="email" inputMode="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="cashier@example.com" required autoFocus />
+                        <input type="email" inputMode="email" autoComplete="username" value={email} onChange={(event) => { setEmail(event.target.value); setBusinesses([]); setBusinessId(''); }} placeholder="cashier@example.com" required autoFocus />
                     </label>
                     <label className="field">
                         <span>Password</span>
@@ -240,7 +245,7 @@ function AuthenticatedApp({ token, profile, setProfile, online, install, onLogou
         <div className="app-shell">
             <header className="app-header">
                 <div>
-                    <span className="app-header__label">{headerLabel}</span>
+                    <span className="app-header__label" title={profile.business?.name}>{profile.business?.name || headerLabel}</span>
                     <h1>
                         {headerTitle}
                         {route === 'sale' && saleView !== 'complete' && salePriceMode === 'wholesale' && <span className="header-mode-alert" role="status">Wholesale</span>}
@@ -307,7 +312,10 @@ export default function App() {
             setToken(activeToken);
             localStorage.setItem(keys.token, activeToken);
         } catch (error) {
-            if (error.status === 401) {
+            if (error.status === 401 || error.status === 403) {
+                localStorage.removeItem(keys.profile);
+                configureBusinessStorage(null,null);
+                setFatalError(error.message || 'Please sign in again.');
                 localStorage.removeItem(keys.token);
                 setToken('');
                 setProfile(null);
@@ -338,6 +346,7 @@ export default function App() {
         }
         localStorage.removeItem(keys.token);
         localStorage.removeItem(keys.profile);
+        configureBusinessStorage(null,null);
         setToken('');
         setProfile(null);
         window.location.hash = '';
@@ -353,5 +362,6 @@ export default function App() {
         );
     }
 
-    return <AuthenticatedApp token={token} profile={profile} setProfile={setProfile} online={online} install={install} onLogout={logout} />;
+    configureBusinessStorage(profile.id,profile.business_id);
+    return <AuthenticatedApp key={`${profile.id}.${profile.business_id}`} token={token} profile={profile} setProfile={setProfile} online={online} install={install} onLogout={logout} />;
 }

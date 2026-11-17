@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class CustomerPayment extends Model
 {
+    use \App\Tenancy\BelongsToBusiness;
+
     use HasFactory, HasUuid;
 
     protected $fillable = [

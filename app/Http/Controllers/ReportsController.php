@@ -528,7 +528,7 @@ class ReportsController extends Controller
                     ? $accessibleBranchIds
                     : collect([$branchScope['branch_id']])->filter();
 
-                $query->whereIn('branch_id', $targetBranchIds)
+                $query->whereHas('memberships', fn ($membership) => $membership->where('business_id',app(\App\Tenancy\BusinessContext::class)->requireId())->whereIn('branch_id',$targetBranchIds))
                     ->orWhereHas('branches', function ($branchQuery) use ($targetBranchIds) {
                         $branchQuery->whereIn('branches.id', $targetBranchIds);
                     });
@@ -1181,7 +1181,7 @@ class ReportsController extends Controller
     protected function purchaseItemBaseQuery($accessibleBranchIds, array $branchScope, Carbon $fromDate, Carbon $toDate, string $paymentStatus, ?string $supplierId = null)
     {
         return $this->applyPurchaseReportScope(
-            DB::table('purchase_items')->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id'),
+            \App\Tenancy\BusinessQuery::table('purchase_items')->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id'),
             $accessibleBranchIds,
             $branchScope,
             $fromDate,
@@ -1658,7 +1658,7 @@ class ReportsController extends Controller
         $summaryReturnPaid = (float) ($returnCashSummary?->paid ?? 0);
         $summaryNetCash = $summaryCashReceived - $summaryChangeGiven + $summaryReturnReceived - $summaryReturnPaid;
 
-        $cashSaleMovements = DB::table('sales')
+        $cashSaleMovements = \App\Tenancy\BusinessQuery::table('sales')
             ->select('cash_session_id')
             ->selectRaw('COALESCE(SUM(amount_received - COALESCE(change_due, 0)), 0) as net_cash')
             ->where('payment_method', 'Cash')
@@ -1666,7 +1666,7 @@ class ReportsController extends Controller
             ->whereNotNull('cash_session_id')
             ->groupBy('cash_session_id');
 
-        $cashReturnMovements = DB::table('return_settlements as rs')
+        $cashReturnMovements = \App\Tenancy\BusinessQuery::table('return_settlements as rs')
             ->join('returns as r', 'r.id', '=', 'rs.return_id')
             ->select('rs.cash_session_id')
             ->selectRaw('COALESCE(SUM(CASE WHEN r.type = "Supplier" THEN rs.amount ELSE -rs.amount END), 0) as net_cash')

@@ -20,3 +20,6 @@ yarn-error.log
 
 # Private hosting account metadata
 /.hostinger/
+
+.env.*
+!.env.example

@@ -1,5 +1,11 @@
 # Pharmacy POS System - Full Feature Overview
 
+The multi-business foundation is now described in [PHASE_1.md](PHASE_1.md):
+platform office, independent businesses, global account memberships, per-business
+roles/branches, business switching, private media and isolated cashier data.
+Subscription billing remains a later phase. The operational modules below run
+inside the selected business.
+
 This document describes the complete feature set of the Pharmacy POS application implemented in this repository. It combines the product specification, current implementation status, API behavior, and business workflow described across the project documentation.
 
 ## 1. Product Overview

@@ -1,41 +1,13 @@
 <?php
-
 namespace Database\Seeders;
-
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-
+use App\Models\Permission;
+use App\Support\PharmacyAccess;
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     *
-     * @return void
-     */
-    public function run()
+    public function run(): void
     {
-        $this->call([
-            RoleSeeder::class,
-            PermissionSeeder::class,
-            BranchSeeder::class,
-            RootUserSeeder::class,
-            UnitSeeder::class,
-            TaxSeeder::class,
-            ProductSeeder::class,
-            ProductUnitSeeder::class,
-            PurchaseSeeder::class,
-            SaleSeeder::class,
-            UserSeeder::class,
-            SupplierSeeder::class,
-        ]);
-
-        // $this->call([
-        //     RoleSeeder::class,
-        //     PermissionSeeder::class,
-        //     BranchSeeder::class,
-        //     RootUserSeeder::class,
-        //     TaxSeeder::class,
-        //     UnitSeeder::class,
-        // ]);
+        foreach (PharmacyAccess::PERMISSIONS as $definition) Permission::updateOrCreate(['slug'=>$definition['slug']],['name'=>$definition['name']]);
+        $this->command?->info('Permission catalogue ready. Use platform:admin to create your office account, then provision businesses from the platform office.');
     }
 }
