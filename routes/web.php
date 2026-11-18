@@ -341,6 +341,13 @@ Route::middleware('auth')->group(function () {
 
 // Central identity and platform office routes are separate from the tenant workspace.
 Route::middleware('auth')->group(function () {
+    Route::get('/support', [\App\Http\Controllers\SupportController::class,'index'])->name('support.index');
+    Route::post('/support', [\App\Http\Controllers\SupportController::class,'store'])->middleware('throttle:support-create')->name('support.store');
+    Route::get('/support/{id}', [\App\Http\Controllers\SupportController::class,'show'])->name('support.show');
+    Route::post('/support/{id}/reply', [\App\Http\Controllers\SupportController::class,'reply'])->middleware('throttle:support-actions')->name('support.reply');
+    Route::post('/support/{id}/action', [\App\Http\Controllers\SupportController::class,'action'])->middleware('throttle:support-actions')->name('support.action');
+    Route::get('/business-export', [\App\Http\Controllers\BusinessExportController::class,'index'])->name('business-export.index');
+    Route::post('/business-export', [\App\Http\Controllers\BusinessExportController::class,'download'])->middleware('throttle:business-exports')->name('business-export.download');
     Route::get('/billing', [\App\Http\Controllers\BillingController::class,'index'])->name('billing.index');
     Route::post('/billing/invoices', [\App\Http\Controllers\BillingController::class,'invoice'])->middleware('throttle:10,1')->name('billing.invoices.store');
     Route::post('/billing/invoices/{invoice}/payments', [\App\Http\Controllers\BillingController::class,'submit'])->middleware('throttle:10,1')->name('billing.payments.store');
@@ -349,7 +356,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/billing/payments/{payment}/receipt', [\App\Http\Controllers\BillingController::class,'receipt'])->name('billing.receipt');
     Route::get('/business-members', [\App\Http\Controllers\BusinessController::class,'members'])->name('business-members.index');
     Route::put('/business-members/{user}', [\App\Http\Controllers\BusinessController::class,'updateMember'])->name('business-members.update');
-    Route::middleware('platform.admin')->prefix('platform')->name('platform.')->group(function () {
+    Route::middleware(['platform.admin',\App\Http\Middleware\OfficeSecurity::class])->prefix('platform')->name('platform.')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Platform\DashboardController::class,'index'])->name('dashboard');
+        Route::get('/audit', [\App\Http\Controllers\Platform\DashboardController::class,'audit'])->name('audit');
+        Route::get('/security', [\App\Http\Controllers\Platform\OfficeSecurityController::class,'index'])->name('security.index');
+        Route::post('/security/setup', [\App\Http\Controllers\Platform\OfficeSecurityController::class,'setup'])->middleware('throttle:office-mfa')->name('security.setup');
+        Route::post('/security/enable', [\App\Http\Controllers\Platform\OfficeSecurityController::class,'enable'])->middleware('throttle:office-mfa')->name('security.enable');
+        Route::post('/security/challenge', [\App\Http\Controllers\Platform\OfficeSecurityController::class,'challenge'])->middleware('throttle:office-mfa')->name('security.challenge');
+        Route::get('/support', [\App\Http\Controllers\SupportController::class,'index'])->name('support.index');
+        Route::get('/support/{id}', [\App\Http\Controllers\SupportController::class,'show'])->name('support.show');
+        Route::post('/support/{id}/reply', [\App\Http\Controllers\SupportController::class,'reply'])->middleware('throttle:support-actions')->name('support.reply');
+        Route::post('/support/{id}/action', [\App\Http\Controllers\SupportController::class,'action'])->middleware('throttle:support-actions')->name('support.action');
+        Route::get('/support/{id}/diagnostics', [\App\Http\Controllers\SupportController::class,'diagnostics'])->middleware('throttle:support-actions')->name('support.diagnostics');
         Route::get('/plans', [\App\Http\Controllers\Platform\BillingController::class,'plans'])->name('plans.index');
         Route::post('/plans', [\App\Http\Controllers\Platform\BillingController::class,'savePlan'])->name('plans.store');
         Route::put('/plans/{plan}', [\App\Http\Controllers\Platform\BillingController::class,'savePlan'])->name('plans.update');

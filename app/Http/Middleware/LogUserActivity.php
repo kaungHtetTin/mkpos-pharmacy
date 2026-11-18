@@ -15,6 +15,8 @@ class LogUserActivity
     {
         $response = $next($request);
 
+        if ($request->is('platform/*','support','support/*','business-export','business-export/*')) return $response;
+
         if (!$request->user()) {
             return $response;
         }

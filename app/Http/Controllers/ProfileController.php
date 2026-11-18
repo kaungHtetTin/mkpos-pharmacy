@@ -58,6 +58,7 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        abort_if($request->user()->is_platform_admin,403,'Office account removal requires a trusted operator.');
         $request->validate([
             'password' => ['required', 'current-password'],
         ]);

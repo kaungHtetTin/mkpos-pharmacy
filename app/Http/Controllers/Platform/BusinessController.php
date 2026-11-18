@@ -11,7 +11,7 @@ use Illuminate\Validation\Rules\Password;
 
 class BusinessController extends Controller
 {
-    public function index() { return Spa::render('Platform/Businesses', ['recent_activity'=>\App\Models\PlatformActivityLog::with(['actor:id,name','business:id,name'])->latest('created_at')->limit(20)->get(), 'businesses'=>Business::withCount(['memberships'])->orderBy('name')->get(['id','name','slug','status','created_at'])]); }
+    public function index(Request $request) { $search=$request->validate(['q'=>'nullable|string|max:100'])['q']??null; return Spa::render('Platform/Businesses', ['recent_activity'=>\App\Models\PlatformActivityLog::with(['actor:id,name','business:id,name'])->latest('created_at')->limit(20)->get(), 'query'=>$search,'businesses'=>Business::when($search,fn($q)=>$q->where('name','like','%'.$search.'%'))->withCount(['memberships'])->orderBy('name')->paginate(20,['id','name','slug','status','created_at'])->withQueryString()]); }
     public function store(Request $request, ProvisionBusiness $provision)
     {
         $data=$request->validate(['name'=>'required|string|max:150','slug'=>'required|alpha_dash:ascii|lowercase|max:100|unique:businesses,slug','owner_name'=>'required|string|max:255','owner_email'=>'required|email|lowercase|max:255|unique:users,email','owner_password'=>['required','string',Password::min(12)],'currency_symbol'=>'required|string|max:8']);

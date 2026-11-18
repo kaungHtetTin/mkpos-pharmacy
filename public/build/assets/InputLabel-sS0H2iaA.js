@@ -1,0 +1,1 @@
+import{q as e}from"./spa-DE5IDPeh.js";var t=e();function n({value:e,className:n=``,children:r,...i}){return(0,t.jsx)(`label`,{...i,className:`block text-[11px] leading-[1.3] font-semibold text-[#425466] `+n,children:e||r})}export{n as t};

@@ -188,7 +188,7 @@ class MultiBusinessFoundationTest extends TestCase
         $admin=User::factory()->create();$admin->forceFill(['is_platform_admin'=>true])->save();
         $this->actingAs($admin)->get('/profile')->assertOk();
         $this->get('/platform/businesses')->assertOk();
-        $this->get('/products')->assertRedirect(route('platform.businesses.index'));
+        $this->get('/products')->assertRedirect(route('platform.dashboard'));
     }
 
     public function test_cashier_checkout_changes_only_the_token_business_stock_and_sales(): void

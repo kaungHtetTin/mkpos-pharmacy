@@ -56,6 +56,11 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
+        RateLimiter::for('office-mfa',fn(Request $r)=>Limit::perMinute(5)->by($r->user()?->id??$r->ip()));
+        RateLimiter::for('support-actions',fn(Request $r)=>Limit::perMinute(20)->by($r->user()?->id??$r->ip()));
+        RateLimiter::for('support-create',fn(Request $r)=>Limit::perMinute(5)->by($r->user()?->id??$r->ip()));
+        RateLimiter::for('business-exports',fn(Request $r)=>Limit::perHour(2)->by($r->user()?->id??$r->ip()));
+        RateLimiter::for('credential-login', fn(Request $r)=>[Limit::perMinute(5)->by(mb_strtolower((string)$r->input('email')).'|'.$r->ip()),Limit::perMinute(60)->by($r->ip())]);
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });

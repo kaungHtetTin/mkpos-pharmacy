@@ -8,16 +8,25 @@ use Illuminate\Support\Facades\DB;
 class SubscriptionAccess
 {
     private array $cache = [];
+    private array $loaded = [];
+    public function preload($businesses): void {
+        $ids=$businesses->pluck('id');$subscriptions=BusinessSubscription::whereIn('business_id',$ids)->get()->keyBy('business_id');
+        $periods=SubscriptionPeriod::whereIn('business_id',$ids)->where('starts_at','<=',now())->orderByDesc('ends_at')->get()->groupBy('business_id');
+        $next=SubscriptionPeriod::whereIn('business_id',$ids)->where('starts_at','>',now())->orderBy('starts_at')->get()->groupBy('business_id');
+        foreach($ids as $id)$this->loaded[$id]=[$subscriptions->get($id),$periods->get($id)?->first(),$next->get($id)?->first()];
+    }
 
-    public function forget(): void { $this->cache = []; }
+    public function forget(): void { $this->cache = []; $this->loaded = []; }
 
     public function summary(Business $business): array
     {
         $key = $business->id.':'.now()->getTimestamp();
         if (isset($this->cache[$key])) return $this->cache[$key];
-        $subscription = BusinessSubscription::where('business_id',$business->id)->first();
-        $period = SubscriptionPeriod::where('business_id',$business->id)->where('starts_at','<=',now())->latest('ends_at')->first();
-        $next = SubscriptionPeriod::where('business_id',$business->id)->where('starts_at','>',now())->orderBy('starts_at')->first();
+        [$subscription,$period,$next] = $this->loaded[$business->id] ?? [
+            BusinessSubscription::where('business_id',$business->id)->first(),
+            SubscriptionPeriod::where('business_id',$business->id)->where('starts_at','<=',now())->latest('ends_at')->first(),
+            SubscriptionPeriod::where('business_id',$business->id)->where('starts_at','>',now())->orderBy('starts_at')->first(),
+        ];
         $plan = $period?->plan_snapshot ?? $subscription?->plan_snapshot ?? [];
         $state = 'unsubscribed'; $until = null; $canOperate = false;
         if ($subscription) {

@@ -76,6 +76,12 @@ const pageDescriptions = {
     'Permission Reference': 'Review the permissions available throughout the application.',
     'Branch Management': 'Maintain operating locations and branch status.',
     'Activity Logs': 'Audit important user actions and operational changes.',
+    'Platform overview': 'Monitor subscriptions, service usage, collections, and backup health.',
+    'Office security': 'Protect your office account with an authenticator and recovery codes.',
+    'Support requests': 'Track conversations and manage expiring diagnostic approvals.',
+    'Support request': 'Review the conversation and diagnostic access for this request.',
+    'Business data export': 'Download a private archive of the records belonging to your business.',
+    'Platform audit': 'Review privileged office actions and approved support access.',
     'Subscription plans': 'Set plan prices, billing terms, included features, and usage limits.',
     'Subscriptions & payments': 'Review manual payments, track subscriptions, and manage renewal invoices.',
     'Subscription & billing': 'Review your plan, usage, invoices, and payment submissions.',
@@ -123,7 +129,7 @@ function EmbeddedPage({ children, header, shell }) {
 function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarget }) {
     const { auth, flash, settings = {}, business, subscription, errors: pageErrors = {}, nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
     const { mode = 'light', toggleColorMode } = useContext(ColorModeContext);
-    const pharmacyName = settings.invoice?.pharmacy_name || 'Pharmacy POS';
+    const pharmacyName = auth.user?.is_platform_admin ? 'Platform office' : settings.invoice?.pharmacy_name || 'Pharmacy POS';
     const appBase = ziggy?.base || window.laravel_base || '';
     const withBase = (path) => `${appBase}${path.startsWith('/') ? path : `/${path}`}`.replace(/\/{2,}/g, '/');
     const storageUrl = (path) => withBase(`/storage/${String(path || '').replace(/^\/+/, '')}`);
@@ -283,7 +289,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
         return !item.permission || userPermissions.includes(item.permission);
     };
 
-    const visibleMenuGroups = menuGroups
+    let visibleMenuGroups = menuGroups
         .map((group) => ({
             ...group,
             visibleItems: group.keys
@@ -296,6 +302,11 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                 .filter((item) => canSee(item)),
         }))
         .filter((group) => group.visibleItems.length > 0);
+
+    if(auth.user?.is_platform_admin){
+        const officeItems=[['platform.dashboard','Overview','grid',['owner','admin','billing','support']],['platform.businesses.index','Businesses','store',['owner','admin']],['platform.plans.index','Plans','receipt',['owner','billing']],['platform.billing.index','Payments','wallet',['owner','billing']],['platform.support.index','Support','users',['owner','admin','support']],['platform.audit','Audit','history',['owner','admin']],['platform.security.index','Security','shieldCheck',['owner','admin','billing','support']]];
+        visibleMenuGroups=[{label:'Overview',icon:'grid',visibleItems:officeItems.filter(([, , ,roles])=>roles.includes(auth.user.platform_role)).map(([name,text,icon])=>({key:name,text,icon,href:route(name),routePattern:name,count:0}))}];
+    }
 
     const selectedGroup = visibleMenuGroups.find((group) => group.visibleItems.some((item) => isActiveRoute(item.routePattern, item.href)));
     const selectedItem = selectedGroup?.visibleItems.find((item) => isActiveRoute(item.routePattern, item.href));
@@ -319,7 +330,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                 <Box sx={{ width: 31, height: 31, flexShrink: 0, borderRadius: '9px', bgcolor: 'primary.main', color: 'primary.contrastText', display: 'grid', placeItems: 'center', boxShadow: '0 2px 6px rgba(23,107,91,0.15)' }}>
                     {settings.invoice?.logo_path ? <Box component="img" src={storageUrl(settings.invoice.logo_path)} alt={pharmacyName} sx={{ width: 25, height: 25, objectFit: 'contain' }} /> : <SimpleIcon name="pill" size={19} />}
                 </Box>
-                {!collapsed && <Box sx={{ minWidth: 0 }}><Typography title={pharmacyName} noWrap sx={{ fontWeight: 800, fontSize: 13, lineHeight: 1.35 }}>{pharmacyName}</Typography><Stack direction="row" alignItems="center" spacing={0.5}><Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main' }} /><Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 10 }}>{__('Pharmacy workspace')}</Typography></Stack></Box>}
+                {!collapsed && <Box sx={{ minWidth: 0 }}><Typography title={pharmacyName} noWrap sx={{ fontWeight: 800, fontSize: 13, lineHeight: 1.35 }}>{pharmacyName}</Typography><Stack direction="row" alignItems="center" spacing={0.5}><Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main' }} /><Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: 10 }}>{__(auth.user?.is_platform_admin?'Office workspace':'Pharmacy workspace')}</Typography></Stack></Box>}
             </Stack>
             {!collapsed && <Box sx={{ px: 1.25, pt: 1.25, pb: 0.75 }}>
                 <TextField size="small" placeholder={__('Search pages…')} value={navigationQuery} onChange={(event) => setNavigationQuery(event.target.value)} inputProps={{ 'aria-label': __('Search navigation') }} InputProps={{ startAdornment: <InputAdornment position="start"><SimpleIcon name="search" size={15} /></InputAdornment> }} sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'action.hover', borderRadius: '7px', fontSize: 11.5 }, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' } }} />
@@ -635,11 +646,14 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                 {business && <Box component="li" role="presentation" sx={{ px:1.25, py:0.75 }}><Typography variant="caption" color="text.secondary">Current business</Typography><Typography sx={{fontSize:12,fontWeight:700,overflowWrap:'anywhere'}}>{business.name}</Typography></Box>}
                 {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('billing.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="receipt" size={16}/></ListItemIcon>Subscription & billing</MenuItem>}
                 {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('business-members.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="users" size={16}/></ListItemIcon>Business members</MenuItem>}
-                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.plans.index')} onClick={()=>setProfileMenuAnchor(null)}>Subscription plans</MenuItem>}
-                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.billing.index')} onClick={()=>setProfileMenuAnchor(null)}>Subscription payments</MenuItem>}
-                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.businesses.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="shieldCheck" size={16}/></ListItemIcon>Platform office</MenuItem>}
+                {auth.user?.is_platform_admin && ['owner','billing'].includes(auth.user.platform_role) && <MenuItem component={Link} href={route('platform.plans.index')} onClick={()=>setProfileMenuAnchor(null)}>Subscription plans</MenuItem>}
+                {auth.user?.is_platform_admin && ['owner','billing'].includes(auth.user.platform_role) && <MenuItem component={Link} href={route('platform.billing.index')} onClick={()=>setProfileMenuAnchor(null)}>Subscription payments</MenuItem>}
+                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.dashboard')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="shieldCheck" size={16}/></ListItemIcon>Platform office</MenuItem>}
+                {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('support.index')} onClick={()=>setProfileMenuAnchor(null)}>Support requests</MenuItem>}
+                {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('business-export.index')} onClick={()=>setProfileMenuAnchor(null)}>Business data export</MenuItem>}
+                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.security.index')} onClick={()=>setProfileMenuAnchor(null)}>Office security</MenuItem>}
                 <Divider sx={{ my: 0.5 }} />
-                {[{ ...menuItems.profile, text: 'My profile' }, menuItems.dashboard, menuItems.settings, menuItems.manual].filter(canSee).map((item) => <MenuItem key={item.href} component={Link} href={item.href} onClick={() => setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name={item.icon} size={16} /></ListItemIcon>{__(item.text)}</MenuItem>)}
+                {(auth.user?.is_platform_admin?[{...menuItems.profile,text:'My profile'}]:[{ ...menuItems.profile, text: 'My profile' }, menuItems.dashboard, menuItems.settings, menuItems.manual]).filter(canSee).map((item) => <MenuItem key={item.href} component={Link} href={item.href} onClick={() => setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name={item.icon} size={16} /></ListItemIcon>{__(item.text)}</MenuItem>)}
                 <Divider sx={{ my: 0.5 }} />
                 <MenuItem onClick={() => { setProfileMenuAnchor(null); router.post(route('logout')); }} sx={{ color: 'error.main' }}><ListItemIcon><SimpleIcon name="logout" size={16} /></ListItemIcon>{__('Log out')}</MenuItem>
             </Menu>

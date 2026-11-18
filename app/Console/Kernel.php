@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('subscriptions:process')->hourly()->withoutOverlapping();
+        $schedule->command('platform:backup')->dailyAt('02:15')->withoutOverlapping();
     }
 
     /**

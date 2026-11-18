@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, router } from '@/spa';
+import { Link, router, usePage } from '@/spa';
 import { Alert, Box, Button, Chip, Stack, Typography } from '@mui/material';
 
 export const billingMoney = (minor, currency = 'USD') => `${currency} ${(Number(minor || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -14,11 +14,9 @@ export function BillingErrors({ errors = {} }) {
     return messages.length ? <Alert severity="error">{messages.join(' ')}</Alert> : null;
 }
 export function BillingLinks() {
-    return <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-        <Button component={Link} href={route('platform.businesses.index')} size="small">Businesses</Button>
-        <Button component={Link} href={route('platform.plans.index')} size="small">Plans</Button>
-        <Button component={Link} href={route('platform.billing.index')} size="small">Subscriptions & payments</Button>
-    </Stack>;
+    const {props}=usePage();const role=props.auth?.user?.platform_role;
+    const links=[['platform.dashboard','Overview',['owner','admin','billing','support']],['platform.businesses.index','Businesses',['owner','admin']],['platform.plans.index','Plans',['owner','billing']],['platform.billing.index','Subscriptions & payments',['owner','billing']],['platform.support.index','Support',['owner','admin','support']],['platform.audit','Audit',['owner','admin']],['platform.security.index','Security',['owner','admin','billing','support']]];
+    return <Stack direction="row" spacing={.5} flexWrap="wrap" useFlexGap>{links.filter(([, ,roles])=>roles.includes(role)).map(([name,label])=><Button key={name} component={Link} href={route(name)} size="small">{label}</Button>)}</Stack>;
 }
 export function BillingPager({ page }) {
     return <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ py: 1 }}>

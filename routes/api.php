@@ -30,7 +30,7 @@ use App\Http\Controllers\Api\SyncController;
 | PUBLIC ROUTES (No authentication required)
 |--------------------------------------------------------------------------
 */
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:credential-login');
 Route::get('/health', fn () => response()->json(['status' => 'ok', 'server_time' => now()->toIso8601String()]));
 Route::get('/v1/health', fn () => response()->json(['status' => 'ok', 'server_time' => now()->toIso8601String()]));
 

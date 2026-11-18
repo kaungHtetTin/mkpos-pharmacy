@@ -2,7 +2,7 @@
 
 This is the original operational-module roadmap. The newer multi-business Phase 1
 is documented in [PHASE_1.md](../PHASE_1.md); its phase numbers are independent of
-the historical module milestones below. Subscription billing follows that foundation.
+the historical module milestones below. Subscription billing is recorded in [PHASE_2.md](../PHASE_2.md); platform operations and hardening are recorded in [PHASE_3.md](../PHASE_3.md).
 
 This document outlines the step-by-step development process for the Pharmacy POS project, including technical milestones and estimated timeframes. **Checkbox status is aligned with actual codebase state** — see [CURRENT_PROJECT_STATE.md](CURRENT_PROJECT_STATE.md) for a detailed implementation summary and gaps.
 

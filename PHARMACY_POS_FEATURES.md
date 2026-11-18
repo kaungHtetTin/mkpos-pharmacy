@@ -1,3 +1,5 @@
+Platform usage, support, exports, backups and office security are documented in [PHASE_3.md](PHASE_3.md).
+
 # Pharmacy POS System - Full Feature Overview
 
 The multi-business foundation is now described in [PHASE_1.md](PHASE_1.md):

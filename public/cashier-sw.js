@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cashier-shell-v4';
+const CACHE_VERSION = 'cashier-shell-v5';
 const APP_SCOPE = new URL(self.registration.scope).pathname;
 const APP_SHELL = APP_SCOPE;
 const ASSET_ROOT = new URL('../cashier-build/', self.registration.scope).pathname;
