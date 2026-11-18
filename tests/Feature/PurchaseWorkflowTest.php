@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Middleware\EnsureUserHasPermission;
 use App\Models\Branch;
 use App\Models\InventoryBatch;
 use App\Models\Product;
@@ -21,9 +20,9 @@ class PurchaseWorkflowTest extends TestCase
 
     public function test_purchase_auto_generates_batch_number_and_tracks_base_costs(): void
     {
-        $this->withoutMiddleware(EnsureUserHasPermission::class);
 
         $user = User::factory()->create();
+        $this->grantPermissions($user, ['manage_purchases', 'manage_branches', 'manage_suppliers', 'manage_payments']);
         $branch = Branch::create([
             'name' => 'Main Branch',
             'phone' => '0123456789',
@@ -129,9 +128,9 @@ class PurchaseWorkflowTest extends TestCase
 
     public function test_existing_batch_costs_are_updated_with_weighted_average(): void
     {
-        $this->withoutMiddleware(EnsureUserHasPermission::class);
 
         $user = User::factory()->create();
+        $this->grantPermissions($user, ['manage_purchases', 'manage_branches', 'manage_suppliers', 'manage_payments']);
         $branch = Branch::create([
             'name' => 'Main Branch',
             'phone' => '0123456789',
@@ -202,8 +201,8 @@ class PurchaseWorkflowTest extends TestCase
     }
     public function test_supplier_can_be_created_and_updated_without_a_credit_limit(): void
     {
-        $this->withoutMiddleware(EnsureUserHasPermission::class);
         $user = User::factory()->create();
+        $this->grantPermissions($user, ['manage_purchases', 'manage_branches', 'manage_suppliers', 'manage_payments']);
         $this->actingAs($user)->post('/suppliers', [
             'name' => 'Unlimited Supplier',
         ])->assertRedirect()->assertSessionHasNoErrors();

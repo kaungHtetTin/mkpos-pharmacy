@@ -11,7 +11,6 @@ use App\Services\ProductCsvImportService;
 use App\Services\ProductUnitPriceCsvService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class ProductCsvImportTest extends TestCase
@@ -21,8 +20,8 @@ class ProductCsvImportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Gate::define('manage_inventory', fn ($user) => $user->email === 'importer@example.test');
         $this->actingAs(User::factory()->create(['email' => 'importer@example.test']));
+        $this->grantPermissions(auth()->user(), ['manage_products']);
         Tax::create(['name' => 'Tax Free', 'rate' => 0, 'status' => true]);
     }
 
@@ -356,7 +355,7 @@ class ProductCsvImportTest extends TestCase
         $this->assertDatabaseHas('product_units', ['conversion_factor' => 1, 'selling_price' => 100]);
     }
 
-    public function test_import_page_and_all_endpoints_require_inventory_permission(): void
+    public function test_import_page_and_all_endpoints_require_product_permission(): void
     {
         $this->get('/products/import', ['X-SPA' => 'true'])->assertOk()->assertJsonPath('component', 'Products/Import');
         $this->actingAs(User::factory()->create());

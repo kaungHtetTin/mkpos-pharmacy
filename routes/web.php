@@ -162,14 +162,7 @@ Route::get('/cashier/{path?}', function () {
 Route::post('/language', [LanguageController::class, 'switch'])->name('language.switch');
 
 // Authentication and application routes share one locale-independent URL space.
-Route::middleware('guest')->group(function () {
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
-});
-
-Route::middleware('auth')->group(function () {
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
-});
+require __DIR__.'/auth.php';
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])

@@ -117,7 +117,7 @@ Feature tests recreate tables; use a separate disposable test database:
 
 ```sh
 DB_DATABASE=mkpos_phase1_testing APP_ENV=testing php artisan test --filter='MultiBusinessFoundationTest|AuthenticationTest'
-node --test tests/browser/business-storage.test.mjs
+node --test tests/js/automaticPricing.test.mjs tests/browser/business-storage.test.mjs
 npm run build
 ```
 
@@ -126,20 +126,38 @@ single assignment, rejection of owner reuse and reassignment, separate office
 identities, removed selection/switching endpoints, branch switching, token/media
 isolation, validation, suspension, pricing and cashier checkout isolation.
 
-Verified on 17 November 2026:
+Final release verification:
 
-- 28 business feature tests (102 assertions) and three authentication tests pass.
-- Cashier storage isolation test and both frontend builds pass.
-- Seven Chromium flows pass: direct owner login, account access editor, separate
-  business records, automatic cashier login, branch switching, offline reload
-  and separate platform office login.
-- Full suite: 72 passed, 65 failed, 407 assertions. Failure case names are
-  unchanged from the preceding Phase 1 implementation; there are no new failures.
+- Full backend suite: **137 passed, 783 assertions, zero failures**.
+- Both frontend production builds pass.
+- Cashier storage isolation and automatic-pricing JavaScript checks pass.
+- Nine Chromium flows pass: business login, account access, separate records,
+  cashier login, branch switching, offline reload, platform office, password
+  recovery navigation and profile password validation.
+- The repository browser suite also passes with no skipped tests: cashier storage
+  isolation and failed-login validation followed by successful login. Set
+  `POS_BASE_URL`, `POS_TEST_EMAIL` and `POS_TEST_PASSWORD` privately to run
+  `npm run test:browser` against a synthetic preview account.
 
-The inherited suite has unresolved failures recorded in
-`UPGRADE_LARAVEL_13.md`; this feature does not make the full suite green. Resolve
-those failures and complete deployment checks before production approval.
-The live site and original development database remain untouched.
+The previous 65 inherited failures are resolved. Import and pricing fixtures now
+use real business roles with the current product/supplier/settings permissions;
+API fixtures use persisted business-bound tokens; purchase and return fixtures
+include actual branch access, payment permissions and required cash shifts.
+Return tests also check that an already completed return cannot be approved twice.
+Registration tests explicitly verify that public signup remains unavailable.
+No permission checks or tenant guards were weakened to make the tests pass.
+
+The application now loads its authentication routes, including password recovery,
+profile password updates, password confirmation and signed verification URLs.
+The login form links to recovery. Public registration remains closed; owners and
+staff are still provisioned through their authorized business workflows.
+Password-reset notifications are tested with fake notifications, so verification
+sends no real email. Production mail transport must be configured at deployment.
+
+The live site and original development database remain untouched. Installation
+still requires the fresh database described above. Physical receipt printing and
+production deployment checks remain environment-specific checks, outside this
+local Phase 1 verification.
 
 ## Next phase
 

@@ -7,7 +7,6 @@ use App\Services\{AutomaticPricingService, ProductUnitPriceCsvService};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -18,11 +17,9 @@ class AutomaticPricingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (['manage_branches', 'manage_inventory', 'manage_purchases'] as $permission) {
-            Gate::define($permission, fn ($user) => $user->email === 'pricing@example.test');
-        }
         $branch = Branch::create(['name' => 'Main', 'phone' => '000', 'address' => 'Test', 'status' => 'Active']);
         $this->actingAs(User::factory()->create(['email' => 'pricing@example.test', 'branch_id' => $branch->id]));
+        $this->grantPermissions(auth()->user(), ['manage_settings', 'manage_products', 'manage_inventory', 'manage_purchases', 'manage_branches']);
     }
 
     public function test_decimal_formula_rounding_minimum_profit_and_unit_conversion(): void
@@ -239,7 +236,7 @@ class AutomaticPricingTest extends TestCase
 
     public function test_staff_api_preserves_automatic_mode_and_unit_identity(): void
     {
-        $this->grantApiPermission('manage_inventory');
+        $this->grantApiPermission('manage_products');
         [$product, $unit, $rule] = $this->catalog();
         $rule->update(['pricing_mode' => 'automatic', 'markup_percent' => 20]);
         $unit->update(['selling_price_mode' => 'automatic']);
@@ -288,10 +285,7 @@ class AutomaticPricingTest extends TestCase
 
     private function grantApiPermission(string $slug): void
     {
-        $permission = \App\Models\Permission::create(['name' => $slug, 'slug' => $slug]);
-        $role = \App\Models\Role::create(['name' => 'Pricing tester']);
-        $role->permissions()->attach($permission);
-        auth()->user()->roles()->attach($role);
+        $this->grantPermissions(auth()->user(), [$slug]);
     }
 
     private function values(PricingRule $rule, array $overrides = []): array

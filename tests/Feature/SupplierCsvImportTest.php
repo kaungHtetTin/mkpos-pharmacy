@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Services\SupplierCsvImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class SupplierCsvImportTest extends TestCase
@@ -17,8 +16,8 @@ class SupplierCsvImportTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Gate::define('manage_inventory', fn ($user) => $user->email === 'importer@example.test');
         $this->actingAs(User::factory()->create(['email' => 'importer@example.test']));
+        $this->grantPermissions(auth()->user(), ['manage_suppliers']);
     }
 
     public function test_template_download_and_import_page_are_accessible_and_template_imports(): void
@@ -154,7 +153,7 @@ class SupplierCsvImportTest extends TestCase
         $this->assertDatabaseCount('suppliers', 0);
     }
 
-    public function test_import_requires_inventory_permission(): void
+    public function test_import_requires_supplier_permission(): void
     {
         $this->actingAs(User::factory()->create());
         $this->get('/suppliers/import')->assertForbidden();

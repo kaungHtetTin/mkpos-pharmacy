@@ -15,7 +15,7 @@ and unresolved legacy test failures.
 
 ## Automatic pricing
 
-Open **Settings → Automatic Pricing** using the existing settings permission (`manage_branches`). Selling and wholesale prices each have a Manual/Automatic rule, markup percentage, minimum profit per base unit, and upward rounding increment. Both rules and all existing unit prices start in Manual mode; installing this feature does not change catalog prices.
+Open **Settings → Automatic Pricing** using the settings permission (`manage_settings`). Selling and wholesale prices each have a Manual/Automatic rule, markup percentage, minimum profit per base unit, and upward rounding increment. Both rules and all existing unit prices start in Manual mode; installing this feature does not change catalog prices.
 
 The formula matches onlineshop: choose the larger of `base cost × (1 + markup / 100)` and `base cost + minimum profit`, round upward to the configured increment, then multiply by the unit conversion factor. For example, cost 950, markup 20%, minimum profit 100, and rounding 50 produces 1,150 per base unit and 11,500 for a strip of 10.
 
@@ -29,7 +29,7 @@ Deployment requires PHP BCMath (declared in Composer), the migration `2026_09_14
 
 ## Supplier CSV import
 
-Open **Suppliers → Import CSV** (requires `manage_inventory`). Download the template, replace/delete its example row, and save as CSV UTF-8. Keep the columns `name,phone,email,address,payment_terms`; only name is required. Phone numbers should be formatted as text in Excel to preserve leading zeros.
+Open **Suppliers → Import CSV** (requires `manage_suppliers`). Download the template, replace/delete its example row, and save as CSV UTF-8. Keep the columns `name,phone,email,address,payment_terms`; only name is required. Phone numbers should be formatted as text in Excel to preserve leading zeros.
 
 Each row creates a supplier with zero balance; existing suppliers are never updated. Nonempty phones and emails must be unique within the file and existing suppliers. Names may repeat, matching the supplier form. Blank optional values become null. Limits match the form: name/email 255 characters, phone 20, address/payment terms 500. Files allow 10,000 data rows / 10 MB, subject to server upload limits. Blank rows are skipped; any validation failure saves nothing and reports CSV record numbers including the header.
 
@@ -37,7 +37,7 @@ No additional migration is needed. Coverage: `php artisan test --filter=Supplier
 
 ## Medicine CSV imports
 
-Open **Medicines → Import CSV** (requires `manage_inventory`). No additional database migration is needed for this feature on an up-to-date installation.
+Open **Medicines → Import CSV** (requires `manage_products`). No additional database migration is needed for this feature on an up-to-date installation.
 
 - **New medicines:** download the product template, replace/delete the example row, and save as CSV UTF-8. Each row creates one medicine and one base/default selling unit. `buying_cost` is required per base unit, supports up to six decimal places, and supplies automatic pricing until the medicine has a purchase. Missing categories can optionally be created; typed unit name/short-name pairs are created automatically. Existing barcodes, including archived medicines, are rejected; blank barcodes are generated. This import does not update existing medicines.
 - **Units and prices:** export the current unit/price template, keep `product_id` unchanged, edit both prices, and upload. Barcode and product name are reference columns. Copy a product ID into another row and enter any unit name/short-name pair to add it without initial Unit setup. Unit names and short names must each be unique within that medicine, matching onlineshop behavior. Existing unit IDs are preserved and omitted rows are unchanged. Existing base units and conversion factors cannot be changed through this import. To change the default selling unit, include both the old and new default rows.

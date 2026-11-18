@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Middleware\EnsureUserHasPermission;
 use App\Models\Branch;
 use App\Models\Inventory;
 use App\Models\InventoryBatch;
@@ -22,7 +21,6 @@ class CustomerReturnCostAccountingTest extends TestCase
 
     public function test_customer_return_uses_original_sale_price_and_cost(): void
     {
-        $this->withoutMiddleware(EnsureUserHasPermission::class);
         config(['app.url' => 'http://localhost']);
         URL::forceRootUrl('http://localhost');
 
@@ -32,6 +30,8 @@ class CustomerReturnCostAccountingTest extends TestCase
             'status' => 'Active',
         ]);
         $user = User::factory()->create(['branch_id' => $branch->id]);
+        $this->grantPermissions($user, ['process_sale', 'approve_returns']);
+        \App\Models\CashSession::create(['branch_id' => $branch->id, 'user_id' => $user->id, 'opening_amount' => 0, 'opened_at' => now(), 'status' => 'open']);
         $product = Product::factory()->create();
         $unit = Unit::create(['name' => 'Tablet', 'short_name' => 'tab']);
         $batch = InventoryBatch::create([
@@ -77,6 +77,7 @@ class CustomerReturnCostAccountingTest extends TestCase
 
         $response = $this->actingAs($user)->post('/returns', [
             'type' => 'Customer',
+            'payment_method' => 'Cash',
             'reference_id' => $sale->id,
             'reason' => 'Customer returned old purchase',
             'items' => [[
@@ -99,8 +100,10 @@ class CustomerReturnCostAccountingTest extends TestCase
 
         $this->actingAs($user)->post("/returns/status/{$return->id}", [
             'status' => 'Approved',
-        ])->assertSessionHasNoErrors();
+        ])->assertSessionHasErrors('status');
 
+        $this->assertSame('Approved', $return->status);
+        $this->assertEquals(10, $return->settlement_paid);
         $this->assertSame(11, $batch->fresh()->quantity);
         $this->assertEquals(6.909091, round((float) $batch->fresh()->purchase_price, 6));
         $this->assertSame(11, Inventory::where('product_id', $product->id)->value('quantity'));

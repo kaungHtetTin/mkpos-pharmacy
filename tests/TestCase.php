@@ -23,6 +23,23 @@ abstract class TestCase extends BaseTestCase
         DB::table('pricing_states')->insert(['business_id'=>$this->fixtureBusiness->id,'id'=>1,'version'=>1]);
         foreach (['selling_price'=>'Selling price','wholesale_price'=>'Wholesale price'] as $code=>$name) PricingRule::forceCreate(['code'=>$code,'name'=>$name]);
     }
+    protected function grantPermissions(\App\Models\User $user, array $slugs): void
+    {
+        $role = \App\Models\Role::create(['name' => 'Test access '.\Illuminate\Support\Str::uuid()]);
+        foreach ($slugs as $slug) {
+            $permission = \App\Models\Permission::firstOrCreate(['slug' => $slug], ['name' => $slug]);
+            $role->permissions()->attach($permission);
+        }
+        $user->roles()->attach($role);
+    }
+
+    protected function businessToken(\App\Models\User $user, string $name = 'test-device'): string
+    {
+        $token = $user->createToken($name);
+        $token->accessToken->forceFill(['business_id' => app(BusinessContext::class)->requireId()])->save();
+        return $token->plainTextToken;
+    }
+
     public function call($method, $uri, $parameters=[], $cookies=[], $files=[], $server=[], $content=null)
     {
         if ($this->fixtureBusiness) app(BusinessContext::class)->set(null);

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import AuthSplitLayout from '@/Layouts/AuthSplitLayout';
-import { Head, useForm } from '@/spa';
+import { Head, Link, useForm } from '@/spa';
 import { Box, Typography, TextField, Button, Checkbox as MuiCheckbox, FormControlLabel, Alert, Stack } from '@mui/material';
 
 export default function Login({ status }) {
@@ -88,6 +88,7 @@ export default function Login({ status }) {
                             }
                             label={<Typography variant="body2">Remember me</Typography>}
                         />
+                        <Button component={Link} href={route('password.request')} size="small" sx={{ fontSize: 12, minHeight: 28 }}>Forgot password?</Button>
                     </Box>
 
                     <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>

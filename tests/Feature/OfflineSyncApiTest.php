@@ -18,7 +18,6 @@ use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class OfflineSyncApiTest extends TestCase
@@ -68,8 +67,7 @@ class OfflineSyncApiTest extends TestCase
             'status' => 'open',
         ]);
 
-        Sanctum::actingAs($user);
-        $user->currentAccessToken()->forceFill(['business_id'=>app(\App\Tenancy\BusinessContext::class)->requireId()]);
+        $this->withToken($this->businessToken($user));
 
         $payload = [
             'sales' => [
@@ -144,7 +142,6 @@ class OfflineSyncApiTest extends TestCase
         ])->assertStatus(422)
             ->assertJsonPath('message', 'No active cash session. Please open a session first.');
 
-        $this->withoutMiddleware();
         $this->actingAs($user)
             ->post('/pos/checkout', [
                 'payment_method' => 'Cash',
@@ -178,8 +175,8 @@ class OfflineSyncApiTest extends TestCase
             'opened_at' => now(),
             'status' => 'open',
         ]);
-        $deviceOneToken = $user->createToken('cashier-device-one')->plainTextToken;
-        $deviceTwoToken = $user->createToken('cashier-device-two')->plainTextToken;
+        $deviceOneToken = $this->businessToken($user, 'cashier-device-one');
+        $deviceTwoToken = $this->businessToken($user, 'cashier-device-two');
 
         $this->withToken($deviceOneToken)
             ->getJson('http://localhost/api/cashier/sessions/active')
@@ -216,7 +213,7 @@ class OfflineSyncApiTest extends TestCase
             'status' => 'Active',
         ]);
         $user = User::factory()->create(['branch_id' => $branch->id]);
-        $this->givePermission($user, 'Manager', 'Manage Inventory', 'manage_inventory');
+        $this->givePermission($user, 'Manager', 'Manage Purchases', 'manage_purchases');
 
         $supplier = Supplier::create([
             'name' => 'Acme Supplier',
@@ -235,8 +232,7 @@ class OfflineSyncApiTest extends TestCase
             'is_base_unit' => true,
         ]);
 
-        Sanctum::actingAs($user);
-        $user->currentAccessToken()->forceFill(['business_id'=>app(\App\Tenancy\BusinessContext::class)->requireId()]);
+        $this->withToken($this->businessToken($user));
 
         $payload = [
             'purchases' => [

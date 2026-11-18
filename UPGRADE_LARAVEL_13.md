@@ -2,7 +2,9 @@
 
 This is the historical Phase 0 report. The current multi-business branch uses
 [Phase 1 installation instructions](PHASE_1.md), which supersede the database
-and seeding steps below and require a new empty database.
+and seeding steps below and require a new empty database. The inherited failure
+counts below describe the historical baseline; the Phase 1 release verification
+now records a fully passing backend suite.
 
 ## Runtime and packages
 

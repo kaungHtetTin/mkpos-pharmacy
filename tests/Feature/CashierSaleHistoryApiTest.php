@@ -14,7 +14,6 @@ use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class CashierSaleHistoryApiTest extends TestCase
@@ -110,8 +109,7 @@ class CashierSaleHistoryApiTest extends TestCase
             'sale_date' => Carbon::parse('2026-06-19 10:00:00'),
         ]);
 
-        Sanctum::actingAs($user);
-        $user->currentAccessToken()->forceFill(['business_id'=>app(\App\Tenancy\BusinessContext::class)->requireId()]);
+        $this->withToken($this->businessToken($user));
 
         $listResponse = $this->getJson('http://localhost/api/cashier/sales?search=HISTORY');
 
