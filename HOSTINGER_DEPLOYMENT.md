@@ -1,9 +1,53 @@
 # Hostinger deployment
 
-Phase 1 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
-PHP 8.4.27. The deployed application source is commit `5ad6f0a`, including the
-Sales staff query correction verified during rollout. HTTP redirects to HTTPS.
+Phase 2 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
+PHP 8.4.27. The deployed application source is commit `a2fccdf`, including
+subscriptions and manual payment approval. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
+
+## Phase 2 deployment — 18 November 2026
+
+The subscription migration and initialization ran against the existing Phase 1
+database after a private file backup (19,867,559 bytes) and full SQL backup
+(88,331 bytes). The database, owner identity, office identity and their passwords
+were retained. The existing business received its initial 14-day trial, ending
+2 December 2026. No synthetic plans, receipts or payment records were deployed.
+
+The new private release directory is `_pharmacy_phase2_a2fccdf`. Its environment
+and private media were copied server-side from the retained Phase 1 release.
+Only public assets and the front controller were switched. Exact active and
+rollback paths are in the ignored `.hostinger/site.json`.
+
+One pharmacy cron job invokes the PHP 8.4 release's `artisan schedule:run` every
+minute. Laravel runs `subscriptions:process` hourly with an overlap lock. The
+provider's captured cron output confirms execution. The four existing cron jobs
+for pwarmyar.com were preserved. Renewal processing creates manual invoices;
+it never charges a bank account or sends email.
+
+All nine live Chromium check groups passed: preserved owner login, operational
+pages, initial-trial billing/usage, office business administration, plan and
+payment screens, cashier business/subscription binding, offline shell and logout,
+private-file protection, and owner/office logout. No JavaScript errors, HTTP 5xx
+or operational test records were produced. The protected installer and uploaded
+archive were removed; both return HTTP 404. Rollback backups remain private.
+
+The backend suite passes **161 tests and 901 assertions**. Nine additional local
+Chromium flows exercised payment submission/receipt approval, isolation,
+expiry/renewal recovery, mobile dialogs and a synthetic online sale. Both
+production builds and JavaScript checks pass. See [PHASE_2.md](PHASE_2.md).
+
+Before accepting payments, the platform office must configure real plan prices
+at `/platform/plans` and bank/wallet instructions at `/platform/billing`.
+Existing owner and office credentials are unchanged.
+
+For Phase 2 rollback, restore the Phase 1 front controller and public manifests
+from the retained private Phase 2 file backup, and remove or repoint the pharmacy
+cron job. Retain the shared database; the additive billing tables can remain
+unused by Phase 1. Do not reset the database or restore the earlier SQL dump over
+new operational records. Re-enable Phase 2 only after reviewing any billing
+changes made since rollback.
+
+## Phase 1 deployment history
 
 ## Application and data
 
@@ -71,7 +115,7 @@ Owner access remains as previously configured. Platform office credentials are
 provided separately in a private workspace file, never in repository docs.
 Outgoing mail still uses the existing log transport; configure SMTP before
 relying on password-reset email delivery. Physical receipt printing remains a
-hardware-specific check. Subscription billing belongs to the next phase.
+hardware-specific check. Subscription billing is delivered in Phase 2 above.
 
 For rollback, restore the retained old front controller/public manifests from the
 private file backup so the site uses the untouched old app/database. The retained

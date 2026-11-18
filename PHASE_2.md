@@ -170,3 +170,17 @@ plan creation, payment instructions, owner invoices, receipt upload/download and
 approval, business isolation, cashier lock with queue/token preservation, renewal
 recovery using the same token, compact mobile dialogs, and a real synthetic cashier shift/online checkout/receipt. Both production builds
 and JavaScript checks pass.
+
+## Live deployment
+
+Source `a2fccdf` was deployed to https://pharmacypos.pwarmyar.com on 18 November
+2026 without a Git push. The existing business and both login accounts were
+retained; its initial trial ends 2 December 2026. No commercial prices or banking
+details were invented. Office users must configure them before collecting payment.
+
+Nine live browser check groups passed for owner/office billing, operational
+pages, cashier binding and offline shell, logout, and private-file protection.
+The PHP 8.4 scheduler is installed and its execution was confirmed. Temporary
+deployment files were removed after verification; private file and SQL backups
+were retained. See [HOSTINGER_DEPLOYMENT.md](HOSTINGER_DEPLOYMENT.md) for rollout
+and rollback details.
