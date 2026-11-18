@@ -1,121 +1,24 @@
-import { useEffect } from 'react';
-import GuestLayout from '@/Layouts/GuestLayout';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Head, Link, useForm } from '@/spa';
+import React from 'react';
+import AuthSplitLayout from '@/Layouts/AuthSplitLayout';
+import {Head,Link,useForm} from '@/spa';
+import {Alert,Button,MenuItem,Stack,TextField,Typography} from '@mui/material';
 
-export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-    });
-
-    useEffect(() => {
-        return () => {
-            reset('password', 'password_confirmation');
-        };
-    }, []);
-
-    const handleOnChange = (event) => {
-        setData(event.target.name, event.target.type === 'checkbox' ? event.target.checked : event.target.value);
-    };
-
-    const submit = (e) => {
-        e.preventDefault();
-
-        post(route('register'));
-    };
-
-    return (
-        <GuestLayout>
-            <Head title="Register" />
-
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
-
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={handleOnChange}
-                        required
-                    />
-
-                    <InputError message={errors.name} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={handleOnChange}
-                        required
-                    />
-
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={handleOnChange}
-                        required
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
-
-                    <TextInput
-                        id="password_confirmation"
-                        type="password"
-                        name="password_confirmation"
-                        value={data.password_confirmation}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={handleOnChange}
-                        required
-                    />
-
-                    <InputError message={errors.password_confirmation} className="mt-2" />
-                </div>
-
-                <div className="flex items-center justify-end mt-4">
-                    <Link
-                        href={route('login')}
-                        className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                        Already registered?
-                    </Link>
-
-                    <PrimaryButton className="ml-4" disabled={processing}>
-                        Register
-                    </PrimaryButton>
-                </div>
-            </form>
-        </GuestLayout>
-    );
+export default function Register({trial_days=14}){
+    const form=useForm({business_name:'',name:'',email:'',password:'',password_confirmation:'',currency_symbol:'$'});
+    const submit=e=>{e.preventDefault();form.post(route('register'),{onFinish:()=>form.reset('password','password_confirmation')});};
+    const field=(name,label,extra={})=><TextField key={name} required fullWidth size="small" label={label} name={name} value={form.data[name]} onChange={e=>form.setData(name,e.target.value)} error={Boolean(form.errors[name])} helperText={form.errors[name]} {...extra}/>;
+    return <AuthSplitLayout compact title="Create your business." subtitle={`Start with a ${trial_days}-day trial. No payment is required to get started.`} topBarContent={<Button component={Link} href={route('login')} size="small">Sign in</Button>}><Head title="Create business account"/>
+        <Stack component="form" spacing={1.25} onSubmit={submit} sx={{'& .MuiOutlinedInput-root':{minHeight:{xs:40,sm:34}},'& .MuiFormHelperText-root':{mx:0,mt:.5}}}>
+            {field('business_name','Business name',{autoComplete:'organization',autoFocus:true,inputProps:{maxLength:150}})}
+            {field('name','Your name',{autoComplete:'name',inputProps:{maxLength:150}})}
+            {field('email','Owner email',{type:'email',autoComplete:'username',inputProps:{maxLength:255}})}
+            {field('password','Password',{type:'password',autoComplete:'new-password',helperText:form.errors.password||'At least 12 characters.',inputProps:{minLength:12,maxLength:72}})}
+            {field('password_confirmation','Confirm password',{type:'password',autoComplete:'new-password',inputProps:{minLength:12,maxLength:72}})}
+            <TextField select required size="small" label="Business currency" value={form.data.currency_symbol} onChange={e=>form.setData('currency_symbol',e.target.value)} error={Boolean(form.errors.currency_symbol)} helperText={form.errors.currency_symbol}>{[['$','USD — US dollar'],['Ks','MMK — Myanmar kyat'],['฿','THB — Thai baht'],['€','EUR — Euro'],['£','GBP — Pound sterling']].map(([value,label])=><MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
+            <Typography variant="caption" color="text.secondary">One owner account belongs to one business. Add more branches inside your workspace. Subscription payments are reviewed by the platform office.</Typography>
+            {form.errors.registration&&<Alert severity="error">{form.errors.registration}</Alert>}
+            <Button type="submit" variant="contained" disabled={form.processing} sx={{minHeight:38}}>{form.processing?'Creating your business…':'Create business account'}</Button>
+            <Typography variant="caption" textAlign="center">Already have an account? <Link href={route('login')}>Sign in</Link></Typography>
+        </Stack>
+    </AuthSplitLayout>;
 }

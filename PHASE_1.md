@@ -150,8 +150,9 @@ No permission checks or tenant guards were weakened to make the tests pass.
 
 The application now loads its authentication routes, including password recovery,
 profile password updates, password confirmation and signed verification URLs.
-The login form links to recovery. Public registration remains closed; owners and
-staff are still provisioned through their authorized business workflows.
+The login form links to recovery. Owner self-registration is now available as
+described in [OWNER_SIGNUP.md](OWNER_SIGNUP.md). Staff remain provisioned by their
+business owner; the platform office can also provision businesses.
 Password-reset notifications are tested with fake notifications, so verification
 sends no real email. Production mail transport must be configured at deployment.
 

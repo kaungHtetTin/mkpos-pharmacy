@@ -104,6 +104,7 @@ export default function Login({ status }) {
                     </Stack>
                 </Stack>
             </form>
+            <Typography variant="caption" color="text.secondary" sx={{display:'block',mt:2,textAlign:'center'}}>New business owner? <Link href={route('register')}>Create a business account</Link></Typography>
         </AuthSplitLayout>
     );
 }

@@ -1,3 +1,5 @@
+Owners can create a new business account through [self-registration](OWNER_SIGNUP.md).
+
 Platform usage, support, exports, backups and office security are documented in [PHASE_3.md](PHASE_3.md).
 
 # Pharmacy POS System - Full Feature Overview
