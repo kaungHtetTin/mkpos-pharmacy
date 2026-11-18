@@ -101,13 +101,15 @@ class SalesController extends Controller
             ->get();
 
         $salesStaff = User::query()
-            ->select('id', 'name', 'branch_id')
+            ->select('id', 'name')
             ->with('branch:id,name')
             ->whereHas('roles', function ($q) {
                 $q->whereNotIn('name', ['Owner', 'Root']);
             })
             ->where(function ($q) use ($accessibleBranchIds) {
-                $q->whereIn('branch_id', $accessibleBranchIds)
+                $q->whereHas('memberships', fn ($membership) => $membership
+                    ->where('business_id', app(\App\Tenancy\BusinessContext::class)->requireId())
+                    ->whereIn('branch_id', $accessibleBranchIds))
                     ->orWhereHas('branches', function ($branchQuery) use ($accessibleBranchIds) {
                         $branchQuery->whereIn('branches.id', $accessibleBranchIds);
                     });

@@ -282,4 +282,21 @@ class MultiBusinessFoundationTest extends TestCase
     }
 
 
+    public function test_sales_page_loads_staff_from_membership_branches_without_cross_business_accounts(): void
+    {
+        $staff=[];
+        foreach ([$this->a,$this->b] as $business) {
+            $staff[$business->id]=$this->within($business,function () use ($business) {
+                $user=User::factory()->create(['branch_id'=>$this->branch($business)]);
+                $user->roles()->attach($this->role($business,'Cashier'));
+                return $user;
+            });
+        }
+        $this->actingAs($this->alice)->withHeader('X-SPA','true')->get('/sales')
+            ->assertOk()->assertJsonPath('component','Sales/Index')
+            ->assertJsonCount(1,'props.salesStaff')
+            ->assertJsonPath('props.salesStaff.0.id',$staff[$this->a->id]->id)
+            ->assertJsonPath('props.salesStaff.0.branch_id',$this->branch($this->a));
+    }
+
 }
