@@ -1,9 +1,67 @@
 # Hostinger deployment
 
-Phase 2 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
-PHP 8.4.27. The deployed application source is commit `a2fccdf`, including
-subscriptions and manual payment approval. HTTP redirects to HTTPS.
+Phase 3 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
+PHP 8.4.27. The deployed application source is commit `80fb223`, including
+platform usage, support, exports, backups and office MFA. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
+
+## Phase 3 deployment — 18 November 2026
+
+The initial source `33bbfef` and its compiled assets were installed into the
+private `_pharmacy_phase3_33bbfef` release directory. The final source is
+`80fb223`: fixed, hash-checked follow-ups require office MFA for profile/password
+changes and version cashier worker/manifest requests. Original framework, route
+and worker files were retained privately before those updates. Existing accounts, passwords, business IDs and the shared
+Phase 1 database were retained. No QA businesses, plans, tickets or financial
+transactions were deployed.
+
+Before migration, private rollback backups saved the Phase 2 app/public files
+(20,567,132 bytes) and full SQL snapshot (98,729 bytes). Phase 3 also created and
+verified the first AES-256 scheduled backup on Hostinger (12,957 bytes). Scheduled
+archives live in a persistent private sibling directory, outside public_html and
+release directories, with their encryption key kept only in the private server
+environment. Exact paths are in the ignored `.hostinger/site.json`.
+
+The pharmacy scheduler now targets the active Phase 3 directory using PHP 8.4.
+Provider cron output confirms successful execution. The previous pharmacy job
+was replaced; all four unrelated pwarmyar.com jobs remain. Laravel schedules
+hourly subscription processing and daily encrypted backup at 02:15 in the
+configured application timezone. Backup success metadata was current at rollout.
+
+Office accounts retain their credentials and owner role, but their next login
+requires authenticator enrollment before entering office pages or editing their
+account. No live office secret or recovery code was enrolled by the deployment.
+The user must save the recovery codes displayed during enrollment. Separate
+owner and cashier login flows continue to work directly in their assigned business.
+
+Local verification passes **181 backend tests and 1,128 assertions**, ten browser
+flows including cashier checkout/offline reload and the office account MFA
+boundary, both frontend builds and JavaScript checks. A disposable-database
+restore rehearsal verified the encrypted archive and matched source/restore
+records. Production Composer and npm dependency audits report zero advisories;
+the remaining build-only glob advisory is documented in [PHASE_3.md](PHASE_3.md).
+
+The final offline rerun identified a stale service worker in the hosting cache.
+The worker and manifest URLs now carry a version, hosting caches were purged,
+and final verification requires the current `cashier-shell-v6` cache before
+checking offline reload. Pending cashier sales and browser account storage were
+preserved; this update only replaces the public application shell cache.
+
+Final live verification passed ten groups: owner/office access, operational
+pages, billing, support/export forms, private export manifest/tenant checks,
+secure cookies/headers, cashier login, current-worker offline reload, file
+protection and clean logout. No operational QA data was created. All four
+uploaded temporary files were removed and return HTTP 404. Private rollback
+copies and encrypted scheduled backups remain. The remaining deployment action
+for the user is office authenticator enrollment at the next office login.
+
+For rollback, restore the Phase 2 front controller/public manifests from the
+private pre-Phase-3 backup, then repoint the pharmacy scheduler to Phase 2. Retain
+the shared database and all new data. Phase 2 ignores the added office/support
+columns and tables; do not reset the database or overwrite newer operational
+records with an earlier SQL dump. Keep scheduled backup archives and their key
+when rolling back. Full recovery procedures are in
+[OPERATIONS_RUNBOOK.md](OPERATIONS_RUNBOOK.md).
 
 ## Phase 2 deployment — 18 November 2026
 

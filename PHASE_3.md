@@ -93,3 +93,14 @@ Recheck the advisory when updating the toolchain; no suppression or forced downg
 was used to hide it.
 
 Cashier worker URLs use a content hash, and worker manifest requests carry the same version. This prevents stale worker/manifest reuse after releases. Hosting page/CDN caches are purged during rollout.
+
+## Deployment record
+
+Phase 3 is live at https://pharmacypos.pwarmyar.com with application source
+`80fb223`. Ten final live check groups passed, including the current worker's
+offline reload, mandatory office MFA, private owner export validation and normal
+logout. The first encrypted backup was verified on Hostinger, the scheduler was
+repointed, and temporary installers/archives were removed. Existing credentials
+and the database were retained. Office users must enroll their authenticator at
+the next login; no live enrollment secret was created by the deployment. No Git
+push was performed. See HOSTINGER_DEPLOYMENT.md for the retained rollback files.
