@@ -77,6 +77,7 @@ const pageDescriptions = {
     'Branch Management': 'Maintain operating locations and branch status.',
     'Activity Logs': 'Audit important user actions and operational changes.',
     'Platform overview': 'Monitor subscriptions, service usage, collections, and backup health.',
+    'Email delivery': 'Configure the platform sender and verify password-reset email delivery.',
     'Office security': 'Protect your office account with an authenticator and recovery codes.',
     'Support requests': 'Track conversations and manage expiring diagnostic approvals.',
     'Support request': 'Review the conversation and diagnostic access for this request.',
@@ -304,7 +305,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
         .filter((group) => group.visibleItems.length > 0);
 
     if(auth.user?.is_platform_admin){
-        const officeItems=[['platform.dashboard','Overview','grid',['owner','admin','billing','support']],['platform.businesses.index','Businesses','store',['owner','admin']],['platform.plans.index','Plans','receipt',['owner','billing']],['platform.billing.index','Payments','wallet',['owner','billing']],['platform.support.index','Support','users',['owner','admin','support']],['platform.audit','Audit','history',['owner','admin']],['platform.security.index','Security','shieldCheck',['owner','admin','billing','support']]];
+        const officeItems=[['platform.dashboard','Overview','grid',['owner','admin','billing','support']],['platform.businesses.index','Businesses','store',['owner','admin']],['platform.plans.index','Plans','receipt',['owner','billing']],['platform.billing.index','Payments','wallet',['owner','billing']],['platform.support.index','Support','users',['owner','admin','support']],['platform.audit','Audit','history',['owner','admin']],['platform.email.index','Email','receipt',['owner']],['platform.security.index','Security','shieldCheck',['owner','admin','billing','support']]];
         visibleMenuGroups=[{label:'Overview',icon:'grid',visibleItems:officeItems.filter(([, , ,roles])=>roles.includes(auth.user.platform_role)).map(([name,text,icon])=>({key:name,text,icon,href:route(name),routePattern:name,count:0}))}];
     }
 

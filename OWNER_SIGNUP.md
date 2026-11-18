@@ -51,3 +51,5 @@ Six live check groups passed, no test businesses were created live, and existing
 owner/office credentials and cashier offline operation were preserved. The
 scheduler targets the new release; encrypted and rollback backups were retained.
 Temporary deployment files were removed after verification.
+
+Owner accounts can recover forgotten passwords using the flow in [PASSWORD_RECOVERY.md](PASSWORD_RECOVERY.md). The platform owner must configure Hostinger SMTP before reset emails can be delivered.

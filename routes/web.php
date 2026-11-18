@@ -357,6 +357,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/business-members', [\App\Http\Controllers\BusinessController::class,'members'])->name('business-members.index');
     Route::put('/business-members/{user}', [\App\Http\Controllers\BusinessController::class,'updateMember'])->name('business-members.update');
     Route::middleware(['platform.admin',\App\Http\Middleware\OfficeSecurity::class])->prefix('platform')->name('platform.')->group(function () {
+        Route::get('/email',[\App\Http\Controllers\Platform\MailController::class,'index'])->name('email.index');
+        Route::put('/email',[\App\Http\Controllers\Platform\MailController::class,'update'])->name('email.update');
+        Route::post('/email/test',[\App\Http\Controllers\Platform\MailController::class,'test'])->middleware('throttle:office-mail-test')->name('email.test');
         Route::get('/dashboard', [\App\Http\Controllers\Platform\DashboardController::class,'index'])->name('dashboard');
         Route::get('/audit', [\App\Http\Controllers\Platform\DashboardController::class,'audit'])->name('audit');
         Route::get('/security', [\App\Http\Controllers\Platform\OfficeSecurityController::class,'index'])->name('security.index');

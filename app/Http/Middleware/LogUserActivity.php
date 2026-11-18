@@ -30,7 +30,7 @@ class LogUserActivity
         if ($routeName === 'activity-logs.index') {
             return $response;
         }
-        if ($request->is('login', 'logout', 'api/login', 'api/logout')) {
+        if ($request->is('login', 'logout', 'api/login', 'api/logout','forgot-password','reset-password','reset-password/*')) {
             return $response;
         }
 

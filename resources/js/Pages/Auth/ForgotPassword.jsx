@@ -1,54 +1,10 @@
-import GuestLayout from '@/Layouts/GuestLayout';
-import InputError from '@/Components/InputError';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Head, useForm } from '@/spa';
-
-export default function ForgotPassword({ status }) {
-    const { data, setData, post, processing, errors } = useForm({
-        email: '',
-    });
-
-    const onHandleChange = (event) => {
-        setData(event.target.name, event.target.value);
-    };
-
-    const submit = (e) => {
-        e.preventDefault();
-
-        post(route('password.email'));
-    };
-
-    return (
-        <GuestLayout>
-            <Head title="Forgot Password" />
-
-            <div className="mb-4 text-sm text-gray-600">
-                Forgot your password? No problem. Just let us know your email address and we will email you a password
-                reset link that will allow you to choose a new one.
-            </div>
-
-            {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
-
-            <form onSubmit={submit}>
-                <TextInput
-                    id="email"
-                    type="email"
-                    name="email"
-                    value={data.email}
-                    className="mt-1 block w-full"
-                    isFocused={true}
-                    onChange={onHandleChange}
-                />
-
-                <InputError message={errors.email} className="mt-2" />
-
-                <div className="flex items-center justify-end mt-4">
-                    <PrimaryButton className="ml-4" disabled={processing}>
-                        Email Password Reset Link
-                    </PrimaryButton>
-                </div>
-            </form>
-        </GuestLayout>
-    );
+import React from 'react';
+import AuthSplitLayout from '@/Layouts/AuthSplitLayout';
+import {Head,Link,useForm} from '@/spa';
+import {Alert,Button,Stack,TextField,Typography} from '@mui/material';
+export default function ForgotPassword({status,mail_available=true}){
+ const form=useForm({email:''});return <AuthSplitLayout compact title="Forgot your password?" subtitle="Enter your account email to request a secure reset link." topBarContent={<Button component={Link} href={route('login')} size="small">Sign in</Button>}><Head title="Forgot password"/><Stack component="form" spacing={1.5} onSubmit={e=>{e.preventDefault();form.post(route('password.email'));}}>
+ {!mail_available&&<Alert severity="warning">Password reset email is not configured yet. Contact the platform office for help.</Alert>}{status&&<Alert severity="success">{status}</Alert>}
+ <TextField required fullWidth size="small" type="email" label="Account email" autoFocus autoComplete="username" value={form.data.email} onChange={e=>form.setData('email',e.target.value)} error={Boolean(form.errors.email)} helperText={form.errors.email} inputProps={{maxLength:255}}/>
+ <Button type="submit" variant="contained" disabled={form.processing||!mail_available} sx={{minHeight:38}}>{form.processing?'Requesting link…':'Send reset link'}</Button><Typography variant="caption" color="text.secondary">The link expires in one hour and can be used once. You do not need to select a business.</Typography><Button component={Link} href={route('login')} size="small">Back to sign in</Button></Stack></AuthSplitLayout>;
 }

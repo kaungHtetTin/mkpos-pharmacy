@@ -11,13 +11,13 @@ class SecurityHeaders
         $response = $next($r);
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
-        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->headers->set('Referrer-Policy', $r->is('reset-password','reset-password/*')?'no-referrer':'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
         $response->headers->set('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
         if ($r->isSecure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000');
         }
-        if ($r->user() || $r->is('login', 'platform/*')) {
+        if ($r->user() || $r->is('login', 'register', 'forgot-password', 'reset-password', 'reset-password/*', 'platform/*')) {
             $response->headers->set('Cache-Control', 'private, no-store');
         }
         return $response;

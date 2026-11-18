@@ -3,49 +3,39 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
+use App\Models\User;
+use App\Security\RecoveryMail;
 use App\Support\Spa;
+use Illuminate\Http\{Request, RedirectResponse};
+use Illuminate\Support\Facades\{DB, Password};
 use Symfony\Component\HttpFoundation\Response;
-
 class PasswordResetLinkController extends Controller
 {
-    /**
-     * Display the password reset link request view.
-     */
-    public function create(): Response
+    public const MESSAGE = 'If an account uses this email, you will receive a password reset link shortly. Check your inbox and spam folder.';
+    public function create(RecoveryMail $mail): Response
     {
-        return Spa::render('Auth/ForgotPassword', [
-            'status' => session('status'),
-        ]);
+        return Spa::render('Auth/ForgotPassword', ['status' => session('status'), 'mail_available' => $mail->available()]);
     }
-
-    /**
-     * Handle an incoming password reset link request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $r, RecoveryMail $mail): RedirectResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
-
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
-
-        if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', __($status));
+        if (is_string($r->email)) {
+            $r->merge(['email' => mb_strtolower(trim($r->email))]);
         }
-
-        throw ValidationException::withMessages([
-            'email' => [trans($status)],
-        ]);
+        $r->validate(['email' => 'required|string|email:rfc|max:255']);
+        if (!$mail->available()) {
+            return back()->withErrors(['email' => 'Password reset email is not configured yet. Contact the platform office for help.']);
+        }
+        try {
+            DB::transaction(function () use ($r, $mail) {
+                User::withoutGlobalScopes()->where('email', $r->email)->lockForUpdate()->first();
+                $status = Password::sendResetLink($r->only('email'));
+                if ($status === Password::RESET_LINK_SENT) {
+                    $mail->sent();
+                }
+            });
+        } catch (\Throwable $error) {
+            $mail->failed($error);
+        }
+        return back()->with('status', self::MESSAGE);
     }
 }

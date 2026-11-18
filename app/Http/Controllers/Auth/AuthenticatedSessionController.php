@@ -32,6 +32,7 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        $request->session()->put(['auth_user_id'=>$request->user()->id,'auth_epoch'=>(int)$request->user()->auth_epoch]);
         \App\Support\PlatformAudit::record('identity.login',$request->user());
         ActivityLogger::log($request, 'auth.login', 'User logged in.');
 

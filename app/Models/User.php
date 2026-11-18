@@ -14,7 +14,7 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, HasUuid;
 
-    protected $attributes = ['status'=>'Active', 'is_platform_admin'=>false, 'platform_role'=>'owner'];
+    protected $attributes = ['status'=>'Active', 'is_platform_admin'=>false, 'platform_role'=>'owner', 'auth_epoch'=>0];
     protected array $pendingMembership = [];
     protected $appends = ['branch_id', 'active_branch_id'];
 
@@ -54,6 +54,8 @@ class User extends Authenticatable
             }
         });
     }
+
+    public function sendPasswordResetNotification($token): void {$this->notify(new \App\Notifications\AccountPasswordReset($token));}
 
     public function memberships() { return $this->hasMany(BusinessMembership::class); }
     public function businessMembership() { return $this->hasOne(BusinessMembership::class); }
@@ -103,7 +105,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'remember_token',
+        'remember_token', 'auth_epoch',
         'office_mfa_secret', 'office_recovery_codes', 'office_mfa_counter',
     ];
 
@@ -114,7 +116,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'is_platform_admin' => 'boolean',
+        'is_platform_admin' => 'boolean', 'auth_epoch'=>'integer',
         'office_mfa_secret'=>'encrypted', 'office_recovery_codes'=>'array',
     ];
 

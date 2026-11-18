@@ -3,67 +3,50 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\{Spa, PlatformAudit};
 use Illuminate\Auth\Events\PasswordReset;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Http\{Request, RedirectResponse};
+use Illuminate\Support\Facades\{DB, Hash, Password};
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
-use App\Support\Spa;
 use Symfony\Component\HttpFoundation\Response;
-
 class NewPasswordController extends Controller
 {
-    /**
-     * Display the password reset view.
-     */
-    public function create(Request $request): Response
+    public function create(Request $r): Response
     {
-        return Spa::render('Auth/ResetPassword', [
-            'email' => $request->email,
-            'token' => $request->route('token'),
-        ]);
+        $email = is_string($r->email) ? mb_strtolower(trim($r->email)) : '';
+        $token = (string) $r->route('token');
+        $user = filter_var($email, FILTER_VALIDATE_EMAIL) ? User::withoutGlobalScopes()->where('email', $email)->first() : null;
+        $valid = strlen($token) <= 256 && $user && Password::broker()->tokenExists($user, $token);
+        return Spa::render('Auth/ResetPassword', ['email' => $email, 'token' => $token, 'link_valid' => (bool) $valid]);
     }
-
-    /**
-     * Handle an incoming new password request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $r): RedirectResponse
     {
-        $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
-
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user) use ($request) {
-                $user->forceFill([
-                    'password' => Hash::make($request->password),
-                    'remember_token' => Str::random(60),
-                ])->save();
-
-                event(new PasswordReset($user));
-            }
-        );
-
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
-        if ($status == Password::PASSWORD_RESET) {
-            return redirect()->route('login')->with('status', __($status));
+        if (is_string($r->email)) {
+            $r->merge(['email' => mb_strtolower(trim($r->email))]);
         }
-
-        throw ValidationException::withMessages([
-            'email' => [trans($status)],
-        ]);
+        $r->validate(['token' => 'required|string|max:256', 'email' => 'required|string|email:rfc|max:255', 'password' => ['required', 'string', 'confirmed', PasswordRule::min(12), function ($attribute, $value, $fail) {
+            if (strlen($value) > 72) {
+                $fail('Use a password no longer than 72 bytes.');
+            }
+        }]]);
+        $status = DB::transaction(function () use ($r) {
+            $user = User::withoutGlobalScopes()->where('email', $r->email)->lockForUpdate()->first();
+            if (!$user) {
+                return Password::INVALID_TOKEN;
+            }
+            return Password::reset($r->only('email', 'password', 'password_confirmation', 'token'), function ($user) use ($r) {
+                $user->forceFill(['password' => Hash::make($r->password), 'remember_token' => Str::random(60), 'auth_epoch' => (int) $user->auth_epoch + 1])->save();
+                $user->tokens()->delete();
+                PlatformAudit::record('identity.password_reset', $user, $user->businessMembership()->value('business_id'));
+                event(new PasswordReset($user));
+            });
+        });
+        if ($status !== Password::PASSWORD_RESET) {
+            throw ValidationException::withMessages(['token' => 'This reset link is invalid or has expired. Request a new link.']);
+        }
+        return redirect()->route('login')->with('status', 'Your password has been reset. Sign in with your new password. Existing sessions have been signed out.');
     }
 }

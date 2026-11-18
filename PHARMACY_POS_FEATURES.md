@@ -1,3 +1,5 @@
+Secure password recovery and Hostinger sender setup are documented in [PASSWORD_RECOVERY.md](PASSWORD_RECOVERY.md).
+
 Owners can create a new business account through [self-registration](OWNER_SIGNUP.md).
 
 Platform usage, support, exports, backups and office security are documented in [PHASE_3.md](PHASE_3.md).

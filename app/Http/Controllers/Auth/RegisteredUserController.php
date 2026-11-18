@@ -52,6 +52,7 @@ class RegisteredUserController extends Controller
         }
         Auth::login($user);
         $request->session()->regenerate();
+        $request->session()->put(['auth_user_id'=>$request->user()->id,'auth_epoch'=>(int)$request->user()->auth_epoch]);
         return redirect()->route('dashboard')->with('success','Your business is ready. Configure your branch, staff and medicines to get started.');
     }
 }

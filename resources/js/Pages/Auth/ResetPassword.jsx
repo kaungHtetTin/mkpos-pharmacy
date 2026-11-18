@@ -1,94 +1,12 @@
-import { useEffect } from 'react';
-import GuestLayout from '@/Layouts/GuestLayout';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Head, useForm } from '@/spa';
-
-export default function ResetPassword({ token, email }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        token: token,
-        email: email,
-        password: '',
-        password_confirmation: '',
-    });
-
-    useEffect(() => {
-        return () => {
-            reset('password', 'password_confirmation');
-        };
-    }, []);
-
-    const onHandleChange = (event) => {
-        setData(event.target.name, event.target.value);
-    };
-
-    const submit = (e) => {
-        e.preventDefault();
-
-        post(route('password.store'));
-    };
-
-    return (
-        <GuestLayout>
-            <Head title="Reset Password" />
-
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={onHandleChange}
-                    />
-
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        isFocused={true}
-                        onChange={onHandleChange}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
-
-                    <TextInput
-                        type="password"
-                        name="password_confirmation"
-                        value={data.password_confirmation}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={onHandleChange}
-                    />
-
-                    <InputError message={errors.password_confirmation} className="mt-2" />
-                </div>
-
-                <div className="flex items-center justify-end mt-4">
-                    <PrimaryButton className="ml-4" disabled={processing}>
-                        Reset Password
-                    </PrimaryButton>
-                </div>
-            </form>
-        </GuestLayout>
-    );
+import React from 'react';
+import AuthSplitLayout from '@/Layouts/AuthSplitLayout';
+import {Head,Link,useForm} from '@/spa';
+import {Alert,Button,Stack,TextField,Typography} from '@mui/material';
+export default function ResetPassword({token,email='',link_valid=true}){
+ const form=useForm({token,email,password:'',password_confirmation:''});const errors=[...new Set(Object.entries(form.errors).filter(([key])=>!['password','password_confirmation'].includes(key)).flatMap(([,value])=>Array.isArray(value)?value:[value]))];
+ return <AuthSplitLayout compact title="Choose a new password." subtitle="Reset your account password and return to your workspace." topBarContent={<Button component={Link} href={route('login')} size="small">Sign in</Button>}><Head title="Reset password"/>{!link_valid?<Stack spacing={1.5}><Alert severity="warning">This reset link is invalid or has expired. Request a new link to continue.</Alert><Button component={Link} href={route('password.request')} variant="contained">Request a new link</Button></Stack>:<Stack component="form" spacing={1.5} onSubmit={e=>{e.preventDefault();form.post(route('password.store'),{onFinish:()=>form.reset('password','password_confirmation')});}}>
+ {!!errors.length&&<Alert severity="error">{errors.join(' ')}</Alert>}<TextField required size="small" type="email" label="Account email" value={form.data.email} InputProps={{readOnly:true}} autoComplete="username"/>
+ <TextField required size="small" type="password" autoFocus label="New password" autoComplete="new-password" value={form.data.password} onChange={e=>form.setData('password',e.target.value)} error={Boolean(form.errors.password)} helperText={form.errors.password||'At least 12 characters.'} inputProps={{minLength:12,maxLength:72}}/>
+ <TextField required size="small" type="password" label="Confirm new password" autoComplete="new-password" error={Boolean(form.errors.password_confirmation)} helperText={form.errors.password_confirmation} value={form.data.password_confirmation} onChange={e=>form.setData('password_confirmation',e.target.value)} inputProps={{minLength:12,maxLength:72}}/>
+ <Typography variant="caption" color="text.secondary">Your existing sessions and cashier API tokens will be signed out. Office two-factor authentication stays enabled.</Typography><Button type="submit" variant="contained" disabled={form.processing} sx={{minHeight:38}}>{form.processing?'Resetting password…':'Reset password'}</Button><Button component={Link} href={route('password.request')} size="small">Request a new link</Button></Stack>}</AuthSplitLayout>;
 }

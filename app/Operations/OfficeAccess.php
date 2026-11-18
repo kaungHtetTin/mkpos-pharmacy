@@ -11,7 +11,7 @@ final class OfficeAccess
             return false;
         }
         return in_array($area, match ($user->platform_role) {
-            'owner' => ['dashboard', 'businesses', 'billing', 'plans', 'support', 'audit'],
+            'owner' => ['dashboard', 'businesses', 'billing', 'plans', 'support', 'audit', 'email'],
             'admin' => ['dashboard', 'businesses', 'support', 'audit'],
             'billing' => ['dashboard', 'billing', 'plans'],
             'support' => ['dashboard', 'support'],

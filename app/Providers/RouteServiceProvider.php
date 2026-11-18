@@ -56,6 +56,9 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
+        RateLimiter::for('password-link',fn(Request $r)=>[Limit::perMinute(6)->by($r->ip()),Limit::perHour(20)->by($r->ip()),Limit::perHour(6)->by(hash('sha256',is_string($r->email)?mb_strtolower(trim($r->email)):'invalid'))]);
+        RateLimiter::for('password-reset-submit',fn(Request $r)=>Limit::perMinute(6)->by($r->ip()));
+        RateLimiter::for('office-mail-test',fn(Request $r)=>Limit::perHour(5)->by($r->user()?->id??$r->ip()));
         RateLimiter::for('business-signup', fn(Request $r)=>[Limit::perMinute(5)->by($r->ip()),Limit::perDay(20)->by($r->ip())]);
         RateLimiter::for('office-mfa',fn(Request $r)=>Limit::perMinute(5)->by($r->user()?->id??$r->ip()));
         RateLimiter::for('support-actions',fn(Request $r)=>Limit::perMinute(20)->by($r->user()?->id??$r->ip()));
