@@ -1,9 +1,38 @@
 # Hostinger deployment
 
 Phase 3 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
-PHP 8.4.27. The deployed application source is commit `80fb223`, including
-platform usage, support, exports, backups and office MFA. HTTP redirects to HTTPS.
+PHP 8.4.27. The deployed application source is commit `1dc6d4f`, including
+owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
+
+## Owner self-registration — 18 November 2026
+
+Owners can now create a business at `/register`, linked from the login page.
+Source `1dc6d4f` is deployed in the private `_pharmacy_owner_signup_1dc6d4f`
+release directory. Signup creates a separate owner, business, first branch,
+defaults and initial trial atomically. Existing office provisioning remains.
+No schema changes or resets were needed. See [OWNER_SIGNUP.md](OWNER_SIGNUP.md).
+
+The complete suite passes **191 tests and 1,217 assertions**. Seven synthetic
+browser flows passed for signup, isolation, duplicate emails, repeated login
+and mobile layout. Six live groups passed for signup discovery/validation,
+existing owner identity, office MFA, mobile layout and cashier offline reload.
+No synthetic business accounts were created live. The first trial is not gated
+by email verification, and the feature does not send verification emails.
+
+Before activation, private rollback copies saved the previous app/public files
+(21,212,011 bytes) and SQL database (106,678 bytes). A new encrypted backup was
+created and verified (13,862 bytes). The persistent backup directory and key
+were retained. The pharmacy cron job now points to this release, its output
+confirms execution, and all four unrelated jobs remain. Hosting caches were
+purged. The one-use installer and archive were removed and return HTTP 404.
+Existing passwords, business IDs, office MFA and operational records are retained.
+No Git push was performed.
+
+For rollback, restore the preceding Phase 3 front controller/manifests from the
+private backup and repoint the pharmacy scheduler. Retain the database and any
+businesses created after signup became available; the preceding Phase 3 schema
+can read them. Never restore an older SQL dump over newly created businesses.
 
 ## Phase 3 deployment — 18 November 2026
 

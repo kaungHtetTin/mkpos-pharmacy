@@ -43,3 +43,11 @@ throttling and immediate cashier API access. Both production builds pass. Seven
 Chromium flows pass against a synthetic database, including the compact mobile
 form, subsequent login and two owners with the same business name in separate
 workspaces. No synthetic businesses are created during live verification.
+
+## Live deployment
+
+Available at https://pharmacypos.pwarmyar.com/register, source `1dc6d4f`.
+Six live check groups passed, no test businesses were created live, and existing
+owner/office credentials and cashier offline operation were preserved. The
+scheduler targets the new release; encrypted and rollback backups were retained.
+Temporary deployment files were removed after verification.
