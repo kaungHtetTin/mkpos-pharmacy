@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cashier-shell-v5';
+const CACHE_VERSION = 'cashier-shell-v6';
 const APP_SCOPE = new URL(self.registration.scope).pathname;
 const APP_SHELL = APP_SCOPE;
 const ASSET_ROOT = new URL('../cashier-build/', self.registration.scope).pathname;
@@ -10,6 +10,7 @@ self.addEventListener('install', (event) => {
             const cache=await caches.open(CACHE_VERSION);
             await cache.add(new Request(APP_SHELL,{cache:'reload'}));
             const manifestUrl=new URL('../cashier-build/manifest.json',self.registration.scope);
+            manifestUrl.searchParams.set('v',new URL(self.location.href).searchParams.get('v') || CACHE_VERSION);
             const response=await fetch(manifestUrl,{cache:'no-cache',credentials:'same-origin'});
             if(!response.ok) throw new Error('Cashier assets unavailable');
             const manifest=await response.json();

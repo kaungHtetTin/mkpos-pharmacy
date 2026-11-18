@@ -75,7 +75,7 @@ node --test tests/js/automaticPricing.test.mjs tests/browser/business-storage.te
 npm run build
 ```
 
-The regression suite passes 181 tests and 1,126 assertions, including 20 Phase 3 tests. Cases cover office role boundaries, pagination, currency isolation, tenant exports and cleanup, owner consent, diagnostic expiry/revocation/reassignment, MFA enrollment/replay/recovery/session expiry, security headers, encrypted backups and tamper detection. A separate synthetic database backup was decrypted and restored into a newly created disposable database, and source/restore counts matched before the rehearsal database was removed. Browser verification and deployment results are recorded in the deployment notes after rollout.
+The regression suite passes 181 tests and 1,128 assertions, including 20 Phase 3 tests. Cases cover office role boundaries, pagination, currency isolation, tenant exports and cleanup, owner consent, diagnostic expiry/revocation/reassignment, MFA enrollment/replay/recovery/session expiry, security headers, encrypted backups and tamper detection. A separate synthetic database backup was decrypted and restored into a newly created disposable database, and source/restore counts matched before the rehearsal database was removed. Browser verification and deployment results are recorded in the deployment notes after rollout.
 
 Eight synthetic Chromium flows passed for MFA setup/recovery, owner/office support,
 consent and revocation, cross-business rejection, conversation closure, native ZIP
@@ -91,3 +91,5 @@ trusted repository configuration; these packages are not uploaded as Node servic
 Do not expose the development server publicly or feed it untrusted glob patterns.
 Recheck the advisory when updating the toolchain; no suppression or forced downgrade
 was used to hide it.
+
+Cashier worker URLs use a content hash, and worker manifest requests carry the same version. This prevents stale worker/manifest reuse after releases. Hosting page/CDN caches are purged during rollout.

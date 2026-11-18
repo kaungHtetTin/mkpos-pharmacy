@@ -230,6 +230,7 @@ class PlatformOperationsTest extends TestCase
     }
     public function test_authenticated_responses_have_hardening_headers(): void
     {
+        $this->get('/cashier')->assertOk()->assertSee('cashier-sw.js?v=',false);
         $this->actingAs($this->owner)->get('/support')->assertHeader('X-Content-Type-Options', 'nosniff')->assertHeader('X-Frame-Options', 'DENY')->assertHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
         $this->assertStringContainsString('no-store', $this->get('/support')->headers->get('Cache-Control'));
     }

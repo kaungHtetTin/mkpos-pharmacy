@@ -153,7 +153,7 @@ Route::get('/cashier/{path?}', function () {
             'noScriptMessage' => $translate('This cashier app requires JavaScript.'),
             'baseUrl' => rtrim(url('/'), '/'),
             'apiUrl' => rtrim(url('/api'), '/'),
-            'serviceWorkerUrl' => url('/cashier-sw.js'),
+            'serviceWorkerUrl' => url('/cashier-sw.js').'?v='.substr(hash_file('sha256',public_path('cashier-sw.js')),0,16),
             'scopeUrl' => url('/cashier/'),
         ],
     ]);
