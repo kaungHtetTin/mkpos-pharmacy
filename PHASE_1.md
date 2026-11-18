@@ -7,7 +7,8 @@ can have multiple branches and grant its staff access to those branches.
 Platform office accounts remain separate and cannot belong to a business.
 
 This changes the Laravel backend and database schema as well as both interfaces.
-It targets a new installation and has not been deployed to the existing site.
+It uses a fresh database and is deployed at https://pharmacypos.pwarmyar.com.
+The old app/database are retained as described in [HOSTINGER_DEPLOYMENT.md](HOSTINGER_DEPLOYMENT.md).
 Subscription billing remains a later phase.
 
 ## Account and login behavior
@@ -128,7 +129,7 @@ isolation, validation, suspension, pricing and cashier checkout isolation.
 
 Final release verification:
 
-- Full backend suite: **137 passed, 783 assertions, zero failures**.
+- Full backend suite: **138 passed, 788 assertions, zero failures**.
 - Both frontend production builds pass.
 - Cashier storage isolation and automatic-pricing JavaScript checks pass.
 - Nine Chromium flows pass: business login, account access, separate records,
@@ -154,10 +155,13 @@ staff are still provisioned through their authorized business workflows.
 Password-reset notifications are tested with fake notifications, so verification
 sends no real email. Production mail transport must be configured at deployment.
 
-The live site and original development database remain untouched. Installation
-still requires the fresh database described above. Physical receipt printing and
-production deployment checks remain environment-specific checks, outside this
-local Phase 1 verification.
+The live release has also passed owner, office and cashier verification, including
+workspace pages, private-file protection, offline reload and logout. The Sales
+staff selector uses membership branches and has a cross-business regression test.
+The live owner account was preserved while the app switched to a fresh Phase 1
+database; the old database and private file/SQL backups remain available.
+The original local development database was not reset. Physical receipt printing
+and real outgoing mail delivery remain environment-specific checks.
 
 ## Next phase
 
