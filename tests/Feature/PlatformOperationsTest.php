@@ -60,8 +60,8 @@ class PlatformOperationsTest extends TestCase
     }
     public function test_office_roles_are_enforced_server_side(): void
     {
-        $this->actingAs($this->office)->delete('/profile',['password'=>'password'])->assertForbidden();
-        $this->assertDatabaseHas('users',['id'=>$this->office->id]);
+        $this->actingAs($this->office)->delete('/profile', ['password' => 'password'])->assertForbidden();
+        $this->assertDatabaseHas('users', ['id' => $this->office->id]);
         $this->office->forceFill(['platform_role' => 'support'])->save();
         $this->actingAs($this->office)->get('/platform/dashboard', ['X-SPA' => 'true'])->assertOk()->assertJsonPath('props.billing_visible', false);
         foreach (['/platform/billing', '/platform/plans', '/platform/businesses', '/platform/audit'] as $url) {
@@ -272,6 +272,9 @@ class PlatformOperationsTest extends TestCase
     public function test_mfa_session_expires_and_a_new_code_is_accepted(): void
     {
         config(['operations.mfa_required' => true]);
+        $this->actingAs($this->office)->get('/profile')->assertRedirect(route('platform.security.index'));
+        $this->put('/password', ['current_password' => 'password', 'password' => 'changed-password-example', 'password_confirmation' => 'changed-password-example'])->assertRedirect(route('platform.security.index'));
+        $this->assertTrue(Hash::check('password', $this->office->fresh()->password));
         $secret = Totp::secret();
         $this->office->forceFill(['office_mfa_secret' => $secret])->save();
         $this->actingAs($this->office)->post('/platform/security/challenge', ['code' => Totp::code($secret, intdiv(now()->timestamp, 30))])->assertRedirect(route('platform.dashboard'));

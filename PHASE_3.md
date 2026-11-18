@@ -23,7 +23,7 @@ Supported roles:
 
 All permissions are enforced on the server. Every role can manage its own MFA. The CLI is the staff provisioning/recovery boundary; there is no business-access impersonation endpoint. Business accounts cannot be promoted to office accounts.
 
-Production office routes require TOTP enrollment and verification. Sign in, enter the current password on **Office security**, add the displayed setup key to an authenticator, and verify a code. Eight one-use recovery codes are displayed once; store them privately. Codes follow standard 30-second TOTP with a one-window clock tolerance, reject replay and are rate limited. Enrollment secrets are encrypted with the application key; recovery codes are hashed. Neither is serialized in shared account props or written into audit payloads. A verified session expires after eight hours or logout.
+Production office routes require TOTP enrollment and verification. Sign in, enter the current password on **Office security**, add the displayed setup key to an authenticator, and verify a code. Eight one-use recovery codes are displayed once; store them privately. Codes follow standard 30-second TOTP with a one-window clock tolerance, reject replay and are rate limited. Enrollment secrets are encrypted with the application key; recovery codes are hashed. Neither is serialized in shared account props or written into audit payloads. A verified session expires after eight hours or logout. The same MFA boundary protects office profile and password changes.
 
 Lost MFA requires trusted server access, not a support-ticket request:
 
@@ -75,7 +75,7 @@ node --test tests/js/automaticPricing.test.mjs tests/browser/business-storage.te
 npm run build
 ```
 
-The regression suite passes 181 tests and 1,121 assertions, including 20 Phase 3 tests. Cases cover office role boundaries, pagination, currency isolation, tenant exports and cleanup, owner consent, diagnostic expiry/revocation/reassignment, MFA enrollment/replay/recovery/session expiry, security headers, encrypted backups and tamper detection. A separate synthetic database backup was decrypted and restored into a newly created disposable database, and source/restore counts matched before the rehearsal database was removed. Browser verification and deployment results are recorded in the deployment notes after rollout.
+The regression suite passes 181 tests and 1,126 assertions, including 20 Phase 3 tests. Cases cover office role boundaries, pagination, currency isolation, tenant exports and cleanup, owner consent, diagnostic expiry/revocation/reassignment, MFA enrollment/replay/recovery/session expiry, security headers, encrypted backups and tamper detection. A separate synthetic database backup was decrypted and restored into a newly created disposable database, and source/restore counts matched before the rehearsal database was removed. Browser verification and deployment results are recorded in the deployment notes after rollout.
 
 Eight synthetic Chromium flows passed for MFA setup/recovery, owner/office support,
 consent and revocation, cross-business rejection, conversation closure, native ZIP
