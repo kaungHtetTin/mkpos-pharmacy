@@ -1,9 +1,40 @@
 # Hostinger deployment
 
 Phase 3 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
-PHP 8.4.27. The deployed application source is commit `1dc6d4f`, including
+PHP 8.4.27. The deployed application source is commit `fe0d7e3`, including password recovery,
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
+
+## Password recovery — 19 November 2026 (application timezone)
+
+Source `fe0d7e3` is live in `_pharmacy_password_recovery_fe0d7e3`. Recovery uses
+expiring, one-use links and revokes the reset account's browser sessions and API
+tokens. The migration adds `users.auth_epoch` and encrypted platform sender
+settings. Existing passwords, business records and office MFA are retained.
+Existing web users sign in again after deployment; existing cashier API tokens
+remain valid until logout or a password reset.
+
+The user will configure Hostinger SMTP personally at
+[Platform office → Email](https://pharmacypos.pwarmyar.com/platform/email).
+Delivery is initially disabled and the public form reports that honestly.
+No existing mailbox passwords, DNS records or live account passwords were
+changed. No real email was sent; external delivery requires user setup and an
+inbox test. See [PASSWORD_RECOVERY.md](PASSWORD_RECOVERY.md).
+
+Before activation, private rollback copies saved app/public files (21,695,716
+bytes) and SQL (108,169 bytes). An encrypted backup was created and verified
+(14,299 bytes); the persistent backup directory and key were retained. The new
+pharmacy cron executed successfully, the previous pharmacy job was removed,
+and all four unrelated jobs remain. Hosting caches were purged. The temporary
+installer and archive were removed and both return HTTP 404.
+
+Validation: **210 tests, 1,338 assertions**, both production builds, JavaScript
+checks, seven synthetic browser groups and six live groups passed. Live checks
+covered compact recovery, invalid links/security headers, existing owner login,
+office MFA, mobile layout and cashier offline reload. No Git push was performed.
+For rollback, preserve operational data and reset password hashes, invalidate
+older browser sessions and review token revocation as documented in recovery
+operations. Do not restore an old SQL dump over current business records.
 
 ## Owner self-registration — 18 November 2026
 

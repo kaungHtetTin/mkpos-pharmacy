@@ -91,3 +91,16 @@ For rollback to an older release without session-version enforcement, invalidate
 its session files/database sessions before exposing it, and revoke API tokens as
 appropriate. Preserve reset password hashes and all business data; do not restore
 an old database over operational records just to roll back the UI.
+
+## Live deployment
+
+Source `fe0d7e3` is deployed at https://pharmacypos.pwarmyar.com. Six live browser
+groups passed: sender readiness and recovery navigation, invalid-link handling
+and response headers, existing owner login, office MFA protection, compact mobile
+layout and cashier offline reload. Temporary deployment files return HTTP 404;
+the scheduler targets the new release and private backups are retained.
+
+Configure the mailbox at [Platform office → Email](https://pharmacypos.pwarmyar.com/platform/email).
+SMTP is left disabled for the user's configuration. No live passwords were
+reset, no mailbox credentials or DNS were changed, and no external email was
+sent. Confirm delivery in the recipient inbox after saving SMTP settings.
