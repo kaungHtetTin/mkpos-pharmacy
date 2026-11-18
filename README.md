@@ -13,6 +13,15 @@ Start with [upgrade and setup instructions](UPGRADE_LARAVEL_13.md). That documen
 includes the verified checks, comparison against the original Laravel 9 baseline
 and unresolved legacy test failures.
 
+## Subscriptions
+
+[Phase 2](PHASE_2.md) adds configurable plans, trials, grace periods, manual
+subscription payments with platform-office approval, renewal invoices, plan
+limits, and cashier expiry recovery. Each user account still belongs to one
+business. Owners manage billing through their account menu; platform office
+manages plans, payment instructions and review. Configure real prices and payment
+details in the office rather than using development examples.
+
 ## Automatic pricing
 
 Open **Settings → Automatic Pricing** using the settings permission (`manage_settings`). Selling and wholesale prices each have a Manual/Automatic rule, markup percentage, minimum profit per base unit, and upward rounding increment. Both rules and all existing unit prices start in Manual mode; installing this feature does not change catalog prices.

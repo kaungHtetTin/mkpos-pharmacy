@@ -16,6 +16,7 @@ trait BelongsToBusiness
         });
         static::saving(function ($model) {
             $id = app(BusinessContext::class)->requireId();
+            app(\App\Billing\SubscriptionAccess::class)->assertOperational(app(BusinessContext::class)->business());
             if (($model->business_id && $model->business_id !== $id) || ($model->exists && $model->getRawOriginal('business_id') !== $id)) {
                 throw ValidationException::withMessages(['business_id'=>'This record belongs to another business.']);
             }
@@ -37,6 +38,7 @@ trait BelongsToBusiness
         });
         static::deleting(function ($model) {
             abort_unless($model->business_id === app(BusinessContext::class)->requireId(), 403);
+            app(\App\Billing\SubscriptionAccess::class)->assertOperational(app(BusinessContext::class)->business());
         });
     }
 

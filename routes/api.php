@@ -75,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     | Base URL: /api/cashier
     */
     Route::prefix('cashier')->middleware('permission:process_sale')->group(function () {
+        Route::post('/checkout', [SyncController::class, 'onlineSale']);
         // Products
         Route::get('/products', [CashierPosController::class, 'searchProducts']);
 
@@ -133,4 +134,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/purchases/{purchase}', [StaffPurchaseController::class, 'show'])->middleware('permission:manage_purchases');
     });
 
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/account/subscription', [\App\Http\Controllers\BillingController::class,'status']);
+    Route::get('/billing', [\App\Http\Controllers\BillingController::class,'index']);
+    Route::post('/billing/invoices', [\App\Http\Controllers\BillingController::class,'invoice'])->middleware('throttle:10,1');
+    Route::post('/billing/invoices/{invoice}/payments', [\App\Http\Controllers\BillingController::class,'submit'])->middleware('throttle:10,1');
+    Route::post('/billing/invoices/{invoice}/void', [\App\Http\Controllers\BillingController::class,'void']);
+    Route::put('/billing/renewal', [\App\Http\Controllers\BillingController::class,'renewal']);
 });

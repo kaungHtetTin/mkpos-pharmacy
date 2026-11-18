@@ -287,6 +287,9 @@ export default function App() {
     const [profile, setProfile] = useState(() => loadJson(keys.profile, null));
     const [booting, setBooting] = useState(Boolean(token));
     const [fatalError, setFatalError] = useState('');
+    const [billingLock, setBillingLock] = useState(null);
+    useEffect(() => { const blocked = event => setBillingLock(event.detail); window.addEventListener('cashier:subscription-blocked', blocked); return () => window.removeEventListener('cashier:subscription-blocked', blocked); }, []);
+    useEffect(() => { if (!token || !profile?.subscription?.access_until) return; const check = () => { if (Date.now() >= Date.parse(profile.subscription.access_until)) setBillingLock({ message: 'Your cached subscription access has ended. Connect and renew with your business owner.', subscription: profile.subscription }); }; check(); const timer = setInterval(check, 15000); return () => clearInterval(timer); }, [token, profile?.subscription?.access_until]);
 
     const bootstrap = useCallback(async (activeToken) => {
         setBooting(true);
@@ -305,10 +308,15 @@ export default function App() {
             }
             saveJson(keys.profile, nextProfile);
             setProfile(nextProfile);
+            setBillingLock(nextProfile.subscription?.plan?.features?.cashier === false ? { message: 'POS and cashier access are not included in this business plan.', subscription: nextProfile.subscription } : null);
             setToken(activeToken);
             localStorage.setItem(keys.token, activeToken);
         } catch (error) {
-            if (error.status === 401 || error.status === 403) {
+            if (['subscription_required', 'feature_unavailable'].includes(error.code)) {
+                setBillingLock({ message: error.message, subscription: error.subscription });
+                setToken(activeToken);
+                localStorage.setItem(keys.token, activeToken);
+            } else if (error.status === 401 || error.status === 403) {
                 localStorage.removeItem(keys.profile);
                 configureBusinessStorage(null,null);
                 setFatalError(error.message || 'Please sign in again.');
@@ -345,10 +353,12 @@ export default function App() {
         configureBusinessStorage(null,null);
         setToken('');
         setProfile(null);
+        setBillingLock(null);
         window.location.hash = '';
     };
 
     if (booting) return <Splash />;
+    if (billingLock && token) return <main className="login-page"><section className="login-card"><div className="login-intro"><span className="eyebrow">BUSINESS ACCESS</span><h1>Subscription needs attention</h1><p>{billingLock.message}</p></div><div className="form-alert">Your saved cart and pending sales are kept on this device. Ask your business owner to resolve billing, then retry.</div><div className="form-stack"><button className="button button--primary" disabled={!online} onClick={() => bootstrap(token)}>Check subscription again</button><button className="button button--soft" onClick={logout}>Sign out</button></div></section></main>;
     if (!token || !profile) {
         return (
             <>

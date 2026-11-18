@@ -134,7 +134,7 @@ export default function ProfileScreen({ token, profile, setProfile, online, inst
                 <button className="settings-row" type="button" onClick={() => { setError(''); setPasswordOpen(true); }}><span className="settings-row__icon"><Icon name="lock" size={19} /></span><span><strong>Change password</strong><small>Update account security</small></span><Icon name="chevron" size={18} /></button>
             </section>
 
-            <section className="settings-card"><div className="settings-card__title"><span><Icon name="store" size={19}/></span><div><h2>Business</h2><p>Your assigned business</p></div></div><strong>{profile.business?.name || 'Current business'}</strong></section>
+            <section className="settings-card"><div className="settings-card__title"><span><Icon name="store" size={19}/></span><div><h2>Business</h2><p>Your assigned business</p></div></div><strong>{profile.business?.name || 'Current business'}</strong>{profile.subscription && <p>{profile.subscription.plan?.name} · {profile.subscription.state}{profile.subscription.access_until ? ` · through ${new Date(profile.subscription.access_until).toLocaleDateString()}` : ''}</p>}</section>
             <section className="settings-card">
                 <div className="settings-card__title"><span><Icon name="store" size={19} /></span><div><h2>Register & branch</h2><p>Your current sales location</p></div></div>
                 {branches.length > 1 ? (

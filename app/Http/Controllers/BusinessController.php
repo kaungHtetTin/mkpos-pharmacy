@@ -36,7 +36,7 @@ class BusinessController extends Controller
                 abort_if($owners<=1,422,'A business must keep at least one active owner.');
             }
             abort_if($member->id===$request->user()->id && $data['status']!=='Active',422,'You cannot deactivate your own membership.');
-            $member->memberships()->where('business_id',$id)->update(['status'=>$data['status'],'branch_id'=>$data['branch_id'],'active_branch_id'=>$data['branch_id']]);
+            $member->memberships()->where('business_id',$id)->firstOrFail()->update(['status'=>$data['status'],'branch_id'=>$data['branch_id'],'active_branch_id'=>$data['branch_id']]);
             $member->roles()->sync([$data['role_id']]);
             $member->branches()->syncWithoutDetaching([$data['branch_id']]);
         });

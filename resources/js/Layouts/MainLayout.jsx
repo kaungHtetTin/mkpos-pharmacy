@@ -76,6 +76,9 @@ const pageDescriptions = {
     'Permission Reference': 'Review the permissions available throughout the application.',
     'Branch Management': 'Maintain operating locations and branch status.',
     'Activity Logs': 'Audit important user actions and operational changes.',
+    'Subscription plans': 'Set plan prices, billing terms, included features, and usage limits.',
+    'Subscriptions & payments': 'Review manual payments, track subscriptions, and manage renewal invoices.',
+    'Subscription & billing': 'Review your plan, usage, invoices, and payment submissions.',
     'System Settings': 'Configure business identity, localization, appearance, and POS behavior.',
     'Profile Settings': 'Update your account details, password, and profile information.',
     'System Operating Procedure (SOP)': 'Use the operating guide for routine sales, stock, and finance tasks.',
@@ -118,7 +121,7 @@ function EmbeddedPage({ children, header, shell }) {
 }
 
 function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarget }) {
-    const { auth, flash, settings = {}, business, nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
+    const { auth, flash, settings = {}, business, subscription, errors: pageErrors = {}, nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
     const { mode = 'light', toggleColorMode } = useContext(ColorModeContext);
     const pharmacyName = settings.invoice?.pharmacy_name || 'Pharmacy POS';
     const appBase = ziggy?.base || window.laravel_base || '';
@@ -621,6 +624,8 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                 }}
             >
                 <Toolbar sx={{ minHeight: '48px !important' }} />
+                {pageErrors.subscription && <Alert severity="error" sx={{ m: 1.5, mb: 0 }}>{Array.isArray(pageErrors.subscription) ? pageErrors.subscription.join(' ') : pageErrors.subscription}</Alert>}
+                {subscription && ['trialing','grace','expired','canceled','canceling','unsubscribed'].includes(subscription.state) && <Alert severity={subscription.can_operate ? 'info' : 'warning'} sx={{ m: 1.5, mb: 0 }} action={auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) ? <Button component={Link} href={route('billing.index')} size="small">Manage billing</Button> : undefined}>Subscription: {subscription.state}. {subscription.access_until && `Access through ${new Date(subscription.access_until).toLocaleDateString()}.`} {!subscription.can_operate && 'Contact your business owner to renew.'}</Alert>}
                 {children}
             </Box>
 
@@ -628,7 +633,10 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                 <Box component="li" role="presentation" sx={{ px: 1.25, py: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 700, overflowWrap: 'anywhere' }}>{auth.user?.name}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary', overflowWrap: 'anywhere' }}>{auth.user?.email}</Typography>{auth.user?.roles?.length > 0 && <Typography sx={{ mt: 0.5, fontSize: 10, color: 'text.secondary' }}>{auth.user.roles.map((role) => __(role)).join(', ')}</Typography>}</Box>
                 <Divider sx={{ my: 0.5 }} />
                 {business && <Box component="li" role="presentation" sx={{ px:1.25, py:0.75 }}><Typography variant="caption" color="text.secondary">Current business</Typography><Typography sx={{fontSize:12,fontWeight:700,overflowWrap:'anywhere'}}>{business.name}</Typography></Box>}
+                {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('billing.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="receipt" size={16}/></ListItemIcon>Subscription & billing</MenuItem>}
                 {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('business-members.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="users" size={16}/></ListItemIcon>Business members</MenuItem>}
+                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.plans.index')} onClick={()=>setProfileMenuAnchor(null)}>Subscription plans</MenuItem>}
+                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.billing.index')} onClick={()=>setProfileMenuAnchor(null)}>Subscription payments</MenuItem>}
                 {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.businesses.index')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="shieldCheck" size={16}/></ListItemIcon>Platform office</MenuItem>}
                 <Divider sx={{ my: 0.5 }} />
                 {[{ ...menuItems.profile, text: 'My profile' }, menuItems.dashboard, menuItems.settings, menuItems.manual].filter(canSee).map((item) => <MenuItem key={item.href} component={Link} href={item.href} onClick={() => setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name={item.icon} size={16} /></ListItemIcon>{__(item.text)}</MenuItem>)}

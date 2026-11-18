@@ -9,6 +9,7 @@ use Illuminate\Validation\ValidationException;
 class BusinessMembership extends Model
 {
     use HasUuid;
+    use \App\Billing\EnforcesPlanLimit;
 
     protected $fillable = ['business_id', 'user_id', 'status', 'branch_id', 'active_branch_id'];
 

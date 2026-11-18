@@ -18,6 +18,11 @@ class User extends Authenticatable
     protected array $pendingMembership = [];
     protected $appends = ['branch_id', 'active_branch_id'];
 
+    public function save(array $options = [])
+    {
+        return \Illuminate\Support\Facades\DB::transaction(fn () => parent::save($options));
+    }
+
     protected static function booted(): void
     {
         static::addGlobalScope('business_member', function ($query) {

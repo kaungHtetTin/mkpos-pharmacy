@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import MainLayout from '@/Layouts/MainLayout';
-import { Head, router, useForm } from '@/spa';
+import { Head, Link, router, useForm } from '@/spa';
+import { BillingLinks } from '@/Components/BillingUi';
 import { Alert, Box, Button, Chip, Dialog, DialogTitle, DialogContent, DialogActions, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField } from '@mui/material';
 
 export default function Businesses({ auth, businesses = [], recent_activity = [] }) {
     const [open, setOpen] = useState(false);
     const form = useForm({ name: '', slug: '', owner_name: '', owner_email: '', owner_password: '', currency_symbol: '$' });
     const submit = event => { event.preventDefault(); form.post(route('platform.businesses.store'), { onSuccess: () => { setOpen(false); form.reset(); } }); };
-    return <MainLayout auth={auth} header="Platform office"><Head title="Business administration" /><Stack spacing={1.5}>
-        <Alert severity="info">Manage business accounts and availability here. Each business has its own accounts and can contain multiple branches. Subscription billing is not enabled.</Alert>
+    return <MainLayout auth={auth} header="Platform office"><Head title="Business administration" /><Stack spacing={1.5}><BillingLinks />
+        <Alert severity="info">Manage business accounts and availability here. Each business has its own accounts and can contain multiple branches. New businesses start with a trial. Review subscription plans and manual payments in the billing office.</Alert>
         <Button variant="contained" sx={{ alignSelf: 'flex-start' }} onClick={() => setOpen(true)}>Create business</Button>
         <TableContainer><Table size="small"><TableHead><TableRow><TableCell>Business</TableCell><TableCell>Slug</TableCell><TableCell align="right">Members</TableCell><TableCell>Status</TableCell><TableCell>Action</TableCell></TableRow></TableHead><TableBody>
-            {businesses.map(business => <TableRow key={business.id}><TableCell>{business.name}</TableCell><TableCell>{business.slug}</TableCell><TableCell align="right">{business.memberships_count}</TableCell><TableCell><Chip size="small" label={business.status} color={business.status === 'Active' ? 'success' : 'warning'} /></TableCell><TableCell><Button onClick={() => { if (window.confirm(`${business.status === 'Active' ? 'Suspend' : 'Activate'} ${business.name}?`)) router.put(route('platform.businesses.update', business.id), { status: business.status === 'Active' ? 'Suspended' : 'Active' }); }}>{business.status === 'Active' ? 'Suspend' : 'Activate'}</Button></TableCell></TableRow>)}
+            {businesses.map(business => <TableRow key={business.id}><TableCell>{business.name}</TableCell><TableCell>{business.slug}</TableCell><TableCell align="right">{business.memberships_count}</TableCell><TableCell><Chip size="small" label={business.status} color={business.status === 'Active' ? 'success' : 'warning'} /></TableCell><TableCell><Button component={Link} href={route('platform.billing.index', { business_id: business.id })} size="small">Billing</Button><Button onClick={() => { if (window.confirm(`${business.status === 'Active' ? 'Suspend' : 'Activate'} ${business.name}?`)) router.put(route('platform.businesses.update', business.id), { status: business.status === 'Active' ? 'Suspended' : 'Active' }); }}>{business.status === 'Active' ? 'Suspend' : 'Activate'}</Button></TableCell></TableRow>)}
             {!businesses.length && <TableRow><TableCell colSpan={5}>No businesses created yet.</TableCell></TableRow>}
         </TableBody></Table></TableContainer>
         <Box><Box component="h2" sx={{fontSize:14, fontWeight:700}}>Recent platform activity</Box><TableContainer><Table size="small"><TableHead><TableRow><TableCell>Action</TableCell><TableCell>Actor</TableCell><TableCell>Business</TableCell><TableCell>When</TableCell></TableRow></TableHead><TableBody>{recent_activity.map(entry=><TableRow key={entry.id}><TableCell>{entry.action}</TableCell><TableCell>{entry.actor?.name || 'System'}</TableCell><TableCell>{entry.business?.name || 'Platform'}</TableCell><TableCell>{new Date(entry.created_at).toLocaleString()}</TableCell></TableRow>)}{!recent_activity.length&&<TableRow><TableCell colSpan={4}>No platform activity yet.</TableCell></TableRow>}</TableBody></Table></TableContainer></Box>

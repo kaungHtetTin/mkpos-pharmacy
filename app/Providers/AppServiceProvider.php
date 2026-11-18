@@ -14,6 +14,7 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->scoped(\App\Tenancy\BusinessContext::class);
+        $this->app->scoped(\App\Billing\SubscriptionAccess::class);
 
     }
 

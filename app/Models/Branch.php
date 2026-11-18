@@ -10,6 +10,7 @@ use App\Traits\HasUuid;
 class Branch extends Model
 {
     use \App\Tenancy\BelongsToBusiness;
+    use \App\Billing\EnforcesPlanLimit;
 
     use HasFactory, HasUuid;
 

@@ -3,7 +3,7 @@
 The multi-business foundation is now described in [PHASE_1.md](PHASE_1.md):
 platform office, independent businesses, one-business user accounts, multiple
 branches per business, automatic business login, private media and isolated cashier data.
-Subscription billing remains a later phase. The operational modules below run
+Subscription plans, manual payment approval, renewals and limits are described in [PHASE_2.md](PHASE_2.md). The operational modules below run
 inside the account's assigned business.
 
 This document describes the complete feature set of the Pharmacy POS application implemented in this repository. It combines the product specification, current implementation status, API behavior, and business workflow described across the project documentation.

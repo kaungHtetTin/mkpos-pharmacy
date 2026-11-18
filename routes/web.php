@@ -341,9 +341,25 @@ Route::middleware('auth')->group(function () {
 
 // Central identity and platform office routes are separate from the tenant workspace.
 Route::middleware('auth')->group(function () {
+    Route::get('/billing', [\App\Http\Controllers\BillingController::class,'index'])->name('billing.index');
+    Route::post('/billing/invoices', [\App\Http\Controllers\BillingController::class,'invoice'])->middleware('throttle:10,1')->name('billing.invoices.store');
+    Route::post('/billing/invoices/{invoice}/payments', [\App\Http\Controllers\BillingController::class,'submit'])->middleware('throttle:10,1')->name('billing.payments.store');
+    Route::post('/billing/invoices/{invoice}/void', [\App\Http\Controllers\BillingController::class,'void'])->name('billing.invoices.void');
+    Route::put('/billing/renewal', [\App\Http\Controllers\BillingController::class,'renewal'])->name('billing.renewal');
+    Route::get('/billing/payments/{payment}/receipt', [\App\Http\Controllers\BillingController::class,'receipt'])->name('billing.receipt');
     Route::get('/business-members', [\App\Http\Controllers\BusinessController::class,'members'])->name('business-members.index');
     Route::put('/business-members/{user}', [\App\Http\Controllers\BusinessController::class,'updateMember'])->name('business-members.update');
     Route::middleware('platform.admin')->prefix('platform')->name('platform.')->group(function () {
+        Route::get('/plans', [\App\Http\Controllers\Platform\BillingController::class,'plans'])->name('plans.index');
+        Route::post('/plans', [\App\Http\Controllers\Platform\BillingController::class,'savePlan'])->name('plans.store');
+        Route::put('/plans/{plan}', [\App\Http\Controllers\Platform\BillingController::class,'savePlan'])->name('plans.update');
+        Route::get('/billing', [\App\Http\Controllers\Platform\BillingController::class,'index'])->name('billing.index');
+        Route::get('/billing/business-search', [\App\Http\Controllers\Platform\BillingController::class,'businesses'])->name('billing.businesses');
+        Route::post('/billing/invoices', [\App\Http\Controllers\Platform\BillingController::class,'invoice'])->name('billing.invoices.store');
+        Route::post('/billing/invoices/{invoice}/void', [\App\Http\Controllers\Platform\BillingController::class,'void'])->name('billing.invoices.void');
+        Route::post('/billing/payments/{payment}/review', [\App\Http\Controllers\Platform\BillingController::class,'review'])->name('billing.payments.review');
+        Route::get('/billing/payments/{payment}/receipt', [\App\Http\Controllers\BillingController::class,'receipt'])->name('billing.receipt');
+        Route::put('/billing/settings', [\App\Http\Controllers\Platform\BillingController::class,'settings'])->name('billing.settings');
         Route::get('/businesses', [\App\Http\Controllers\Platform\BusinessController::class,'index'])->name('businesses.index');
         Route::post('/businesses', [\App\Http\Controllers\Platform\BusinessController::class,'store'])->name('businesses.store');
         Route::put('/businesses/{business}', [\App\Http\Controllers\Platform\BusinessController::class,'update'])->name('businesses.update');

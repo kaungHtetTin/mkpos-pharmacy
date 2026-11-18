@@ -10,6 +10,13 @@ use Illuminate\Validation\ValidationException;
 
 class SyncController extends Controller
 {
+    public function onlineSale(Request $request, SaleSyncService $service)
+    {
+        abort_unless($request->user()->hasPermission('process_sale'),403);
+        $result=$service->sync($request->all(),$request->user());
+        return response()->json(['sale'=>$result['model'],'created'=>$result['created']],$result['created']?201:200);
+    }
+
     public function sales(Request $request, SaleSyncService $saleSyncService)
     {
         if (!$request->user()->hasPermission('process_sale')) {

@@ -35,6 +35,7 @@ class HandleSpaRequests
 
         return [
             'business' => app(\App\Tenancy\BusinessContext::class)->business()?->only(['id','name','slug','status']),
+            'subscription' => ($business = app(\App\Tenancy\BusinessContext::class)->business()) ? app(\App\Billing\SubscriptionAccess::class)->summary($business) : null,
             'csrf_token' => csrf_token(),
             'errors' => $request->session()->get('errors')?->getBag('default')->getMessages() ?? [],
             'auth' => [

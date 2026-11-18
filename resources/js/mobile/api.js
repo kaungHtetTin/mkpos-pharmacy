@@ -7,6 +7,8 @@ export class ApiError extends Error {
         this.name = 'ApiError';
         this.status = status;
         this.errors = errors;
+        this.code = payload.code;
+        this.subscription = payload.subscription;
     }
 }
 
@@ -35,6 +37,7 @@ export async function apiRequest(path, { token, method = 'GET', json, body, sign
     const payload = contentType.includes('application/json') ? await response.json() : null;
 
     if (!response.ok) {
+        if (token && (payload?.code === 'subscription_required' || (payload?.code === 'feature_unavailable' && payload?.feature === 'cashier'))) window.dispatchEvent(new CustomEvent('cashier:subscription-blocked', { detail: { message: payload.message, subscription: payload.subscription } }));
         const firstValidationError = Object.values(payload?.errors || {}).flat()[0];
         throw new ApiError(
             firstValidationError || payload?.message || `Request failed (${response.status}).`,

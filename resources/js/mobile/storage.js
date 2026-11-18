@@ -13,6 +13,7 @@ export const keys = {
     profile: `${PREFIX}profile`,
     products: branchId => scoped(`products.${branchId || 'none'}`),
     get customers() { return scoped('customers'); },
+    checkoutAttempt: branchId => scoped(`checkout-attempt.${branchId || 'none'}`),
     session: branchId => scoped(`session.${branchId || 'none'}`),
     cart: (userId, branchId) => scoped(`cart.${userId}.${branchId || 'none'}`),
     get pendingSales() { return scoped('pending-sales'); },

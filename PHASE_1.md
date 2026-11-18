@@ -9,7 +9,7 @@ Platform office accounts remain separate and cannot belong to a business.
 This changes the Laravel backend and database schema as well as both interfaces.
 It uses a fresh database and is deployed at https://pharmacypos.pwarmyar.com.
 The old app/database are retained as described in [HOSTINGER_DEPLOYMENT.md](HOSTINGER_DEPLOYMENT.md).
-Subscription billing remains a later phase.
+Subscription billing is implemented in [Phase 2](PHASE_2.md).
 
 ## Account and login behavior
 
@@ -163,8 +163,8 @@ database; the old database and private file/SQL backups remain available.
 The original local development database was not reset. Physical receipt printing
 and real outgoing mail delivery remain environment-specific checks.
 
-## Next phase
+## Phase 2
 
-Subscription plans, payments, recurring billing, quotas, trial/grace periods and
-subscription enforcement follow this foundation. Administrative business
-suspension is available; subscription billing is not implemented in Phase 1.
+[Phase 2 subscriptions](PHASE_2.md) now supplies plans, trials/grace, manual
+payment submission and office approval, recurring invoices, resource limits and
+subscription enforcement. This document records the Phase 1 foundation.

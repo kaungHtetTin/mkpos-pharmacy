@@ -14,6 +14,7 @@ class ResolveBusiness
     {
         $context = app(BusinessContext::class);
         $context->set(null);
+        app(\App\Billing\SubscriptionAccess::class)->forget();
 
         try {
             $user = $request->user();
@@ -45,6 +46,11 @@ class ResolveBusiness
             }
 
             $context->set($business);
+            $identityOrBilling = $request->is('billing','billing/*','profile','password','confirm-password','verify-email','verify-email/*','email/verification-notification','api/account/profile','api/account/password','api/account/subscription','api/billing','api/billing/*');
+            if (!$identityOrBilling) {
+                $feature = $request->is('pos','pos/*','api/cashier/*') ? 'cashier' : ($request->is('api/sync/*','api/v1/sync/*') ? 'offline_sync' : ($request->routeIs('reports.*') ? 'reports' : null));
+                app(\App\Billing\SubscriptionAccess::class)->assertOperational($business, $feature);
+            }
             $user->unsetRelation('roles')->unsetRelation('branch')->unsetRelation('branches')->unsetRelation('activeBranch');
             return $next($request);
         } finally {

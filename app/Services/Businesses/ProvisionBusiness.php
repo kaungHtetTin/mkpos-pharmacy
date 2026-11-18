@@ -17,6 +17,7 @@ final class ProvisionBusiness
                 throw \Illuminate\Validation\ValidationException::withMessages(['owner_email' => 'Each business needs a separate owner account.']);
             }
             $business = Business::create(['name'=>$data['name'],'slug'=>$data['slug'],'status'=>'Active']);
+            app(\App\Billing\SubscriptionService::class)->startTrial($business);
             app(BusinessContext::class)->run($business, function () use ($business,$owner,$data) {
                 foreach (PharmacyAccess::PERMISSIONS as $definition) Permission::firstOrCreate(['slug'=>$definition['slug']],['name'=>$definition['name']]);
                 foreach (PharmacyAccess::ROLES as $name) {

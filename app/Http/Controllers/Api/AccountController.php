@@ -184,6 +184,7 @@ class AccountController extends Controller
         $user->loadMissing(['branch', 'activeBranch']);
 
         return [
+            'subscription' => app(\App\Billing\SubscriptionAccess::class)->summary(app(\App\Tenancy\BusinessContext::class)->business()),
             'business_id' => app(\App\Tenancy\BusinessContext::class)->id(),
             'business' => app(\App\Tenancy\BusinessContext::class)->business()?->only(['id','name','slug']),
             'id' => $user->id,

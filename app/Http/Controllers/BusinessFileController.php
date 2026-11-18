@@ -9,7 +9,8 @@ class BusinessFileController extends Controller
     public function show(Request $request, string $business, string $path)
     {
         if (!$request->hasValidSignature()) abort_unless(app(BusinessContext::class)->id()===$business,404);
-        abort_unless(Business::whereKey($business)->where('status','Active')->exists(),404);
+        $account = Business::whereKey($business)->where('status','Active')->firstOrFail();
+        abort_unless(app(\App\Billing\SubscriptionAccess::class)->summary($account)['can_operate'],403);
         abort_if(str_contains($path,'..') || str_contains($path,'\\') || str_starts_with($path,'/'),404);
         $file='businesses/'.$business.'/'.$path;
         abort_unless(Storage::disk('local')->exists($file),404);

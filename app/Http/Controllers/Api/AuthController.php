@@ -43,6 +43,8 @@ class AuthController extends Controller
             return response()->json(['message' => 'Your account has no active business access. Contact your administrator.'], 403);
         }
 
+        app(\App\Billing\SubscriptionAccess::class)->assertOperational($business);
+
         // Create token (device_name is useful for managing multiple sessions)
         $deviceName = $validated['device_name'] ?? $request->userAgent() ?? 'Android App';
         $issued = $user->createToken($deviceName);
