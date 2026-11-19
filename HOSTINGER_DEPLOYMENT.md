@@ -7,7 +7,8 @@ No Git push was needed for this archive deployment.
 
 ## Mobile business-owner POS flow — 20 November 2026
 
-Phones and tablets below the desktop breakpoint use a dedicated Products → Cart →
+Frontend patch `5289eb4` is live. Phones and tablets below the desktop breakpoint
+use a dedicated Products → Cart →
 Payment → Sale complete flow. Search and category/price-type controls lead the
 catalog, products use touch-friendly rows, and a safe-area-aware bottom dock keeps
 the cart total and next action reachable. Infinite loading, explicit load-more
@@ -26,8 +27,15 @@ new sale actions. Same-page browser Back preserves the cart between steps.
 Desktop POS, cashier PWA assets, Laravel backend logic and database schema are
 unchanged. Browser scenarios use intercepted product/payment fixtures; they do
 not create operational sales. Shared navigation, login, loading and business
-storage regression checks also pass. Live deployment verification is recorded
-below after publishing.
+storage regression checks also pass. Five workflow scenarios passed locally and
+live at 320×780, 390×844, 768×1024, 844×390 and 1440×1000. Five shared app-bar
+scenarios and five login/loading/storage checks passed locally. A read-only live
+smoke check matched the actual catalog API response and found no JavaScript errors
+or operational writes. The verification account currently has an empty catalog.
+
+Private source/manifest rollback and encrypted backups are retained. Business and
+office login pages return HTTP 200; the temporary deployment helper and archive
+were removed and return HTTP 404. No Git push was performed.
 
 ## Separate mobile app bar — 20 November 2026
 
