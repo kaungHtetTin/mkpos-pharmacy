@@ -5,6 +5,21 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Inventory detail table spacing — 20 November 2026
+
+Frontend patch `2aadc1a` separates the inventory summary, movement history and batch
+section using a responsive grid gap: 24px on desktop and 16px on phones. The shared
+legacy wrapper style resets Paper margins, so a component bottom margin previously
+had no effect and the tables touched. Grid spacing survives that reset. The batch
+table now has a Stock batches heading; the grid column can shrink without causing
+page overflow.
+
+Both production builds passed. Local and live Chromium checks at 1440px and 390px
+measured the expected gaps and verified filters, pagination, per-product history
+and contained table scrolling. This patch changes one frontend source file and
+built assets; no backend logic, schema or business data changed. Rollback backups
+are retained and temporary deployment files return HTTP 404. No Git push was made.
+
 ## Inventory stock movement history — 20 November 2026
 
 Source patch `b175aff` adds a business-wide ledger at `/inventory/movements` and a
