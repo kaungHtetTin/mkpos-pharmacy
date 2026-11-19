@@ -136,7 +136,12 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
     useLayoutEffect(() => {
         const bar = appBarRef.current;
         if (!bar) return;
-        const resize = () => document.documentElement.style.setProperty('--mkpos-appbar-height', `${bar.getBoundingClientRect().height}px`);
+        const resize = () => {
+            const height = `${bar.getBoundingClientRect().height}px`;
+            if (document.documentElement.style.getPropertyValue('--mkpos-appbar-height') === height) return;
+            document.documentElement.style.setProperty('--mkpos-appbar-height', height);
+            window.dispatchEvent(new Event('mkpos:appbar-resize'));
+        };
         resize();
         const observer = new ResizeObserver(resize);
         observer.observe(bar);

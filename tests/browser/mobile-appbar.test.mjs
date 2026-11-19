@@ -49,6 +49,9 @@ for (const [width, height] of [[320, 780], [390, 844], [768, 1024], [844, 390], 
                     assert.equal(await bar.locator('[data-mobile-appbar]').count(),0);
                     assert(await bar.getByRole('button',{name:/Collapse navigation|Expand navigation/}).isVisible());
                 }
+                if (path === '/products/create') {
+                    await page.waitForFunction(() => { const button=[...document.querySelectorAll('button')].find((node)=>node.textContent.includes('Create Medicine')); return button && button.getBoundingClientRect().bottom<=innerHeight; });
+                }
                 if (mobile && path === '/suppliers') {
                     await bar.locator('button.MuiButton-contained').click();
                     await page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true}).click();

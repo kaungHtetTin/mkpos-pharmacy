@@ -15,10 +15,12 @@ export default function ViewportPanel({ children, sx = {} }) {
         const observer = new ResizeObserver(resize);
         observer.observe(ref.current.parentElement);
         window.addEventListener('resize', resize);
+        window.addEventListener('mkpos:appbar-resize', resize);
         window.visualViewport?.addEventListener('resize', resize);
         return () => {
             observer.disconnect();
             window.removeEventListener('resize', resize);
+            window.removeEventListener('mkpos:appbar-resize', resize);
             window.visualViewport?.removeEventListener('resize', resize);
         };
     }, []);
