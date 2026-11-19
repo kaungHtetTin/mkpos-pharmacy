@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, router, usePage } from '@/spa';
 import { Alert, Box, Button, Chip, Stack, Typography } from '@mui/material';
 
-export const billingMoney = (minor, currency = 'USD') => `${currency} ${(Number(minor || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export const billingMoney = (minor, currency = 'MMK') => `${currency} ${(Number(minor || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: currency === 'MMK' ? 0 : 2, maximumFractionDigits: 2 })}`;
 export const billingDate = value => value ? new Date(value).toLocaleString() : '—';
 export const billingKey = () => crypto.randomUUID();
 export function BillingStatus({ value }) {

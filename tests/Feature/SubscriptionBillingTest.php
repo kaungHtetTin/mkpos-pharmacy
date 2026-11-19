@@ -34,7 +34,7 @@ class SubscriptionBillingTest extends TestCase
     private function within(Business $business, callable $callback) { return app(BusinessContext::class)->run($business,$callback(...)); }
     private function plan(array $values=[]): SubscriptionPlan
     {
-        return SubscriptionPlan::create(array_replace(['code'=>'plan-'.Str::lower(Str::random(8)),'name'=>'Standard','amount_minor'=>1999,'currency'=>'USD','interval_months'=>1,'grace_days'=>3,'max_branches'=>2,'max_users'=>3,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true,'is_trial'=>false],$values));
+        return SubscriptionPlan::create(array_replace(['code'=>'plan-'.Str::lower(Str::random(8)),'name'=>'Standard','amount_minor'=>1999,'currency'=>'MMK','interval_months'=>1,'grace_days'=>3,'max_branches'=>2,'max_users'=>3,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true,'is_trial'=>false],$values));
     }
     private function invoice(?SubscriptionPlan $plan=null, ?Business $business=null, ?User $actor=null): SubscriptionInvoice
     {
@@ -199,7 +199,7 @@ class SubscriptionBillingTest extends TestCase
     }
     public function test_only_office_can_edit_plans_and_prices_use_exact_minor_units(): void
     {
-        $data=['code'=>'starter','name'=>'Starter','price'=>'0.10','currency'=>'USD','interval_months'=>1,'grace_days'=>2,'max_branches'=>1,'max_users'=>2,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>false,'reports'=>false],'is_active'=>true,'is_public'=>true];
+        $data=['code'=>'starter','name'=>'Starter','price'=>'0.10','currency'=>'MMK','interval_months'=>1,'grace_days'=>2,'max_branches'=>1,'max_users'=>2,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>false,'reports'=>false],'is_active'=>true,'is_public'=>true];
         $this->actingAs($this->owner)->postJson('/platform/plans',$data)->assertForbidden();
         $this->actingAs($this->office)->postJson('/platform/plans',$data)->assertRedirect();$this->assertDatabaseHas('subscription_plans',['code'=>'starter','amount_minor'=>10]);
         $this->postJson('/platform/plans',array_replace($data,['code'=>'bad-price','price'=>'19.995']))->assertUnprocessable()->assertJsonValidationErrors('price');

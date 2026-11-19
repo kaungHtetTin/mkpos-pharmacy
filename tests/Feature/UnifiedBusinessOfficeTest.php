@@ -23,7 +23,7 @@ class UnifiedBusinessOfficeTest extends TestCase
         $this->owner=User::factory()->create();
         $this->business=app(ProvisionBusiness::class)->create(['name'=>'Unified Alpha','slug'=>'unified-alpha'],$this->owner);
         $this->other=app(ProvisionBusiness::class)->create(['name'=>'Unified Beta','slug'=>'unified-beta'],User::factory()->create());
-        $this->plan=SubscriptionPlan::create(['code'=>'unified-paid','name'=>'Unified Paid','amount_minor'=>2500,'currency'=>'USD','interval_months'=>1,'grace_days'=>3,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true,'is_trial'=>false]);
+        $this->plan=SubscriptionPlan::create(['code'=>'unified-paid','name'=>'Unified Paid','amount_minor'=>2500,'currency'=>'MMK','interval_months'=>1,'grace_days'=>3,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true,'is_trial'=>false]);
         $this->actingAs($this->office);
     }
     private function url(string $p='',?Business $b=null):string {return '/platform/businesses/'.($b??$this->business)->id.($p?'/'.$p:'');}
@@ -169,5 +169,44 @@ class UnifiedBusinessOfficeTest extends TestCase
         $summary=app(\App\Billing\SubscriptionAccess::class)->summary($this->business);
         $this->assertSame('suspended',$summary['state']);$this->assertFalse($summary['can_operate']);
         $this->assertTrue(BusinessSubscription::where('business_id',$this->other->id)->sole()->auto_renew);
+    }
+    public function test_platform_currency_defaults_to_mmk_and_foreign_finance_writes_fail(): void
+    {
+        $this->assertSame('MMK', BusinessSubscription::where('business_id',$this->business->id)->sole()->plan_snapshot['currency']);
+        foreach(['/platform/finance','/platform/founders','/platform/bank-books'] as $path){
+            $this->get($path,['X-SPA'=>'true'])->assertOk()->assertJsonPath('props.summary.currency','MMK')->assertJsonPath('props.currencies',['MMK']);
+            $this->get($path.'?currency=USD')->assertSessionHasErrors('currency');
+        }
+        $data=['name'=>'MMK Cash','currency'=>'USD','account_reference'=>'TEST','is_active'=>true,'is_default'=>true];
+        $this->post('/platform/bank-books',$data)->assertSessionHasErrors('currency');
+        $this->assertDatabaseCount('platform_bank_books',0);
+        $data['currency']='MMK';$this->post('/platform/bank-books',$data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('platform_bank_books',['name'=>'MMK Cash','currency'=>'MMK']);
+        $this->post('/platform/finance/entries',['currency'=>'USD'])->assertSessionHasErrors('currency');
+        $this->assertDatabaseCount('platform_finance_entries',0);
+    }
+    public function test_new_invoices_and_foc_grants_cannot_use_historical_foreign_plans(): void
+    {
+        $this->plan->update(['currency'=>'USD']);
+        $data=['plan_id'=>$this->plan->id,'request_key'=>(string)Str::uuid(),'due_at'=>today()->toDateString(),'note'=>'Must not relabel'];
+        $this->post($this->url('invoices'),$data)->assertSessionHasErrors('currency');
+        $this->post($this->url('complimentary'),$data+['months'=>1,'confirmed'=>true])->assertSessionHasErrors('currency');
+        $this->assertDatabaseCount('subscription_invoices',0);
+        $this->assertSame('USD',$this->plan->fresh()->currency);$this->assertSame(2500,$this->plan->fresh()->amount_minor);
+        $this->get($this->url(),['X-SPA'=>'true'])->assertOk()->assertJsonCount(0,'props.plans');
+        $this->post('/platform/plans',['currency'=>'USD'])->assertSessionHasErrors('currency');
+    }
+    public function test_trial_currency_normalization_changes_no_amounts_or_subscription_dates(): void
+    {
+        $s=BusinessSubscription::where('business_id',$this->business->id)->sole();
+        $plan=SubscriptionPlan::findOrFail($s->plan_id);$plan->update(['currency'=>'USD']);
+        $snapshot=$s->plan_snapshot;$snapshot['currency']='USD';$s->update(['plan_snapshot'=>$snapshot]);
+        $before=$s->only('trial_started_at','trial_ends_at','auto_renew');
+        $this->artisan('platform:normalize-trial-currency')->assertSuccessful();
+        $this->assertSame('MMK',$s->fresh()->plan_snapshot['currency']);
+        $this->assertEquals($before,$s->fresh()->only('trial_started_at','trial_ends_at','auto_renew'));
+        $this->assertSame(0,$plan->fresh()->amount_minor);
+        $this->assertDatabaseCount('subscription_invoices',0);$this->assertDatabaseCount('subscription_payments',0);
+        $this->artisan('platform:normalize-trial-currency')->assertSuccessful();
     }
 }

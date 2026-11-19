@@ -7,8 +7,8 @@ and uses Pharmacy POS's approved subscription payments as its income source.
 ## Setup
 
 1. Open Bank books and create a separate book for each bank, wallet or cash
-   balance. Choose its three-letter currency and, optionally, make it the
-   receiving book for future subscription approvals in that currency.
+   balance. Currency is fixed to MMK. Optionally make it the receiving book for future
+   MMK subscription approvals.
 2. Open Founders, choose Edit founder shares, and enter the real founder names
    and percentages. Active shares must total exactly 100%. No founders, bank
    accounts, percentages or opening balances are seeded by deployment.
@@ -28,7 +28,10 @@ transfers, withdraw funds, charge customers or send founder payments.
 ## Accounting rules
 
 All money is stored as integer minor units under the existing two-decimal
-currency convention. Currencies are never combined or exchanged automatically.
+currency convention (MMK 1,000 is stored as 100,000 minor units). New platform
+plans, invoices, FOC grants, books and financial entries use MMK only. Historical
+foreign-currency records retain their original currency and are never relabeled
+or exchanged automatically. Whole-kyat amounts display without unnecessary .00.
 A book's currency is fixed after creation.
 
 - Recorded profit = approved subscription receipts + other income − expenses.

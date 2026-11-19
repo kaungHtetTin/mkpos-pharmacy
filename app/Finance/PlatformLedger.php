@@ -4,6 +4,7 @@ namespace App\Finance;
 
 use App\Models\{PlatformFounder as Founder, PlatformBankBook as Book, PlatformFinanceReceipt as Receipt, PlatformFinanceEntry as Entry, SubscriptionPayment, User};
 use App\Support\PlatformAudit;
+use App\Billing\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -60,6 +61,7 @@ final class PlatformLedger
     }
     public function saveBook(?Book $book, array $data, User $actor): Book
     {
+        Money::assertCurrency($data['currency']);
         return DB::transaction(function () use ($book, $data, $actor) {
             $control = $this->lockCurrency($data['currency']);
             if ($book?->exists) {
@@ -167,6 +169,7 @@ final class PlatformLedger
     {
         $amount = $this->amount((string) $data['amount']);
         $currency = $data['currency'];
+        Money::assertCurrency($currency);
         $type = $data['type'];
         if (!in_array($type, self::TYPES, true)) {
             $this->invalid('type', 'Invalid entry type.');

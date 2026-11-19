@@ -85,3 +85,12 @@ no duplicate period. Suspension remains in effect until explicitly lifted.
 Automatic renewal is turned off to avoid a later charge; the office or owner can
 explicitly resume ordinary renewal if desired. FOC access expires on its end date.
 No schema migration is required.
+
+## Platform currency
+
+All new platform plans, invoices and FOC grants use MMK. Plan currency is fixed
+in the form and enforced on the server. Business-owner billing lists MMK plans
+only. Existing financial/invoice snapshots retain their original currency; no
+exchange rate or relabeling is applied to historical amounts. Zero-value system
+trial metadata is normalized to MMK without changing trial dates or limits.
+Business POS currency settings are separate from platform subscription currency.

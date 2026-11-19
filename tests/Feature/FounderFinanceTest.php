@@ -33,7 +33,7 @@ class FounderFinanceTest extends TestCase
         $this->a = app(ProvisionBusiness::class)->create(['name' => 'Finance Alpha', 'slug' => 'finance-alpha'], $this->owner);
         $this->b = app(ProvisionBusiness::class)->create(['name' => 'Finance Beta', 'slug' => 'finance-beta'], $this->other);
     }
-    private function book(string $name = 'Main USD', string $currency = 'USD', bool $default = true): Book
+    private function book(string $name = 'Main MMK', string $currency = 'MMK', bool $default = true): Book
     {
         return $this->ledger->saveBook(null, ['name' => $name, 'currency' => $currency, 'account_reference' => 'TEST-ONLY', 'is_active' => true, 'is_default' => $default], $this->office);
     }
@@ -48,7 +48,7 @@ class FounderFinanceTest extends TestCase
     }
     private function data(string $type, string $amount, ?Book $book = null, array $extra = []): array
     {
-        return array_replace(['request_key' => (string) Str::uuid(), 'type' => $type, 'currency' => $book?->currency ?? 'USD', 'amount' => $amount, 'entry_date' => today()->toDateString(), 'description' => 'Synthetic ' . $type, 'category' => 'Testing', 'reference' => 'QA-reference', 'counterparty' => null, 'book_id' => $book?->id, 'to_book_id' => null, 'founder_id' => null, 'pay_now' => false, 'settings_version' => (int) DB::table('platform_founder_settings')->where('id', 1)->value('version'), 'direction' => 'increase'], $extra);
+        return array_replace(['request_key' => (string) Str::uuid(), 'type' => $type, 'currency' => $book?->currency ?? 'MMK', 'amount' => $amount, 'entry_date' => today()->toDateString(), 'description' => 'Synthetic ' . $type, 'category' => 'Testing', 'reference' => 'QA-reference', 'counterparty' => null, 'book_id' => $book?->id, 'to_book_id' => null, 'founder_id' => null, 'pay_now' => false, 'settings_version' => (int) DB::table('platform_founder_settings')->where('id', 1)->value('version'), 'direction' => 'increase'], $extra);
     }
     private function entry(string $type, string $amount, ?Book $book = null, array $extra = []): Entry
     {
@@ -67,7 +67,7 @@ class FounderFinanceTest extends TestCase
     {
         $business ??= $this->a;
         $owner = $business->id === $this->a->id ? $this->owner : $this->other;
-        $plan = SubscriptionPlan::create(['code' => 'finance-' . Str::lower(Str::random(8)), 'name' => 'Finance test plan', 'currency' => 'USD', 'amount_minor' => 2500, 'interval_months' => 1, 'grace_days' => 3, 'features' => ['cashier' => true, 'offline_sync' => true, 'reports' => true], 'is_active' => true, 'is_public' => true, 'is_trial' => false]);
+        $plan = SubscriptionPlan::create(['code' => 'finance-' . Str::lower(Str::random(8)), 'name' => 'Finance test plan', 'currency' => 'MMK', 'amount_minor' => 2500, 'interval_months' => 1, 'grace_days' => 3, 'features' => ['cashier' => true, 'offline_sync' => true, 'reports' => true], 'is_active' => true, 'is_public' => true, 'is_trial' => false]);
         $s = app(SubscriptionService::class);
         $i = $s->invoice($business, $plan, (string) Str::uuid(), $this->office);
         $p = $s->submit($i, $owner, ['request_key' => (string) Str::uuid(), 'method' => 'bank_transfer', 'reference' => 'FIN-QA-' . Str::random(10), 'payment_date' => today()->toDateString()]);
@@ -80,12 +80,12 @@ class FounderFinanceTest extends TestCase
     {
         $one = $this->book();
         $p = $this->paid();
-        $two = $this->book('Second USD');
+        $two = $this->book('Second MMK');
         $this->ledger->recordReceipt($p);
         $this->paid($this->b);
         $this->assertSame(2, Receipt::count());
         $this->assertSame($one->id, Receipt::where('payment_id', $p->id)->value('book_id'));
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(5000, $s['income_minor']);
         foreach ($s['books'] as $b) {
             $this->assertSame(2500, $b->balance_minor);
@@ -95,7 +95,7 @@ class FounderFinanceTest extends TestCase
     {
         $p = $this->paid(null, false);
         $this->assertSame(0, Receipt::count());
-        $this->assertSame(0, $this->ledger->summary('USD')['profit_minor']);
+        $this->assertSame(0, $this->ledger->summary('MMK')['profit_minor']);
         app(SubscriptionService::class)->review($p, $this->office, false, 'Not received');
         $this->assertSame(0, Receipt::count());
     }
@@ -103,13 +103,13 @@ class FounderFinanceTest extends TestCase
     {
         $p = $this->paid();
         $b = $this->book();
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(2500, $s['unassigned_minor']);
         $this->assertSame(0, $s['books']->first()->balance_minor);
         $this->invalid(fn() => $this->entry('expense', '1.00', $b), 'amount');
         $r = Receipt::firstOrFail();
         $this->ledger->assignReceipt($r->id, $b->id, $this->office);
-        $this->assertSame(2500, $this->ledger->summary('USD')['books']->first()->balance_minor);
+        $this->assertSame(2500, $this->ledger->summary('MMK')['books']->first()->balance_minor);
         $this->invalid(fn() => $this->ledger->assignReceipt($r->id, $b->id, $this->office), 'book_id');
     }
     public function test_reconciliation_recovers_missing_receipts_without_using_current_default(): void
@@ -139,13 +139,13 @@ class FounderFinanceTest extends TestCase
     {
         $f = $this->founders([10000])[0];
         $a = $this->book();
-        $b = $this->book('Other USD', 'USD', false);
+        $b = $this->book('Other MMK', 'MMK', false);
         $this->entry('opening', '100.00', $a);
         $this->entry('contribution', '20.00', $a, ['founder_id' => $f->id]);
         $this->entry('income', '50.00', $a);
         $this->entry('expense', '10.00', $a);
         $this->entry('transfer', '30.00', $a, ['to_book_id' => $b->id]);
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(4000, $s['profit_minor']);
         $this->assertSame(16000, $s['cash_minor']);
         $this->assertSame(13000, $s['books']->firstWhere('id', $a->id)->balance_minor);
@@ -169,18 +169,18 @@ class FounderFinanceTest extends TestCase
             $this->invalid(fn() => $this->entry('income', $v, $b), 'amount');
         }
         $this->entry('income', '0.01', $b);
-        $this->assertSame(1, $this->ledger->summary('USD')['income_minor']);
+        $this->assertSame(1, $this->ledger->summary('MMK')['income_minor']);
     }
     public function test_overdraft_self_transfer_and_cross_currency_transfer_are_rejected(): void
     {
         $a = $this->book();
-        $b = $this->book('MMK', 'MMK');
+        $b = Book::create(['name'=>'Historical MMK','currency'=>'USD','is_active'=>true]);
         $this->entry('income', '10.00', $a);
         $this->invalid(fn() => $this->entry('expense', '10.01', $a), 'amount');
         $this->invalid(fn() => $this->entry('transfer', '1.00', $a, ['to_book_id' => $a->id]), 'to_book_id');
         $this->invalid(fn() => $this->entry('transfer', '1.00', $a, ['to_book_id' => $b->id]), 'book_id');
-        $this->assertSame(1000, $this->ledger->summary('USD')['cash_minor']);
-        $this->assertSame(0, $this->ledger->summary('MMK')['cash_minor']);
+        $this->assertSame(1000, $this->ledger->summary('MMK')['cash_minor']);
+        $this->assertSame(0, $this->ledger->summary('USD')['cash_minor']);
     }
     public function test_founder_shares_require_exact_total_and_stale_edits_fail(): void
     {
@@ -196,7 +196,7 @@ class FounderFinanceTest extends TestCase
         $b = $this->book();
         $this->entry('income', '100.00', $b);
         $e = $this->entry('allocation', '60.00');
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(10000, $s['cash_minor']);
         $this->assertSame(4000, $s['unallocated_minor']);
         $this->assertSame(6000, $s['founders']->sum('owed_minor'));
@@ -235,7 +235,7 @@ class FounderFinanceTest extends TestCase
         $d = $this->data('allocation', '60.00', $b, ['pay_now' => true, 'description' => str_repeat('A', 500)]);
         $e = $this->ledger->post($d, $this->office);
         $this->ledger->post($d, $this->office);
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(4000, $s['cash_minor']);
         $this->assertSame(0, $s['founders']->sum('owed_minor'));
         $this->assertSame(6000, $s['founders']->sum('paid_minor'));
@@ -245,7 +245,7 @@ class FounderFinanceTest extends TestCase
     {
         $this->founders();
         $a = $this->book();
-        $b = $this->book('Empty USD', 'USD', false);
+        $b = $this->book('Empty MMK', 'MMK', false);
         $this->entry('income', '100.00', $a);
         $this->invalid(fn() => $this->entry('allocation', '50.00', $b, ['pay_now' => true]), 'amount');
         $this->assertSame(0, Entry::where('type', 'allocation')->count());
@@ -259,7 +259,7 @@ class FounderFinanceTest extends TestCase
         $this->entry('allocation', '30.00');
         $this->entry('payout', '10.00', $b, ['founder_id' => $f->id]);
         $this->entry('capital_return', '5.00', $b, ['founder_id' => $f->id]);
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(5000, $s['profit_minor']);
         $this->assertSame(5500, $s['cash_minor']);
         $this->assertSame(2000, $s['founders']->first()->owed_minor);
@@ -275,7 +275,7 @@ class FounderFinanceTest extends TestCase
         $this->entry('allocation', '10.00');
         $this->ledger->saveFounders(['version' => 1, 'founders' => [['id' => $f->id, 'name' => $f->name, 'share_bps' => 10000, 'is_active' => false]]], $this->office);
         $this->entry('payout', '10.00', $b, ['founder_id' => $f->id]);
-        $this->assertSame(0, $this->ledger->summary('USD')['founders']->first()->owed_minor);
+        $this->assertSame(0, $this->ledger->summary('MMK')['founders']->first()->owed_minor);
         $this->invalid(fn() => $this->entry('allocation', '0.01'), 'founders');
     }
     public function test_void_preserves_history_and_prevents_reversing_spent_income(): void
@@ -289,19 +289,19 @@ class FounderFinanceTest extends TestCase
         $this->ledger->void($income, 'Idempotent', $this->office);
         $this->assertSame(2, Entry::count());
         $this->assertSame(2, Entry::whereNotNull('voided_at')->count());
-        $this->assertSame(0, $this->ledger->summary('USD')['cash_minor']);
+        $this->assertSame(0, $this->ledger->summary('MMK')['cash_minor']);
     }
     public function test_void_transfer_requires_receiving_funds_and_restores_both_books(): void
     {
         $a = $this->book();
-        $b = $this->book('Other USD', 'USD', false);
+        $b = $this->book('Other MMK', 'MMK', false);
         $this->entry('income', '10.00', $a);
         $t = $this->entry('transfer', '4.00', $a, ['to_book_id' => $b->id]);
         $e = $this->entry('expense', '3.00', $b);
         $this->invalid(fn() => $this->ledger->void($t, 'Wrong transfer', $this->office), 'reason');
         $this->ledger->void($e, 'Wrong expense', $this->office);
         $this->ledger->void($t, 'Wrong transfer', $this->office);
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(1000, $s['books']->firstWhere('id', $a->id)->balance_minor);
         $this->assertSame(0, $s['books']->firstWhere('id', $b->id)->balance_minor);
     }
@@ -317,7 +317,7 @@ class FounderFinanceTest extends TestCase
         $this->ledger->void($a, 'Wrong allocation', $this->office);
         $combined = $this->entry('allocation', '60.00', $b, ['pay_now' => true]);
         $this->ledger->void($combined, 'Wrong combined allocation', $this->office);
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(10000, $s['cash_minor']);
         $this->assertSame(0, $s['allocated_minor']);
         $this->assertSame(0, $s['founders']->first()->owed_minor);
@@ -325,10 +325,10 @@ class FounderFinanceTest extends TestCase
     public function test_bank_currency_and_default_archive_are_protected(): void
     {
         $b = $this->book();
-        $this->invalid(fn() => $this->ledger->saveBook($b, ['name' => 'Changed', 'currency' => 'MMK', 'is_active' => true, 'is_default' => true], $this->office), 'currency');
-        $this->invalid(fn() => $this->ledger->saveBook($b, ['name' => 'Archived', 'currency' => 'USD', 'is_active' => false, 'is_default' => false], $this->office), 'is_default');
+        $this->invalid(fn() => $this->ledger->saveBook($b, ['name' => 'Changed', 'currency' => 'USD', 'is_active' => true, 'is_default' => true], $this->office), 'currency');
+        $this->invalid(fn() => $this->ledger->saveBook($b, ['name' => 'Archived', 'currency' => 'MMK', 'is_active' => false, 'is_default' => false], $this->office), 'is_default');
         $this->book('Replacement');
-        $this->ledger->saveBook($b, ['name' => $b->name, 'currency' => 'USD', 'is_active' => false, 'is_default' => false], $this->office);
+        $this->ledger->saveBook($b, ['name' => $b->name, 'currency' => 'MMK', 'is_active' => false, 'is_default' => false], $this->office);
         $this->assertFalse($b->fresh()->is_active);
     }
     public function test_finance_permissions_and_owner_only_financial_actions(): void
@@ -363,7 +363,7 @@ class FounderFinanceTest extends TestCase
     }
     public function test_bank_book_creation_and_csv_escape_are_verified_through_http(): void
     {
-        $this->actingAs($this->office)->post('/platform/bank-books', ['name' => 'HTTP Book', 'currency' => 'USD', 'account_reference' => 'TEST', 'is_active' => true, 'is_default' => true])->assertRedirect(route('platform.bank-books.index', ['currency' => 'USD']))->assertSessionHasNoErrors();
+        $this->actingAs($this->office)->post('/platform/bank-books', ['name' => 'HTTP Book', 'currency' => 'MMK', 'account_reference' => 'TEST', 'is_active' => true, 'is_default' => true])->assertRedirect(route('platform.bank-books.index', ['currency' => 'MMK']))->assertSessionHasNoErrors();
         $b = Book::firstOrFail();
         $this->entry('income', '10.00', $b, ['description' => '=2+2']);
         $this->entry('income', '20.00', $b, ['description' => 'Other row']);
@@ -416,7 +416,7 @@ class FounderFinanceTest extends TestCase
         $b = $this->book();
         $this->entry('opening', '10.00', $b);
         $this->entry('opening', '2.50', $b, ['direction' => 'decrease']);
-        $s = $this->ledger->summary('USD');
+        $s = $this->ledger->summary('MMK');
         $this->assertSame(750, $s['cash_minor']);
         $this->assertSame(0, $s['profit_minor']);
         $this->invalid(fn() => $this->entry('opening', '7.51', $b, ['direction' => 'decrease']), 'amount');

@@ -37,7 +37,7 @@ class OfficeFeatureExpansionTest extends TestCase
     {
         return array_replace(['name' => 'Example Bank', 'type' => 'bank_transfer', 'account_name' => 'Platform Office', 'account_number' => 'QA-123', 'instructions' => 'Include invoice number.', 'is_active' => true, 'sort_order' => 1], $d);
     }
-    private function paid(string $currency = 'USD', bool $approve = true): SubscriptionPayment
+    private function paid(string $currency = 'MMK', bool $approve = true): SubscriptionPayment
     {
         $p = SubscriptionPlan::create(['name' => $currency . ' plan', 'code' => 'p-' . Str::lower(Str::random(8)), 'currency' => $currency, 'amount_minor' => 2500, 'interval_months' => 1, 'grace_days' => 3, 'features' => ['cashier' => true, 'offline_sync' => true, 'reports' => true], 'is_active' => true, 'is_public' => true, 'is_trial' => false]);
         $business = \App\Models\SubscriptionPeriod::where('business_id', $this->a->id)->exists() ? $this->b : $this->a;
@@ -47,7 +47,9 @@ class OfficeFeatureExpansionTest extends TestCase
         }
         $owner = User::withoutGlobalScopes()->findOrFail($business->memberships()->value('user_id'));
         $service = app(SubscriptionService::class);
-        $i = $service->invoice($business, $p, (string) Str::uuid(), $this->office);
+        // Historical foreign-currency fixture; current invoices must be MMK.
+        $i = $currency === 'MMK' ? $service->invoice($business, $p, (string) Str::uuid(), $this->office)
+            : SubscriptionInvoice::create(['business_id'=>$business->id,'plan_id'=>$p->id,'number'=>'HIST-'.Str::random(10),'request_key'=>(string)Str::uuid(),'amount_minor'=>$p->amount_minor,'currency'=>$currency,'plan_snapshot'=>$p->snapshot(),'status'=>'open','due_at'=>now()]);
         $payment = $service->submit($i, $owner, ['request_key' => (string) Str::uuid(), 'method' => 'bank_transfer', 'reference' => 'QA-' . Str::random(12), 'payment_date' => today()->toDateString()]);
         if ($approve) {
             $service->review($payment, $this->office, true, null);
@@ -202,7 +204,7 @@ class OfficeFeatureExpansionTest extends TestCase
         $response = $this->get('/platform/reports/export')->assertOk();
         $csv = $response->streamedContent();
         $this->assertStringContainsString("'=2+2", $csv);
-        $this->assertStringContainsString('USD', $csv);
+        $this->assertStringContainsString('MMK', $csv);
         $this->assertStringNotContainsString('EUR', $csv);
         $this->assertDatabaseHas('platform_activity_logs', ['action' => 'billing.collections_exported']);
     }

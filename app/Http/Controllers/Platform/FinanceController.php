@@ -13,11 +13,11 @@ class FinanceController extends Controller
 {
     private function currency(Request $r): string
     {
-        return $r->validate(['currency' => 'nullable|string|size:3|regex:/^[A-Z]{3}$/'])['currency'] ?? 'USD';
+        return $r->validate(['currency' => 'nullable|in:MMK'])['currency'] ?? 'MMK';
     }
     private function currencies(): array
     {
-        return DB::table('platform_finance_currencies')->pluck('currency')->merge(DB::table('platform_bank_books')->pluck('currency'))->push('USD')->unique()->sort()->values()->all();
+        return ['MMK'];
     }
     public function index(Request $r, PlatformLedger $ledger)
     {
@@ -52,7 +52,7 @@ class FinanceController extends Controller
     }
     public function store(Request $r, PlatformLedger $ledger)
     {
-        $d = $r->validate(['request_key' => 'required|uuid', 'type' => ['required', Rule::in(PlatformLedger::TYPES)], 'currency' => 'required|string|size:3|regex:/^[A-Z]{3}$/', 'amount' => 'required|string|max:20', 'entry_date' => 'required|date_format:Y-m-d|before_or_equal:today', 'description' => 'required|string|max:500', 'category' => 'nullable|string|max:100', 'reference' => 'nullable|string|max:150', 'counterparty' => 'nullable|string|max:150', 'book_id' => 'nullable|uuid', 'to_book_id' => 'nullable|uuid', 'founder_id' => 'nullable|uuid', 'pay_now' => 'required|boolean', 'settings_version' => 'required|integer|min:0', 'direction' => 'required|in:increase,decrease']);
+        $d = $r->validate(['request_key' => 'required|uuid', 'type' => ['required', Rule::in(PlatformLedger::TYPES)], 'currency' => 'required|in:MMK', 'amount' => 'required|string|max:20', 'entry_date' => 'required|date_format:Y-m-d|before_or_equal:today', 'description' => 'required|string|max:500', 'category' => 'nullable|string|max:100', 'reference' => 'nullable|string|max:150', 'counterparty' => 'nullable|string|max:150', 'book_id' => 'nullable|uuid', 'to_book_id' => 'nullable|uuid', 'founder_id' => 'nullable|uuid', 'pay_now' => 'required|boolean', 'settings_version' => 'required|integer|min:0', 'direction' => 'required|in:increase,decrease']);
         if (in_array($d['type'], ['allocation', 'payout']) && $d['entry_date'] !== today()->toDateString()) {
             throw \Illuminate\Validation\ValidationException::withMessages(['entry_date' => 'Record founder allocations and payouts on today’s date.']);
         }
@@ -90,7 +90,7 @@ class FinanceController extends Controller
     }
     public function saveBook(Request $r, PlatformLedger $ledger, ?Book $book = null)
     {
-        $d = $r->validate(['name' => 'required|string|max:120', 'currency' => 'required|string|size:3|regex:/^[A-Z]{3}$/', 'account_reference' => 'nullable|string|max:150', 'is_active' => 'required|boolean', 'is_default' => 'required|boolean']);
+        $d = $r->validate(['name' => 'required|string|max:120', 'currency' => 'required|in:MMK', 'account_reference' => 'nullable|string|max:150', 'is_active' => 'required|boolean', 'is_default' => 'required|boolean']);
         $saved = $ledger->saveBook($book, $d, $r->user());
         return redirect()->route('platform.bank-books.index', ['currency' => $saved->currency])->with('success', 'Bank book saved. Existing receipts keep their original book.');
     }

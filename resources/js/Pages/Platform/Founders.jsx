@@ -34,11 +34,7 @@ export default function Founders({
     [k]: v
   } : f));
   const total = form.data.founders.filter(f => f.is_active).reduce((n, f) => n + Math.max(0, bps(f.share)), 0);
-  return <OfficePage auth={auth} title="Founders & profit shares" description="Founder statements keep contributions, allocated profit and payouts separate. Share changes apply to future allocations; saved allocations retain their original shares." actions={owner && <Button variant="contained" onClick={begin}>Edit founder shares</Button>}><Stack direction="row" gap={1} flexWrap="wrap"><TextField select label="Statement currency" value={s.currency} onChange={e => router.get(route('platform.founders.index'), {
-        currency: e.target.value
-      })} sx={{
-        width: 190
-      }}>{currencies.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField><Button component={Link} href={route('platform.finance', {
+  return <OfficePage auth={auth} title="Founders & profit shares" description="Founder statements keep contributions, allocated profit and payouts separate. Share changes apply to future allocations; saved allocations retain their original shares." actions={owner && <Button variant="contained" onClick={begin}>Edit founder shares</Button>}><Stack direction="row" gap={1} flexWrap="wrap"><TextField label="Statement currency" value="MMK" InputProps={{readOnly:true}} /><Button component={Link} href={route('platform.finance', {
         currency: s.currency
       })}>Financial book</Button></Stack>{!s.founders.some(f => f.is_active) && <Alert severity="info">Add founders and set their active profit shares to a total of 100% before allocating profit.</Alert>}<OfficeTable headings={['Founder', 'Current share', 'Net capital', 'Allocated profit', 'Paid profit', 'Unpaid profit', 'Status', 'Statement']} empty={!s.founders.length}>{s.founders.map(f => <TableRow key={f.id}><TableCell>{f.name}</TableCell><TableCell>{(f.share_bps / 100).toFixed(2)}%</TableCell><TableCell>{billingMoney(f.capital_minor, s.currency)}</TableCell><TableCell>{billingMoney(f.allocated_minor, s.currency)}</TableCell><TableCell>{billingMoney(f.paid_minor, s.currency)}</TableCell><TableCell>{billingMoney(f.owed_minor, s.currency)}</TableCell><TableCell><Chip size="small" label={f.is_active ? 'Active' : 'Archived'} /></TableCell><TableCell><Button component={Link} href={route('platform.finance', {
             currency: s.currency,

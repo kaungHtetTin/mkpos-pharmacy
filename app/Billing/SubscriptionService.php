@@ -14,7 +14,7 @@ class SubscriptionService
     public function startTrial(Business $business): BusinessSubscription
     {
         $plan = SubscriptionPlan::firstOrCreate(['code'=>'system-trial'], array_merge([
-            'name'=>config('billing.trial_days').'-day trial','amount_minor'=>0,'currency'=>'USD','interval_months'=>1,'grace_days'=>0,
+            'name'=>config('billing.trial_days').'-day trial','amount_minor'=>0,'currency'=>Money::CURRENCY,'interval_months'=>1,'grace_days'=>0,
             'features'=>array_fill_keys(config('billing.features'),true),'is_active'=>true,'is_public'=>false,'is_trial'=>true,
         ],config('billing.trial_limits')));
         $subscription = BusinessSubscription::firstOrCreate(['business_id'=>$business->id], [
@@ -35,6 +35,7 @@ class SubscriptionService
                 return $existing;
             }
             $plan = SubscriptionPlan::whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            Money::assertCurrency($plan->currency);
             if (!$plan->is_active || $plan->is_trial || ($actor && !$actor->is_platform_admin && !$plan->is_public)) $this->invalid('plan_id','This plan is not available for subscription.');
             if (SubscriptionInvoice::where('business_id',$business->id)->where('status','open')->exists()) $this->invalid('invoice','Resolve or void the existing open invoice before requesting another.');
             if (SubscriptionPeriod::where('business_id',$business->id)->where('starts_at','>',now())->exists()) $this->invalid('invoice','The next subscription period is already covered.');
@@ -65,6 +66,7 @@ class SubscriptionService
                 return $existing;
             }
             $plan = SubscriptionPlan::whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            Money::assertCurrency($plan->currency);
             if (!$plan->is_active || $plan->is_trial) $this->invalid('plan_id', 'Choose an active non-trial plan.');
             if (SubscriptionInvoice::where('business_id', $business->id)->where('status', 'open')->exists()) {
                 $this->invalid('invoice', 'Resolve or void the open invoice before granting a free plan.');
@@ -199,7 +201,7 @@ class SubscriptionService
             if(!$subscription->auto_renew || $business->status!=='Active') return false;
             $last=SubscriptionPeriod::where('business_id',$business->id)->latest('ends_at')->first();
             $plan=SubscriptionPlan::find($subscription->plan_id);
-            if(!$last || !$plan?->is_active || $plan->is_trial || $last->ends_at->gt(now()->addDays(config('billing.renewal_notice_days')))) return false;
+            if(!$last || !$plan?->is_active || $plan->currency !== Money::CURRENCY || $plan->is_trial || $last->ends_at->gt(now()->addDays(config('billing.renewal_notice_days')))) return false;
             $key='auto-'.$last->id;
             if(SubscriptionInvoice::where('business_id',$business->id)->where(fn($q)=>$q->where('status','open')->orWhere('request_key',$key))->exists()) return false;
             $this->invoice($business,$plan,$key);

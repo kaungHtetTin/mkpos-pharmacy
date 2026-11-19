@@ -46,7 +46,7 @@ class DirectoryController extends Controller
                 ->orderBy('u.name')->get(['u.id', 'u.name', 'u.email', 'u.status']),
             'branches' => DB::table('branches')->where('business_id', $business->id)->orderBy('name')->get(['id', 'name', 'phone', 'email', 'address', 'status']),
             'billing_visible' => $billing,
-            'plans' => $billing ? SubscriptionPlan::where('is_active', true)->where('is_trial', false)->orderBy('name')->get() : [],
+            'plans' => $billing ? SubscriptionPlan::where('currency', 'MMK')->where('is_active', true)->where('is_trial', false)->orderBy('name')->get() : [],
             'invoices_page' => $invoices,
             'payments_page' => $payments,
             'invoices' => $invoices?->items() ?? [],

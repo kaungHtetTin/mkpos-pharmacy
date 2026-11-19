@@ -93,16 +93,7 @@ export default function Finance({
  <Box component="form" sx={officeFiltersSx} onSubmit={e => {
       e.preventDefault();
       router.get(route('platform.finance'), f);
-    }}><TextField select label="Currency" value={f.currency} onChange={e => {
-        const next = {
-          ...f,
-          currency: e.target.value,
-          book_id: '',
-          founder_id: ''
-        };
-        setF(next);
-        router.get(route('platform.finance'), next);
-      }}>{currencies.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}</TextField><TextField label="Search description or reference" value={f.q} onChange={e => setF({
+    }}><TextField label="Currency" value="MMK" InputProps={{readOnly:true}} /><TextField label="Search description or reference" value={f.q} onChange={e => setF({
         ...f,
         q: e.target.value
       })} /><TextField select label="Entry type" value={f.type} onChange={e => setF({

@@ -286,12 +286,13 @@ class PlatformOperationsTest extends TestCase
         $this->post('/platform/security/challenge', ['code' => Totp::code($secret, intdiv(now()->timestamp, 30))])->assertRedirect(route('platform.dashboard'));
         $this->get('/platform/dashboard')->assertOk();
     }
-    public function test_dashboard_keeps_verified_collections_in_separate_currencies(): void
+    public function test_dashboard_preserves_historical_collection_currencies(): void
     {
         $service = app(\App\Billing\SubscriptionService::class);
         foreach ([[$this->a, $this->owner, 'USD', 1999], [$this->b, $this->other, 'MMK', 50000]] as [$business, $owner, $currency, $amount]) {
             $plan = \App\Models\SubscriptionPlan::create(['code' => 'currency-' . strtolower($currency), 'name' => 'Currency test', 'amount_minor' => $amount, 'currency' => $currency, 'interval_months' => 1, 'grace_days' => 0, 'features' => ['cashier' => true, 'offline_sync' => true, 'reports' => true], 'is_active' => true, 'is_public' => true, 'is_trial' => false]);
-            $invoice = $service->invoice($business, $plan, (string) Str::uuid(), $owner);
+            $invoice = $currency === 'MMK' ? $service->invoice($business, $plan, (string) Str::uuid(), $owner)
+                : \App\Models\SubscriptionInvoice::create(['business_id'=>$business->id,'plan_id'=>$plan->id,'number'=>'HIST-'.Str::random(10),'request_key'=>(string)Str::uuid(),'amount_minor'=>$amount,'currency'=>$currency,'plan_snapshot'=>$plan->snapshot(),'status'=>'open','due_at'=>now()]);
             $payment = $service->submit($invoice, $owner, ['request_key' => (string) Str::uuid(), 'method' => 'bank_transfer', 'reference' => 'reference-' . $currency, 'payment_date' => today()->toDateString()]);
             $service->review($payment, $this->office, true, null);
         }
