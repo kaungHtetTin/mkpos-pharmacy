@@ -5,6 +5,21 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Left-aligned purchase inputs — 20 November 2026
+
+Frontend patch `bc6194d` left-aligns all editable inputs in the purchase wizard,
+including quantities, cost, retail/wholesale price, unit, batch and date fields.
+The scoped dialog rule overrides numeric right alignment in the shared table
+styles, including focused/disabled states, without changing table calculations.
+Backend, database and existing business records are untouched.
+
+Both production builds, two JavaScript checks, and desktop/phone browser checks
+passed locally and live at 1440px and 390px. The checks exercised the real wizard
+with browser-only supplier/product fixtures, verified computed alignment and
+focus, and confirmed zero purchase POST requests. No purchases or stock movements
+were created. Frontend source and both manifests have private rollback backups;
+temporary deployment files were removed. No Git push was performed.
+
 ## Automatic internal plan codes — 19 November 2026
 
 Source patch `b81ac1c` removes Plan code from creation/editing and plan listings.
