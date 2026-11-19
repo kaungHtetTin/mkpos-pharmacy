@@ -5,6 +5,24 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Custom plan duration in months — 19 November 2026
+
+Source patch `d9a2bc7` replaces Monthly/Yearly with a required Duration (months)
+field accepting integers 1–36. Price for full duration is the total MMK charge.
+Office plan listings, invoice pickers and owner billing show the actual month
+count with correct singular/plural labels. Existing calendar-month settlement
+already supports these durations; no schema migration or data update was needed.
+Existing invoices and periods retain their snapshotted durations and prices.
+
+Validation: **281 tests / 1,882 assertions**, both production builds, two
+JavaScript checks, four local browser groups and three live groups passed.
+Tests cover creating 1-, 2-, 3-, 12- and 36-month plans, rejecting invalid terms,
+editing two months to three, owner labels, phone layout, end-of-month-safe paid
+expiry, renewal stacking and immutable invoice snapshots. Live forms were
+opened/canceled; existing plan terms and prices remained unchanged. Encrypted
+and source/manifest backups are retained; temporary deployment files were removed.
+No Git push was performed.
+
 ## MMK-only platform office — 19 November 2026
 
 Source patch `75040af` makes MMK the fixed currency for new plans, invoices,
