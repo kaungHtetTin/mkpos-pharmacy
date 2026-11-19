@@ -5,6 +5,42 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Business-specific price types — 20 November 2026
+
+Source patch `261dabd` adds business-owned custom price types while retaining
+Retail and Wholesale as permanent defaults. Settings → Automatic Pricing manages
+names, display order, availability and versioned manual/automatic rules. Products
+keep the two default prices in their compact table, with Additional prices for
+per-unit custom amounts and automatic previews. Customer preferences apply at POS
+and can be explicitly overridden by the cashier.
+
+Admin POS, cashier and offline sync validate active business types and authoritative
+prices. Missing custom prices never silently use Retail or zero. Sales snapshot
+the selected code/name and actual prices, preserving history after renames or
+deactivation. Unit-price CSV templates support business-specific custom columns;
+product imports initialize applicable automatic custom prices. Customer preferences,
+custom unit prices and historical names are included in existing business exports.
+See `BUSINESS_PRICE_TYPES.md` for details and offline price-change handling.
+
+Migration 2026_11_20_000003 adds rule metadata, unit custom-price JSON, customer
+preferences and sale-item label snapshots, and widens the previous price-type
+enum. Default sale labels were backfilled. Deployment verified stock totals,
+existing Retail/Wholesale price totals, sale counts and sale amounts unchanged.
+No example custom types, products, customers or sales were created on the live
+server. The cashier assets/manifest and cashier-shell-v7 worker were published
+together; admin assets were published on both business and platform-office hosts.
+
+Validation: **316 tests / 2,109 assertions**; five JavaScript pricing/storage checks;
+five local login/loading/storage browser checks; and local/live custom-pricing
+browser scenarios at 1440px, 390px and offline cashier passed. Scenarios cover
+management, manual values, automatic unit previews, preferences, custom selection,
+missing-price blocking, cached cart type restoration and business-scoped offline
+settings. Browser interactions used intercepted fixtures with no operational
+writes. Actual authenticated live reads confirmed permanent default types and
+catalog custom-price fields. Both login pages and the v7 worker passed final
+checks. Private source and encrypted backups are retained; temporary deployment
+files were removed. No Git push was performed.
+
 ## Lightweight page loading — 20 November 2026
 
 Frontend patch `0198bbe` replaces the heavy loading blocks with small pale,
