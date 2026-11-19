@@ -5,6 +5,29 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Lightweight page loading — 20 November 2026
+
+Frontend patch `0198bbe` replaces the heavy loading blocks with small pale,
+brand-tinted placeholders, compact rows and a gentle 1.8-second pulse. The initial
+workspace keeps its sidebar and app bar mounted while the lazy page module loads.
+Short loads have a 180ms delay before visual feedback to avoid flashing.
+
+Navigation and refreshes keep existing content visible with one soft 2px progress
+line that remains below the app bar while scrolling. The redundant product-list
+progress line was removed. Existing form reset/preserve semantics apply after a
+successful response; validation failures retain the form and entered values.
+Failed initial imports provide Retry instead of loading forever. Light/dark themes
+and reduced-motion preferences are supported.
+
+Both production builds passed. Five local browser checks passed, including login
+validation and cashier storage isolation. Three live loading scenarios at desktop
+and phone sizes passed, covering light/dark themes, delayed imports, retained
+refresh content, form resets after success, fast-response flicker prevention,
+reduced motion, scrolling, request failure and initial-import retry. Loading tests
+use intercepted read-only responses; no live operational data was created.
+Laravel backend logic and database schema are unchanged. Private rollback backups
+are retained, temporary deployment files were removed, and no Git push was made.
+
 ## Inventory detail table spacing — 20 November 2026
 
 Frontend patch `2aadc1a` separates the inventory summary, movement history and batch
