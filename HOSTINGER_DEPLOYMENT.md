@@ -5,6 +5,25 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Inventory In Stock filter correction — 20 November 2026
+
+Backend patch `6c016a7` requires current_stock > 0 as well as current_stock >=
+min_stock_level for In Stock filtering. Previously a minimum of zero allowed
+zero-stock products through the SQL filter (0 >= 0), while the displayed badge
+correctly classified them Out of Stock. Missing inventory rows also aggregate
+to zero and had the same mismatch. Filtering now agrees with the existing status
+classification before pagination; positive stock below its minimum stays Low Stock.
+No inventory values, schema, frontend source or subscription behavior changed.
+
+Validation: the regression test reproduced both zero-minimum and branch-specific
+failures before the fix. **292 tests / 1,966 assertions** passed afterward,
+including missing inventory, exact thresholds, branch totals and filtered paging.
+Read-only live aggregate checks found 63 zero-stock matches under the old rule,
+two products meeting the corrected rule, and zero invalid rows in the corrected
+result. The live owner endpoint passed In Stock, Out of Stock and Low Stock row
+checks. Existing source and encrypted data backups are retained. Temporary
+installer/archive were removed; no Git push was performed.
+
 ## Screenshot preview inside payment review — 20 November 2026
 
 Frontend patch `e260ad3` displays uploaded payment images directly in the office
