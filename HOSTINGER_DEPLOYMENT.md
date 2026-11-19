@@ -1,9 +1,47 @@
 # Hostinger deployment
 
 Phase 3 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
-PHP 8.4.27. The deployed application source is commit `fe0d7e3`, including password recovery,
+PHP 8.4.27. The deployed application source is commit `b18bf6d`, including the expanded platform office, password recovery,
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
+
+## Expanded office administration — 19 November 2026
+
+Source `b18bf6d` is live in `_pharmacy_office_features_b18bf6d` for both
+pharmacypos.pwarmyar.com and pharmacyposoffice.pwarmyar.com. The reference app
+at office.pwarmyar.com remains unchanged. The release adapts business detail,
+account/admin management, trial extensions, subscription calendar, payment
+destinations, collection reporting/CSV, audit filters and application health to
+the existing pharmacy architecture. See [OFFICE_FEATURE_COMPARISON.md](OFFICE_FEATURE_COMPARISON.md)
+for feature mapping and explicitly deferred modules.
+
+The additive migration creates `platform_payment_methods`. Existing accounts,
+passwords, tenant records, subscription periods, invoices, roles, SMTP settings
+and backup encryption key are retained. Both entries share one private release
+and database. Existing sessions were copied during preparation and activation;
+mandatory office MFA remains disabled. No synthetic users, businesses, plans,
+payments or bank destinations were seeded live.
+
+Before migration, private rollback backups saved the old app and both public
+entries (25,276,245 bytes), plus full SQL (127,193 bytes). An encrypted database
+and private-file backup was created and verified after migration (16,846 bytes).
+The persistent backup directory and key were retained. The new scheduler job
+executed successfully; the previous pharmacy job was removed and all four
+unrelated PwarMyar jobs remain. Both hosting caches were purged. Temporary
+installer and archive were removed and return HTTP 404.
+
+Validation: **235 tests and 1,526 assertions**, both builds, two JavaScript
+checks, nine complete synthetic browser workflow groups plus one populated-chart/
+CSV/mobile check, and **11 live groups** passed. Live checks covered all new
+sections, normal office login, role separation, mobile forms, CSV export,
+existing business identity/billing/pricing, cashier offline access and the
+unchanged reference. Live checks created no accounts or payment records and
+changed no passwords. CSV export writes its normal audit entry.
+
+Rollback restores both old public entry scripts/manifests from the private
+backup and repoints the pharmacy scheduler to the preceding private release.
+Retain current SQL data and the additive payment-method table; do not overwrite
+new customer records with an old SQL dump. No Git push was performed.
 
 ## Office password login — 19 November 2026
 

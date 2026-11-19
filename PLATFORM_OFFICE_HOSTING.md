@@ -96,3 +96,15 @@ checks passed. Live verification covers direct password login, removed Security
 links, all office sections/profile, the old security URL redirect, and normal
 business login/pricing. Private backups retain the prior configuration and
 manifests. No Git push was performed.
+
+## Expanded office administration — 19 November 2026
+
+The current shared private release is `_pharmacy_office_features_b18bf6d`, source
+`b18bf6d`. Both public entries now target it; the pharmacy scheduler was repointed
+and verified. Existing identity, session cookies, copied sessions, encrypted mail
+settings and password-only office access were retained. One additive payment
+method table was migrated; no synthetic bank details or account seeds were
+installed. See [OFFICE_FEATURE_COMPARISON.md](OFFICE_FEATURE_COMPARISON.md) for
+coverage and [HOSTINGER_DEPLOYMENT.md](HOSTINGER_DEPLOYMENT.md) for backup and
+validation evidence. New office navigation groups are Workspace, Subscriptions
+and Office settings, filtered by the existing role model.

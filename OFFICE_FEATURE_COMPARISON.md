@@ -43,8 +43,8 @@ and support access. Every route enforces its role on the server. Businesses
 cannot enter office routes.
 
 Email, role, status and password changes revoke affected browser sessions and
-API tokens. Passwords are never returned in page props or audit records. New
-passwords use confirmation and the existing bcrypt byte limit. Office accounts
+API tokens. Passwords are never returned in page props or audit records. Assisted
+password resets require confirmation and enforce the existing bcrypt byte limit. Office accounts
 cannot be edited through tenant endpoints or assigned tenant memberships.
 Business accounts cannot be promoted or moved by extra request fields.
 
@@ -69,3 +69,17 @@ visibility, separate currencies, CSV output, calendar dates, audit filters and
 health privacy. Production builds and JavaScript checks are also run. Browser
 and live deployment evidence is recorded in HOSTINGER_DEPLOYMENT.md after
 verification.
+
+## Live rollout
+
+Source `b18bf6d` is deployed to the pharmacy and dedicated office entries. All
+11 live checks passed, including normal login, every new section, tenant denial,
+mobile forms, CSV download, preserved business identity and cashier offline
+reload. Nine complete local browser workflow groups and an additional populated
+chart/CSV/mobile verification passed. Live checks created no accounts, plans,
+payments or payment destinations and did not change credentials.
+
+Before activation, private backups saved the app, both entries and SQL. The
+additive migration and a fresh encrypted backup were verified. The scheduler now
+targets the active release; all unrelated jobs remain. Temporary files return
+HTTP 404. No Git push was performed.
