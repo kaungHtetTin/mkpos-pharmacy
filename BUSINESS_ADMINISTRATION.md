@@ -104,3 +104,7 @@ Payment approval grants that many calendar months using end-of-month-safe date
 arithmetic. Editing a plan affects future invoices; existing invoice and paid
 period snapshots keep their original duration and price. FOC grant duration
 remains independently selectable. No database migration is needed.
+
+Plan codes are internal identifiers generated automatically when a plan is
+created. They are absent from plan forms and listings, and remain stable when
+a plan is renamed or edited. Office users do not need to choose or manage codes.

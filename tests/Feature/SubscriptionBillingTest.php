@@ -201,7 +201,7 @@ class SubscriptionBillingTest extends TestCase
     {
         $data=['code'=>'starter','name'=>'Starter','price'=>'0.10','currency'=>'MMK','interval_months'=>1,'grace_days'=>2,'max_branches'=>1,'max_users'=>2,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>false,'reports'=>false],'is_active'=>true,'is_public'=>true];
         $this->actingAs($this->owner)->postJson('/platform/plans',$data)->assertForbidden();
-        $this->actingAs($this->office)->postJson('/platform/plans',$data)->assertRedirect();$this->assertDatabaseHas('subscription_plans',['code'=>'starter','amount_minor'=>10]);
+        $this->actingAs($this->office)->postJson('/platform/plans',$data)->assertRedirect();$this->assertDatabaseHas('subscription_plans',['name'=>'Starter','amount_minor'=>10]);
         $this->postJson('/platform/plans',array_replace($data,['code'=>'bad-price','price'=>'19.995']))->assertUnprocessable()->assertJsonValidationErrors('price');
     }
     public function test_unpublished_plans_cannot_be_requested_by_owners(): void
@@ -257,7 +257,7 @@ class SubscriptionBillingTest extends TestCase
         $data=['code'=>'months-plan','name'=>'Flexible months','price'=>'25000','currency'=>'MMK','interval_months'=>2,'grace_days'=>0,'max_branches'=>1,'max_users'=>2,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true];
         foreach([1,2,3,12,36] as $months){
             $this->post('/platform/plans',array_replace($data,['code'=>'months-'.$months,'interval_months'=>$months]))->assertRedirect()->assertSessionHasNoErrors();
-            $this->assertDatabaseHas('subscription_plans',['code'=>'months-'.$months,'interval_months'=>$months,'amount_minor'=>2500000,'currency'=>'MMK']);
+            $this->assertDatabaseHas('subscription_plans',['name'=>'Flexible months','interval_months'=>$months,'amount_minor'=>2500000,'currency'=>'MMK']);
         }
         foreach([0,37,2.5,'bad'] as $months)$this->post('/platform/plans',array_replace($data,['interval_months'=>$months]))->assertSessionHasErrors('interval_months');
     }
@@ -270,5 +270,16 @@ class SubscriptionBillingTest extends TestCase
         $next=$this->invoice($plan);$this->approve($next);$next=$next->fresh();
         $this->assertTrue($next->period_starts_at->equalTo($invoice->period_ends_at));
         $this->assertTrue($next->period_ends_at->equalTo($next->period_starts_at->copy()->addMonthsNoOverflow(3)));
+    }
+    public function test_plan_codes_are_automatic_unique_and_stable_when_names_change(): void
+    {
+        $this->actingAs($this->office);
+        $data=['name'=>'ဆေးဆိုင် အစီအစဉ်','price'=>'25000','currency'=>'MMK','interval_months'=>3,'grace_days'=>0,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true];
+        for($n=0;$n<2;$n++)$this->post('/platform/plans',$data)->assertRedirect()->assertSessionHasNoErrors();
+        $plans=SubscriptionPlan::where('name',$data['name'])->get();$this->assertCount(2,$plans);
+        $this->assertNotSame($plans[0]->code,$plans[1]->code);
+        $this->assertStringStartsWith('plan-',$plans[0]->code);$code=$plans[0]->code;
+        $this->put('/platform/plans/'.$plans[0]->id,array_replace($data,['name'=>'Renamed plan','code'=>'system-trial']))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($code,$plans[0]->fresh()->code);$this->assertSame('Renamed plan',$plans[0]->fresh()->name);
     }
 }

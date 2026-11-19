@@ -72,7 +72,6 @@ class BillingController extends Controller
         if ($record->exists && $record->currency !== 'MMK') throw \Illuminate\Validation\ValidationException::withMessages(['currency'=>'Create a new MMK plan; historical foreign-currency prices are preserved.']);
         abort_if($record->is_trial,422,'The system trial is configured by the deployment, not the paid plan editor.');
         $data=$request->validate([
-            'code'=>['required','string','max:60','regex:/^[a-z][a-z0-9-]*$/',Rule::notIn(['system-trial']),Rule::unique('subscription_plans','code')->ignore($record->id)],
             'name'=>'required|string|max:120','price'=>'required|string','currency'=>'required|in:MMK',
             'interval_months'=>'required|integer|min:1|max:36','grace_days'=>'required|integer|min:0|max:30',
             'max_branches'=>'nullable|integer|min:1|max:1000000','max_users'=>'nullable|integer|min:1|max:1000000','max_products'=>'nullable|integer|min:1|max:10000000',
@@ -80,6 +79,7 @@ class BillingController extends Controller
             'is_active'=>'required|boolean','is_public'=>'required|boolean',
         ]);
         $data['amount_minor']=Money::minor($data['price']);unset($data['price']);$data['is_trial']=false;
+        if (!$record->exists) $data['code'] = 'plan-' . \Illuminate\Support\Str::uuid();
         $record->fill($data)->save();
         PlatformAudit::record($plan?'billing.plan_updated':'billing.plan_created',$request->user(),null,['plan_id'=>$record->id]);
         return back()->with('success','Plan saved. Existing periods and invoices keep their original terms.');
