@@ -5,6 +5,24 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Complimentary plan grants — 19 November 2026
+
+Source patch `ad89ebe` adds Subscription controls → Grant plan FOC. Office
+owners/billing operators select an active non-trial plan and 1–36 months, give
+an audit reason and confirm. A zero-charge FOC invoice and one subscription
+period preserve the plan features/limits without payment, receipt or revenue.
+Current paid periods remain intact; future/open-invoice conflicts are validated.
+Automatic renewal is disabled. Retries are idempotent and suspension is preserved.
+Internal reasons remain in office audit records. No schema migration was needed.
+
+Validation: **276 tests / 1,812 assertions**, both production builds, two
+JavaScript checks, three local FOC browser groups and **nine live groups** passed.
+The actual grant and zero-finance checks used a synthetic local business; live
+checks opened/canceled the desktop and phone forms without granting plans.
+Customer records, subscription dates, account credentials and finance data were
+unchanged. The source/manifest rollback and encrypted backup were retained;
+temporary deployment files were removed. No Git push was performed.
+
 ## Unified business administration — 19 November 2026
 
 Source patch `66ab9ba` is live for both pharmacy entries using the existing
