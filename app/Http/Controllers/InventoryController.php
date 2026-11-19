@@ -71,7 +71,8 @@ class InventoryController extends Controller
             } elseif ($request->stock_status === 'Low Stock') {
                 $query->havingRaw('current_stock > 0 AND current_stock < products.min_stock_level');
             } elseif ($request->stock_status === 'In Stock') {
-                $query->havingRaw('current_stock >= products.min_stock_level');
+                // A zero minimum must not make zero stock count as available.
+                $query->havingRaw('current_stock > 0 AND current_stock >= products.min_stock_level');
             }
         }
 
