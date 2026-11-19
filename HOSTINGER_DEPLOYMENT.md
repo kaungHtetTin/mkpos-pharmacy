@@ -5,6 +5,36 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Inventory stock movement history — 20 November 2026
+
+Source patch `b175aff` adds a business-wide ledger at `/inventory/movements` and a
+per-product ledger in Inventory Detail. Stock Balance has a Movement history
+button. Both views provide search, branch/action/date filters, 25-row paging,
+Myanmar display dates and a phone layout with table scrolling inside the screen.
+
+The ledger covers purchases and edits/deletions, POS/cashier/offline sales, sale
+voids, restocked customer returns, supplier returns, transfers, adjustments and
+mobile/offline purchases. Each entry snapshots the product, branch, actor, source
+reference, signed base-unit change and before/after branch balances. History and
+stock are committed in the same locked transaction. The existing business export
+also includes the ledger. See `STOCK_MOVEMENTS.md` for the recording boundary and
+operational details.
+
+The additive migration and opening-snapshot command ran during brief maintenance.
+Eight nonzero inventory balances were recorded as opening snapshots across the
+businesses. Inventory row counts and total quantities were verified unchanged,
+and there were zero nonzero inventory rows missing a snapshot. Existing financial
+records were preserved. Prior actions are not reconstructed because reliable
+before/after snapshots were unavailable.
+
+Validation: **303 tests / 2,039 assertions**, both production builds and two
+JavaScript checks passed. Local and live desktop/phone browser checks at 1440px
+and 390px used read-only fixtures to verify global and product history, filters,
+pagination, Myanmar time, empty states and contained table scrolling. No live
+stock transactions were submitted. Both login pages remain available. Source and
+encrypted backups are retained, and temporary deployment files were removed.
+No Git push was performed.
+
 ## Searchable stock-adjustment product picker — 20 November 2026
 
 Source patch `c4a5cf6` replaces the Product dropdown in New Stock Adjustment with
