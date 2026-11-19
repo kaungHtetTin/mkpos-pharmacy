@@ -5,6 +5,28 @@ PHP 8.4.27. The deployed application source is commit `fe0d7e3`, including passw
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Units & pricing editor — 19 November 2026
+
+Frontend source `9df8299` is deployed over the existing recovery release. The
+product create/edit form now uses seven columns, pairs modes with their prices,
+right-aligns numeric values, and gives the active input one clear outline.
+The unit name stays pinned during mobile scrolling; accessible row errors wrap
+below the table. Add/remove actions restore keyboard focus and keep one default
+selling unit. Pricing calculations and submitted fields retain their existing
+behavior.
+
+Only compiled admin assets and `resources/js/Pages/Products/Edit.jsx` changed
+on the server. No PHP backend, environment, database, scheduler, account or SMTP
+settings changed. The previous manifest and JSX are retained in a private backup;
+old hashed assets remain available for open browser tabs. Rollback restores that
+manifest and JSX without touching business data.
+
+Both builds, two JavaScript checks, and six local browser groups passed. Four
+live checks passed using normal owner login and unsaved form edits: table/focus,
+default/removal, mobile sticky column, and clean navigation/logout. No product
+was saved. Cache was cleared and temporary archive/installer removed (HTTP 404).
+No Git push was performed.
+
 ## Password recovery — 19 November 2026 (application timezone)
 
 Source `fe0d7e3` is live in `_pharmacy_password_recovery_fe0d7e3`. Recovery uses
