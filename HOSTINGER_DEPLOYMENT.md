@@ -5,6 +5,23 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Screenshot preview inside payment review — 20 November 2026
+
+Frontend patch `e260ad3` displays uploaded payment images directly in the office
+Review manual payment dialog, above the decision controls. Reviewers can open
+the full-size image or download the original. Private authenticated downloads
+are fetched into temporary browser URLs, revoked when the dialog closes. Loading,
+retry and older PDF download fallback are supported. The dialog scrolls within
+the screen while its review action buttons remain reachable.
+
+Both production builds, two JavaScript checks, four local browser groups and
+four live fixture groups passed at desktop/phone widths, including retry/PDF
+handling. A separate read-only live check loaded and decoded an actual pending
+payment screenshot in the dialog. No review POST, approval or rejection was
+submitted. Backend/database and private receipt authorization are unchanged.
+Source/manifests rollback backups are retained; temporary deployment files were
+removed. No Git push was performed.
+
 ## Direct owner subscription screenshot requests — 20 November 2026
 
 Source patch `0d3dc80` replaces owner invoice creation with direct plan/payment
