@@ -59,7 +59,7 @@ class SaleSyncService
             'items.*.foc_quantity' => 'nullable|numeric|min:0',
             'items.*.foc_product_unit_id' => 'nullable|exists:product_units,id',
             'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.price_type' => 'nullable|in:retail,wholesale',
+            'items.*.price_type' => 'nullable|string|max:30',
             'items.*.tax_rate' => 'nullable|numeric|min:0',
         ])->validate();
 
@@ -97,7 +97,7 @@ class SaleSyncService
             $products = Product::whereIn('id', $productIds)
                 ->with(['taxes:id,rate', 'product_units' => function ($query) use ($productUnitIds) {
                     $query->whereIn('id', $productUnitIds)
-                        ->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'wholesale_price', 'selling_price_mode', 'wholesale_price_mode', 'is_base_unit');
+                        ->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'custom_prices', 'wholesale_price', 'selling_price_mode', 'wholesale_price_mode', 'is_base_unit');
                 }])
                 ->get()
                 ->keyBy('id');
@@ -128,10 +128,10 @@ class SaleSyncService
                 $focConversionFactor = max((int) $focProductUnit->conversion_factor, 1);
                 $baseQuantity = (int) round($item['quantity'] * $conversionFactor);
                 $focBaseQuantity = (int) round($item['foc_quantity'] * $focConversionFactor);
-                app(\App\Services\AutomaticPricingService::class)->assertSellable($productUnit, $item['price_type'] === 'wholesale' ? 'wholesale_price' : 'selling_price');
-                $originalUnitPrice = $item['price_type'] === 'wholesale'
-                    ? (float) ($productUnit->wholesale_price ?? $productUnit->selling_price)
-                    : (float) $productUnit->selling_price;
+                $originalUnitPrice = \App\Services\PriceTypes::quote($productUnit, $item['price_type']);
+                if (!in_array($item['price_type'], ['retail','wholesale'], true) && (!isset($item['unit_price']) || bccomp((string)$item['unit_price'],(string)$originalUnitPrice,2)!==0)) {
+                    throw ValidationException::withMessages(['items'=>'The custom price changed since this offline sale. Review the queued sale before syncing; its receipt will not be repriced automatically.']);
+                }
                 $discountPercentage = min(max((float) ($product->discount_percentage ?? 0), 0), 100);
                 $lineGross = $item['quantity'] * $originalUnitPrice;
                 $lineDiscount = $lineGross * ($discountPercentage / 100);
@@ -162,6 +162,7 @@ class SaleSyncService
                     'unit_price' => $unitPrice,
                     'original_unit_price' => $originalUnitPrice,
                     'price_type' => $item['price_type'],
+                    'price_type_name' => \App\Services\PriceTypes::name($item['price_type']),
                     'discount_percentage' => $discountPercentage,
                     'discount_amount' => $lineDiscount,
                     'tax_amount' => $taxAmount,
@@ -253,6 +254,7 @@ class SaleSyncService
                         'cost_backfilled' => false,
                         'unit_price' => $line['unit_price'],
                         'price_type' => $line['price_type'],
+                        'price_type_name' => $line['price_type_name'],
                         'original_unit_price' => $line['original_unit_price'],
                         'discount_percentage' => $line['discount_percentage'],
                         'discount_amount' => $line['quantity'] > 0

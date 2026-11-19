@@ -65,16 +65,37 @@ function RuleEditor({ rule, onDirty }) {
     </Paper>;
 }
 
+function PriceTypeManager({ rules }) {
+    const create = useForm({ name: '' });
+    return <Box>
+        <Box component="form" onSubmit={(e) => { e.preventDefault(); create.post(route('price-types.store'), { preserveScroll: true, onSuccess: () => create.reset() }); }} sx={{ display: 'flex', gap: 1, mb: 2, alignItems: 'start' }}>
+            <TextField size="small" label="New price type" placeholder="e.g. Member or Clinic" value={create.data.name} onChange={(e) => create.setData('name',e.target.value)} error={Boolean(create.errors.name)} helperText={create.errors.name} inputProps={{ maxLength: 60 }} required />
+            <Button type="submit" variant="contained" disabled={create.processing}>Add type</Button>
+        </Box>
+        <Stack spacing={1}>{rules.filter((r) => !['selling_price','wholesale_price'].includes(r.code)).map((rule) => <TypeDetails key={`${rule.code}-${rule.version}`} rule={rule} />)}</Stack>
+    </Box>;
+}
+function TypeDetails({ rule }) {
+    const form=useForm({ name: rule.name, is_active: rule.is_active, sort_order: rule.sort_order });
+    return <Box component="form" onSubmit={(e) => { e.preventDefault(); form.patch(route('price-types.update',rule.code),{ preserveScroll: true }); }} sx={{ display:'flex', gap:1, flexWrap:'wrap', alignItems:'center' }}>
+        <TextField size="small" label="Type name" value={form.data.name} onChange={(e) => form.setData('name',e.target.value)} error={Boolean(form.errors.name)} helperText={form.errors.name} inputProps={{ maxLength:60 }} required />
+        <TextField size="small" type="number" label="Display order" value={form.data.sort_order} onChange={(e) => form.setData('sort_order',e.target.value)} sx={{ width:110 }} inputProps={{ min:0,max:10000 }} />
+        <FormControlLabel control={<Checkbox checked={Boolean(form.data.is_active)} onChange={(e) => form.setData('is_active',e.target.checked)} />} label="Active" />
+        <Button type="submit" disabled={form.processing}>Save type</Button>
+    </Box>;
+}
+
 export default function Pricing({ rules, changes, onDirtyChange }) {
     const [dirty, setDirty] = useState({});
     const onDirty = (code, value) => setDirty((current) => ({ ...current, [code]: value }));
     useEffect(() => { onDirtyChange(Object.values(dirty).some(Boolean)); }, [dirty, onDirtyChange]);
     return <Stack spacing={2}>
-        <Box><Typography variant="h6" fontWeight={900}>Automatic Pricing</Typography><Typography variant="body2" color="text.secondary">Organization-wide rules for selling and wholesale prices.</Typography></Box>
+        <Box><Typography variant="h6" fontWeight={900}>Automatic Pricing</Typography><Typography variant="body2" color="text.secondary">Business-wide price types and their automatic pricing rules. Retail and Wholesale are permanent defaults.</Typography></Box>
         <Alert severity="info">Buying cost comes from the latest purchase date across branches, per base unit. Free quantities do not reduce this pricing cost. Before the first purchase, the medicine's starting buying cost is used. CSV prices are manual overrides.</Alert>
-        {rules.map((rule) => <RuleEditor key={`${rule.code}-${rule.version}`} rule={rule} onDirty={onDirty} />)}
+        <PriceTypeManager rules={rules} />
+        {rules.filter((rule) => rule.is_active !== false).map((rule) => <RuleEditor key={`${rule.code}-${rule.version}`} rule={rule} onDirty={onDirty} />)}
         <Paper variant="outlined" sx={{ p: 2 }}><Typography variant="subtitle1" fontWeight={800}>Recent price changes</Typography><Typography variant="caption" color="text.secondary">Latest 30 recorded changes. Completed sales and purchase costs are unchanged.</Typography>
-            <TableContainer><Table size="small"><TableHead><TableRow><TableCell>Medicine / unit</TableCell><TableCell>Price</TableCell><TableCell align="right">Before</TableCell><TableCell align="right">After</TableCell><TableCell>Reason</TableCell><TableCell>Time</TableCell></TableRow></TableHead><TableBody>{changes.map((row) => <TableRow key={row.id}><TableCell>{row.product_name} / {row.unit_name}</TableCell><TableCell>{row.price_type === 'selling_price' ? 'Selling' : 'Wholesale'}</TableCell><TableCell align="right">{row.old_price}</TableCell><TableCell align="right">{row.new_price}</TableCell><TableCell>{row.trigger.replaceAll('_', ' ')}</TableCell><TableCell sx={{ whiteSpace: 'nowrap' }}>{row.created_at}</TableCell></TableRow>)}{!changes.length && <TableRow><TableCell colSpan={6}>No price changes recorded yet.</TableCell></TableRow>}</TableBody></Table></TableContainer>
+            <TableContainer><Table size="small"><TableHead><TableRow><TableCell>Medicine / unit</TableCell><TableCell>Price</TableCell><TableCell align="right">Before</TableCell><TableCell align="right">After</TableCell><TableCell>Reason</TableCell><TableCell>Time</TableCell></TableRow></TableHead><TableBody>{changes.map((row) => <TableRow key={row.id}><TableCell>{row.product_name} / {row.unit_name}</TableCell><TableCell>{rules.find((rule) => rule.code===row.price_type)?.name || row.price_type}</TableCell><TableCell align="right">{row.old_price}</TableCell><TableCell align="right">{row.new_price}</TableCell><TableCell>{row.trigger.replaceAll('_', ' ')}</TableCell><TableCell sx={{ whiteSpace: 'nowrap' }}>{row.created_at}</TableCell></TableRow>)}{!changes.length && <TableRow><TableCell colSpan={6}>No price changes recorded yet.</TableCell></TableRow>}</TableBody></Table></TableContainer>
         </Paper>
     </Stack>;
 }

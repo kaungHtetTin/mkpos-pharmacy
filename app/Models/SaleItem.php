@@ -31,6 +31,7 @@ class SaleItem extends Model
         'cost_backfilled',
         'unit_price',
         'price_type',
+        'price_type_name',
         'original_unit_price',
         'discount_percentage',
         'discount_amount',

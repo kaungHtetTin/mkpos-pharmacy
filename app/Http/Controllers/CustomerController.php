@@ -253,6 +253,7 @@ class CustomerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'preferred_price_type' => ['nullable', \Illuminate\Validation\Rule::in(array_column(\App\Services\PriceTypes::choices(), 'code'))],
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
@@ -267,6 +268,7 @@ class CustomerController extends Controller
     public function update(Request $request, Customer $customer)
     {
         $validated = $request->validate([
+            'preferred_price_type' => ['nullable', \Illuminate\Validation\Rule::in(array_column(\App\Services\PriceTypes::choices(), 'code'))],
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',

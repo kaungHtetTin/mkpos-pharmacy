@@ -11,6 +11,32 @@ use Illuminate\Validation\ValidationException;
 
 class PricingRuleController extends Controller
 {
+    public function store(Request $request, AutomaticPricingService $pricing)
+    {
+        $data=$request->validate(['name'=>'required|string|max:60']);
+        DB::transaction(function () use ($data,$pricing) {
+            $pricing->lock();
+            if (PricingRule::whereRaw('LOWER(name) = ?', [mb_strtolower(trim($data['name']))])->exists()) throw ValidationException::withMessages(['name'=>'This price type already exists.']);
+            PricingRule::forceCreate(['code'=>'type_'.strtolower(\Illuminate\Support\Str::random(16)), 'name'=>trim($data['name']), 'sort_order'=>(int)PricingRule::max('sort_order')+1]);
+            \App\Tenancy\BusinessQuery::table('pricing_states')->where('id',1)->increment('version');
+        });
+        return redirect()->route('settings.index',['section'=>'prices'],303)->with('success','Price type added. Set its unit prices or automatic rule before using it.');
+    }
+
+    public function metadata(Request $request, PricingRule $rule, AutomaticPricingService $pricing)
+    {
+        $data=$request->validate(['name'=>'required|string|max:60','is_active'=>'required|boolean','sort_order'=>'required|integer|min:0|max:10000']);
+        DB::transaction(function () use ($data,$rule,$pricing) {
+            $pricing->lock();
+            $rule=PricingRule::where('code',$rule->code)->lockForUpdate()->firstOrFail();
+            if (in_array($rule->code,AutomaticPricingService::FIELDS,true)) throw ValidationException::withMessages(['name'=>'Retail and Wholesale are permanent default types.']);
+            if (PricingRule::where('code','!=',$rule->code)->whereRaw('LOWER(name) = ?', [mb_strtolower(trim($data['name']))])->exists()) throw ValidationException::withMessages(['name'=>'This price type already exists.']);
+            $rule->update([...$data,'name'=>trim($data['name']),'version'=>$rule->version+1]);
+            \App\Tenancy\BusinessQuery::table('pricing_states')->where('id',1)->increment('version');
+        });
+        return redirect()->route('settings.index',['section'=>'prices'],303)->with('success','Price type updated. Historical sales are unchanged.');
+    }
+
     private function values(Request $request): array
     {
         $values = $request->validate([

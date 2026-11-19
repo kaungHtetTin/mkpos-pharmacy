@@ -244,7 +244,7 @@ function AuthenticatedApp({ token, profile, setProfile, online, install, onLogou
                     <span className="app-header__label" title={profile.business?.name}>{profile.business?.name || headerLabel}</span>
                     <h1>
                         {headerTitle}
-                        {route === 'sale' && saleView !== 'complete' && salePriceMode === 'wholesale' && <span className="header-mode-alert" role="status">Wholesale</span>}
+                        {route === 'sale' && saleView !== 'complete' && !['retail','Retail'].includes(salePriceMode) && <span className="header-mode-alert" role="status">{salePriceMode}</span>}
                     </h1>
                 </div>
                 <div className="header-branch" title={branchName}>

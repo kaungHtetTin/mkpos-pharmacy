@@ -87,6 +87,8 @@ class ProductController extends Controller
             'tax_method' => 'required|in:Exclusive,Inclusive',
             'status' => 'required|in:Active,Inactive',
             'image' => 'nullable|image|max:250',
+            'product_units.*.custom_prices' => 'sometimes|array',
+            'product_units.*.custom_prices.*' => 'array:amount,mode,status',
             'product_units' => 'required|array|min:1',
             'product_units.*.unit_id' => 'nullable|exists:units,id',
             'product_units.*.unit_name' => 'nullable|string|max:255',
@@ -190,6 +192,8 @@ class ProductController extends Controller
             'tax_method' => 'required|in:Exclusive,Inclusive',
             'status' => 'required|in:Active,Inactive',
             'image' => 'nullable|image|max:250',
+            'product_units.*.custom_prices' => 'sometimes|array',
+            'product_units.*.custom_prices.*' => 'array:amount,mode,status',
             'product_units' => 'required|array|min:1',
             'product_units.*.unit_id' => 'nullable|exists:units,id',
             'product_units.*.unit_name' => 'nullable|string|max:255',
@@ -209,7 +213,7 @@ class ProductController extends Controller
             $product = Product::lockForUpdate()->findOrFail($product->id);
             $hasAutomatic = $product->product_units()->where(function ($query) {
                 $query->where('selling_price_mode', 'automatic')->orWhere('wholesale_price_mode', 'automatic');
-            })->exists();
+            })->exists() || $product->product_units()->get()->contains(fn ($unit) => collect($unit->custom_prices ?? [])->contains(fn ($price) => ($price['mode'] ?? '')==='automatic'));
             if (($request->has('pricing_version') || $hasAutomatic) && (int) $request->input('pricing_version', 0) !== $product->pricing_version) {
                 throw \Illuminate\Validation\ValidationException::withMessages(['pricing' => 'Medicine prices changed. Reload this medicine before saving.']);
             }

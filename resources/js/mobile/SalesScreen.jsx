@@ -1,3 +1,4 @@
+import { unitPrice, defaultPriceTypes, priceTypeName } from '../Utils/priceTypes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiError, apiRequest, queryString } from './api';
 import Icon from './Icons';
@@ -12,9 +13,7 @@ function resolveUnit(product, unitId) {
         || product.units?.[0];
 }
 
-function unitPrice(unit, priceType = 'retail') {
-    return Number(priceType === 'wholesale' ? (unit?.wholesale_price ?? unit?.selling_price) : unit?.selling_price) || 0;
-}
+
 
 function lineValues(line) {
     const gross = Number(line.quantity || 0) * unitPrice(line.unit, line.price_type);
@@ -55,11 +54,11 @@ function ProductCard({ product, unitId, onUnitChange, onAdd, currency, priceType
     const outOfStock = available < 1 || !unit;
     return (
         <article className={`product-card ${outOfStock ? 'product-card--disabled' : ''}`}>
-            <button className="product-card__main" type="button" onClick={() => onAdd(product, unit)} disabled={outOfStock}>
+            <button className="product-card__main" type="button" onClick={() => onAdd(product, unit)} disabled={outOfStock || unitPrice(unit,priceType) === null}>
                 {product.image_url
                     ? <img className="product-avatar product-avatar--image" src={product.image_url} alt="" loading="lazy" onError={(event) => { event.currentTarget.hidden = true; }} />
                     : <span className="product-avatar">{product.name?.slice(0, 2).toUpperCase()}</span>}
-                <span className="product-copy"><strong>{product.name}</strong><small>{product.generic_name || product.barcode || 'Medicine'}</small><span><b>{money(unitPrice(unit, priceType), currency)}</b><em>{outOfStock ? 'Out of stock' : `${available} ${unit?.unit_short_name || unit?.unit_name || 'units'} left`}</em></span></span>
+                <span className="product-copy"><strong>{product.name}</strong><small>{product.generic_name || product.barcode || 'Medicine'}</small><span><b>{unitPrice(unit, priceType) === null ? 'Price not set' : money(unitPrice(unit, priceType), currency)}</b><em>{outOfStock ? 'Out of stock' : `${available} ${unit?.unit_short_name || unit?.unit_name || 'units'} left`}</em></span></span>
                 <i className="add-circle"><Icon name="plus" size={19} /></i>
             </button>
             {product.units?.length > 1 && <label className="unit-picker"><span>Unit</span><select value={unit?.id || ''} onChange={(event) => onUnitChange(product.id, event.target.value)}>{product.units.map((option) => <option key={option.id} value={option.id}>{option.unit_short_name || option.unit_name}</option>)}</select></label>}
@@ -81,7 +80,7 @@ function CartLine({ line, onChange, onRemove, currency }) {
     const maxFocQuantity = Math.max(Math.floor((Number(line.product.stock_quantity || 0) - (Number(line.quantity || 0) * Math.max(Number(line.unit.conversion_factor || 1), 1))) / Math.max(Number(focUnit?.conversion_factor || 1), 1)), 0);
     return (
         <article className={`cart-line ${stockExceeded ? 'cart-line--error' : ''}`}>
-            <div className="cart-line__head"><div><strong>{line.product.name}</strong><small>{line.product.barcode || 'No barcode'} · {line.price_type}</small></div><button className="icon-button icon-button--danger" type="button" onClick={onRemove} aria-label={`Remove ${line.product.name}`}><Icon name="close" size={18} /></button></div>
+            <div className="cart-line__head"><div><strong>{line.product.name}</strong><small>{line.product.barcode || 'No barcode'} · {line.price_type_name || line.price_type}</small></div><button className="icon-button icon-button--danger" type="button" onClick={onRemove} aria-label={`Remove ${line.product.name}`}><Icon name="close" size={18} /></button></div>
             <div className="cart-line__controls">
                 <div className="stepper"><button type="button" aria-label="Reduce quantity" onClick={() => onChange({ quantity: Math.max(Number(line.quantity) - 1, 1) })}><Icon name="minus" size={17} /></button><input aria-label="Quantity" type="number" min="0.01" step="1" value={line.quantity} onChange={(event) => onChange({ quantity: Math.max(Number(event.target.value), 0.01) })} /><button type="button" aria-label="Increase quantity" disabled={Number(line.quantity) >= maxQuantity} onClick={() => onChange({ quantity: Number(line.quantity) + 1 })}><Icon name="plus" size={17} /></button></div>
                 <select aria-label="Unit" value={line.unit.id} onChange={(event) => onChange({ unit: resolveUnit(line.product, event.target.value) })}>{line.product.units.map((unit) => <option key={unit.id} value={unit.id}>{unit.unit_short_name || unit.unit_name}</option>)}</select>
@@ -178,7 +177,7 @@ export default function SalesScreen({ token, profile, online, notify, onPriceMod
     const [selectedUnits, setSelectedUnits] = useState({});
     const [cart, setCart] = useState(() => loadJson(cartKey, []));
     const [mobileStep, setMobileStep] = useState('products');
-    const [salePriceType, setSalePriceType] = useState('retail');
+    const [salePriceType, setSalePriceType] = useState(() => loadJson(cartKey, [])[0]?.price_type || 'retail');
     const [session, setSession] = useState(() => loadJson(keys.session(branchId), null));
     const [sessionOpen, setSessionOpen] = useState(false);
     const [sessionForm, setSessionForm] = useState({ amount: '', notes: '' });
@@ -197,9 +196,11 @@ export default function SalesScreen({ token, profile, online, notify, onPriceMod
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [receipt, setReceipt] = useState(null);
-    const [settings, setSettings] = useState({ currency_symbol: '$', pharmacy_name: 'Pharmacy POS' });
+    const [settings, setSettings] = useState(() => loadJson(keys.priceSettings(branchId), { currency_symbol: '$', pharmacy_name: 'Pharmacy POS' }));
     const searchSequence = useRef(0);
     const currency = settings.currency_symbol || '$';
+    const priceTypes = settings.price_types || defaultPriceTypes;
+    useEffect(() => { onPriceModeChange?.(priceTypeName(salePriceType, priceTypes)); }, [salePriceType, settings.price_types, onPriceModeChange]);
     const totals = useMemo(() => calculateTotals(cart), [cart]);
     const hasStockIssue = useMemo(() => cart.some((line) => stockRequested(line) > Number(line.product.stock_quantity || 0)), [cart]);
     const navigateSaleStep = useCallback((next, { replace = false } = {}) => {
@@ -232,6 +233,7 @@ export default function SalesScreen({ token, profile, online, notify, onPriceMod
             setProducts(nextProducts || []);
             setSession(nextSession);
             setSettings(nextSettings || settings);
+            if (nextSettings) saveJson(keys.priceSettings(branchId), nextSettings);
             saveJson(keys.session(branchId), nextSession);
             if (!query) saveJson(keys.products(branchId), nextProducts || []);
         } catch (requestError) { requestError.status === 401 ? window.location.reload() : setError(requestError.message); }
@@ -289,12 +291,13 @@ export default function SalesScreen({ token, profile, online, notify, onPriceMod
     }, [notify, online, token, offlineAllowed]);
 
     const addProduct = useCallback((product, unit) => {
+        if (unitPrice(unit, salePriceType) === null) return setError('Price not set. Set this unit price or explicitly select Retail.');
         if (!session) { openSaleOverlay('session'); notify('Open your shift before adding items.', 'info'); return false; }
         setCart((current) => {
             const existing = current.find((line) => line.product.id === product.id && String(line.unit.id) === String(unit.id));
             const max = Math.floor(Number(product.stock_quantity || 0) / Math.max(Number(unit.conversion_factor || 1), 1));
             if (existing) return current.map((line) => line === existing ? { ...line, quantity: Math.min(Number(line.quantity) + 1, max) } : line);
-            return [...current, { id: `${product.id}-${unit.id}-${Date.now()}`, product, unit, quantity: 1, foc_quantity: 0, foc_unit_id: unit.id, price_type: salePriceType }];
+            return [...current, { id: `${product.id}-${unit.id}-${Date.now()}`, product, unit, quantity: 1, foc_quantity: 0, foc_unit_id: unit.id, price_type: salePriceType, price_type_name: priceTypeName(salePriceType,priceTypes) }];
         });
         return true;
     }, [notify, openSaleOverlay, salePriceType, session]);
@@ -330,8 +333,9 @@ export default function SalesScreen({ token, profile, online, notify, onPriceMod
 
     const changePriceType = (next) => {
         setSalePriceType(next);
-        onPriceModeChange?.(next);
-        setCart((current) => current.map((line) => ({ ...line, price_type: next })));
+        onPriceModeChange?.(priceTypeName(next,priceTypes));
+        setError(cart.some((line) => unitPrice(line.unit,next)===null) ? 'Price not set. Set this unit price or explicitly select Retail.' : '');
+        setCart((current) => current.map((line) => ({ ...line, price_type: next, price_type_name: priceTypeName(next,priceTypes) })));
     };
     const changeLine = (id, patch) => setCart((current) => current.map((line) => line.id === id ? { ...line, ...patch } : line));
     const removeLine = (id) => setCart((current) => current.filter((line) => line.id !== id));
@@ -363,6 +367,8 @@ export default function SalesScreen({ token, profile, online, notify, onPriceMod
     };
 
     const submitSale = async () => {
+        if (cart.some((line) => unitPrice(line.unit,line.price_type) === null)) return setError('Price not set. Set this unit price or explicitly select Retail.');
+        if (!priceTypes.some((p) => p.code===salePriceType)) return setError('This price type is unavailable. Select an active price type.');
         if (!online && !offlineAllowed) return setError('Offline sales are not included in your business plan. Connect before checking out.');
         if (!session) {
             setError('This cash session is closed. Open a session before making another sale.');
@@ -418,13 +424,13 @@ export default function SalesScreen({ token, profile, online, notify, onPriceMod
             {error && <div className="form-alert form-alert--page" role="alert">{error}<button type="button" onClick={() => setError('')}><Icon name="close" size={16} /></button></div>}
             {mobileStep === 'products' && cart.length === 0 && <button className="cart-dock cart-dock--empty" type="button" disabled aria-label="Cart is empty"><span className="cart-dock__count">0</span><span><small>0 items</small><strong>View cart</strong></span><b>{money(0, currency)}</b><Icon name="chevron" size={19} /></button>}
 
-            {mobileStep === 'products' && <><section className={`shift-strip ${session ? 'shift-strip--open' : ''}`}><span className="shift-strip__icon"><Icon name="cash" size={21} /></span><div><strong>{session ? 'Shift open' : 'Shift not started'}</strong><small>{session ? `Since ${formatDate(session.opened_at)} · ${money(session.total_sales, currency)} sales` : 'Enter your opening cash to begin'}</small></div><button type="button" onClick={() => { setError(''); setSessionOpen(true); }}>{session ? 'Manage' : 'Start shift'}</button></section><section className="catalog-section"><div className="price-mode"><span>Price mode</span><div><button type="button" className={salePriceType === 'retail' ? 'active' : ''} onClick={() => changePriceType('retail')}>Retail</button><button type="button" className={salePriceType === 'wholesale' ? 'active' : ''} onClick={() => changePriceType('wholesale')}>Wholesale</button></div></div><div className="search-box search-box--large"><Icon name="search" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); scanBarcode(query); } }} placeholder="Scan barcode or search medicine" autoComplete="off" />{query && <button type="button" onClick={() => setQuery('')}><Icon name="close" size={18} /></button>}</div><div className="section-heading"><div><h2>Products</h2><p>{loadingProducts ? 'Finding stock…' : `${products.length} available results`}</p></div>{!online && <span className="muted-badge">Cached stock</span>}</div>{loadingProducts && !products.length ? <SkeletonList count={5} /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} unitId={selectedUnits[product.id]} onUnitChange={(id, unitId) => setSelectedUnits((current) => ({ ...current, [id]: unitId }))} onAdd={addProduct} currency={currency} priceType={salePriceType} />)}</div> : <EmptyState icon="search" title="No products found">Try a different medicine name or barcode.</EmptyState>}</section>{cart.length > 0 && <button className="cart-dock" type="button" onClick={() => navigateSaleStep('cart')} aria-label={`View cart with ${cart.length} products`}><span className="cart-dock__count">{cart.length}</span><span><small>{totals.quantity} items</small><strong>View cart</strong></span><b>{money(totals.grandTotal, currency)}</b><Icon name="chevron" size={19} /></button>}</>}
+            {mobileStep === 'products' && <><section className={`shift-strip ${session ? 'shift-strip--open' : ''}`}><span className="shift-strip__icon"><Icon name="cash" size={21} /></span><div><strong>{session ? 'Shift open' : 'Shift not started'}</strong><small>{session ? `Since ${formatDate(session.opened_at)} · ${money(session.total_sales, currency)} sales` : 'Enter your opening cash to begin'}</small></div><button type="button" onClick={() => { setError(''); setSessionOpen(true); }}>{session ? 'Manage' : 'Start shift'}</button></section><section className="catalog-section"><div className="price-mode"><span>Price mode</span><div>{priceTypes.map((type) => <button key={type.code} type="button" className={salePriceType===type.code ? 'active' : ''} onClick={() => changePriceType(type.code)}>{type.name}</button>)}</div></div><div className="search-box search-box--large"><Icon name="search" /><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); scanBarcode(query); } }} placeholder="Scan barcode or search medicine" autoComplete="off" />{query && <button type="button" onClick={() => setQuery('')}><Icon name="close" size={18} /></button>}</div><div className="section-heading"><div><h2>Products</h2><p>{loadingProducts ? 'Finding stock…' : `${products.length} available results`}</p></div>{!online && <span className="muted-badge">Cached stock</span>}</div>{loadingProducts && !products.length ? <SkeletonList count={5} /> : products.length ? <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} unitId={selectedUnits[product.id]} onUnitChange={(id, unitId) => setSelectedUnits((current) => ({ ...current, [id]: unitId }))} onAdd={addProduct} currency={currency} priceType={salePriceType} />)}</div> : <EmptyState icon="search" title="No products found">Try a different medicine name or barcode.</EmptyState>}</section>{cart.length > 0 && <button className="cart-dock" type="button" onClick={() => navigateSaleStep('cart')} aria-label={`View cart with ${cart.length} products`}><span className="cart-dock__count">{cart.length}</span><span><small>{totals.quantity} items</small><strong>View cart</strong></span><b>{money(totals.grandTotal, currency)}</b><Icon name="chevron" size={19} /></button>}</>}
 
-            {mobileStep === 'cart' && <section className="sale-stage"><div className="section-heading"><div><h2>Current sale</h2><p>{cart.length} product{cart.length === 1 ? '' : 's'} · {salePriceType} pricing</p></div><button type="button" onClick={() => window.history.back()}><Icon name="plus" size={17} /> Add items</button></div><div className="cart-lines">{cart.map((line) => <CartLine key={line.id} line={line} onChange={(patch) => changeLine(line.id, patch)} onRemove={() => removeLine(line.id)} currency={currency} />)}</div><div className="totals-card"><div><span>Subtotal</span><b>{money(totals.subtotal, currency)}</b></div>{totals.discount > 0 && <div className="discount-row"><span>Product savings</span><b>−{money(totals.discount, currency)}</b></div>}<div><span>Tax</span><b>{money(totals.tax, currency)}</b></div><div className="totals-card__grand"><span>Grand total</span><b>{money(totals.grandTotal, currency)}</b></div></div>{hasStockIssue && <div className="form-alert">Cart quantity exceeds available stock.</div>}<div className="stage-actions"><button className="button button--ghost" type="button" onClick={() => window.history.back()}>Products</button><button className="button button--primary" type="button" disabled={hasStockIssue} onClick={startCheckout}>Checkout <Icon name="chevron" size={18} /></button></div></section>}
+            {mobileStep === 'cart' && <section className="sale-stage"><div className="section-heading"><div><h2>Current sale</h2><p>{cart.length} product{cart.length === 1 ? '' : 's'} · {priceTypeName(salePriceType,priceTypes)} pricing</p></div><button type="button" onClick={() => window.history.back()}><Icon name="plus" size={17} /> Add items</button></div><div className="cart-lines">{cart.map((line) => <CartLine key={line.id} line={line} onChange={(patch) => changeLine(line.id, patch)} onRemove={() => removeLine(line.id)} currency={currency} />)}</div><div className="totals-card"><div><span>Subtotal</span><b>{money(totals.subtotal, currency)}</b></div>{totals.discount > 0 && <div className="discount-row"><span>Product savings</span><b>−{money(totals.discount, currency)}</b></div>}<div><span>Tax</span><b>{money(totals.tax, currency)}</b></div><div className="totals-card__grand"><span>Grand total</span><b>{money(totals.grandTotal, currency)}</b></div></div>{hasStockIssue && <div className="form-alert">Cart quantity exceeds available stock.</div>}<div className="stage-actions"><button className="button button--ghost" type="button" onClick={() => window.history.back()}>Products</button><button className="button button--primary" type="button" disabled={hasStockIssue} onClick={startCheckout}>Checkout <Icon name="chevron" size={18} /></button></div></section>}
 
             {mobileStep === 'checkout' && <section className="sale-stage checkout-stage"><div className="section-heading"><div><h2>Final checkout</h2><p>{cart.length} product{cart.length === 1 ? '' : 's'} in this sale</p></div><button type="button" onClick={() => window.history.back()}><Icon name="arrow" size={17} /> Back to cart</button></div><div className="amount-hero"><span>Amount to pay</span><strong>{money(totals.grandTotal, currency)}</strong></div><button className="selection-card" type="button" onClick={() => setCustomerOpen(true)}><span className="customer-initial">{selectedCustomer?.name?.charAt(0).toUpperCase() || 'W'}</span><span><small>Customer</small><strong>{selectedCustomer?.name || 'Walk-in customer'}</strong></span><span className="change-label">Change</span></button>{selectedCustomer && <div className="checkout-section"><label>Payment status</label><div className="segmented segmented--two">{['Paid', 'Credit'].map((status) => <button type="button" className={paymentStatus === status ? 'active' : ''} key={status} disabled={status === 'Credit' && selectedCustomer?.has_overdue} onClick={() => { setPaymentStatus(status); if (status === 'Credit') { setDueDate(defaultDueDate()); setAmountReceived('0'); } }}>{status}</button>)}</div></div>}{selectedCustomer && <p className="checkout-hint">Current balance: {money(selectedCustomer.current_balance || 0, currency)}{selectedCustomer.has_overdue ? ' - Overdue. Full payment is required.' : ''}</p>}{paymentStatus === 'Credit' && <label className="field"><span>Overdue limit (due date)</span><input type="date" required min={defaultDueDate(0)} value={dueDate} onChange={(event) => setDueDate(event.target.value)} /><small>Defaults to 7 days from today.</small></label>}{!selectedCustomer && <p className="checkout-hint">Credit is available after selecting a customer.</p>}<div className="checkout-section"><label>Payment method</label><div className="segmented">{['Cash', 'Card', 'Mobile', 'Wallet'].map((method) => <button type="button" className={paymentMethod === method ? 'active' : ''} key={method} onClick={() => { setPaymentMethod(method); setAmountReceived(method === 'Cash' && paymentStatus === 'Paid' ? totals.grandTotal.toFixed(2) : '0'); }}>{method}</button>)}</div></div>{(paymentMethod === 'Cash' || paymentStatus === 'Credit') && <label className="field cash-field"><span>Amount received</span><input type="number" inputMode="decimal" min="0" step="0.01" value={amountReceived} onChange={(event) => setAmountReceived(event.target.value)} /><small>{paymentStatus === 'Credit' ? 'Remaining balance' : 'Change'}: <b>{money(Math.max(paymentStatus === 'Credit' ? totals.grandTotal - Number(amountReceived || 0) : Number(amountReceived || 0) - totals.grandTotal, 0), currency)}</b></small></label>}{!online && <div className="offline-checkout-note"><Icon name="sync" size={19} /><span><strong>{offlineAllowed ? 'This sale will be queued' : 'Internet connection required'}</strong><small>{offlineAllowed ? 'It will sync automatically when this device reconnects.' : 'Offline sales are not included in this business plan.'}</small></span></div>}<div className="stage-actions"><button className="button button--ghost" type="button" onClick={() => window.history.back()} disabled={submitting}>Back</button><button className="button button--primary" type="button" onClick={submitSale} disabled={submitting || hasStockIssue || (!online && !offlineAllowed)}>{submitting ? <span className="spinner" /> : <Icon name={online ? 'check' : 'sync'} size={20} />}{submitting ? 'Completing…' : online ? 'Complete sale' : offlineAllowed ? 'Save offline' : 'Connect to complete sale'}</button></div></section>}
 
-            <Modal open={customerOpen} title="Choose customer" onClose={() => setCustomerOpen(false)}><CustomerChooser token={token} selected={selectedCustomer} online={online} onSelect={(customer) => { setSelectedCustomer(customer); if (!customer || customer.has_overdue) setPaymentStatus('Paid'); setCustomerOpen(false); }} /></Modal>
+            <Modal open={customerOpen} title="Choose customer" onClose={() => setCustomerOpen(false)}><CustomerChooser token={token} selected={selectedCustomer} online={online} onSelect={(customer) => { setSelectedCustomer(customer); if (customer?.preferred_price_type && priceTypes.some((p) => p.code===customer.preferred_price_type)) changePriceType(customer.preferred_price_type); if (!customer || customer.has_overdue) setPaymentStatus('Paid'); setCustomerOpen(false); }} /></Modal>
             <Modal open={sessionOpen} title={session ? 'Close this shift' : 'Start cashier shift'} onClose={() => !sessionBusy && setSessionOpen(false)} footer={<><button type="button" className="button button--ghost" onClick={() => setSessionOpen(false)} disabled={sessionBusy}>Cancel</button><button form="shift-form" className={`button ${session ? 'button--danger' : 'button--primary'}`} disabled={sessionBusy || !online}>{sessionBusy ? 'Saving…' : session ? 'Close shift' : 'Start shift'}</button></>}>
                 {session && <div className="session-report">
                     <div className="shift-metrics"><div><span>Opening cash</span><b>{money(session.opening_balance, currency)}</b></div><div><span>Net cash</span><b>{money(session.net_cash_sales, currency)}</b></div><div><span>Expected cash</span><b>{money(session.expected_closing, currency)}</b></div></div>

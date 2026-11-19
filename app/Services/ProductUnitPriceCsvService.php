@@ -16,9 +16,18 @@ class ProductUnitPriceCsvService
         'conversion_factor', 'is_base_unit', 'is_default_selling_unit', 'selling_price', 'wholesale_price',
     ];
 
+    public static function customColumns(): array
+    {
+        return PriceTypes::rules()->filter(fn ($rule) => PriceTypes::custom($rule->code))
+            ->mapWithKeys(fn ($rule) => [CatalogCsv::key('price: '.$rule->name) => $rule->code])->all();
+    }
+    public static function headers(): array { return [...self::HEADERS, ...array_keys(self::customColumns())]; }
+
     public function import(UploadedFile $file, bool $createUnits): array
     {
-        [$rows, $skipped] = CatalogCsv::read($file, self::HEADERS, 'unit_price_file', 50000);
+        [$headers, $rows, $skipped] = CatalogCsv::readRows($file, 'unit_price_file', 50000);
+        $columns=self::customColumns();
+        if (array_diff(self::HEADERS,$headers) || array_diff($headers,[...self::HEADERS,...array_keys($columns)])) CatalogCsv::fail('unit_price_file',['Use the current unit-price template. Unknown or missing columns were found.']);
         $errors = [];
         foreach ($rows as &$row) {
             $row['product_id'] = strtolower($row['product_id']);
@@ -30,13 +39,14 @@ class ProductUnitPriceCsvService
                 'is_base_unit' => 'required|boolean', 'is_default_selling_unit' => 'required|boolean',
                 'selling_price' => CatalogCsv::moneyRules(), 'wholesale_price' => CatalogCsv::moneyRules(),
             ]);
+            foreach ($columns as $column=>$code) if (isset($row[$column]) && $row[$column]!=='' && (!is_numeric($row[$column]) || !preg_match('/^\d+(\.\d{1,2})?$/',$row[$column]) || bccomp($row[$column],'0',2)<=0 || bccomp($row[$column],AutomaticPricingService::MAX_PRICE,2)>0)) $errors[]="Row {$row['_line']}: custom prices must be positive amounts with at most two decimal places.";
             foreach ($validator->errors()->all() as $error) $errors[] = "Row {$row['_line']}: {$error}";
             if ($row['is_base_unit'] && $row['conversion_factor'] !== '1') $errors[] = "Row {$row['_line']}: base unit conversion factor must be 1.";
         }
         unset($row);
         CatalogCsv::fail('unit_price_file', $errors);
 
-        return DB::transaction(function () use ($rows, $skipped, $createUnits) {
+        return DB::transaction(function () use ($rows, $skipped, $createUnits, $columns) {
             $pricing = app(AutomaticPricingService::class);
             $pricing->lock();
             $units = Unit::query()->get();
@@ -77,6 +87,8 @@ class ProductUnitPriceCsvService
                         }
                         $payload = collect($row)->only(['conversion_factor', 'is_base_unit', 'is_default_selling_unit', 'selling_price', 'wholesale_price'])->all();
                         $payload += ['selling_price_mode' => 'manual', 'wholesale_price_mode' => 'manual', 'selling_price_status' => 'manual', 'wholesale_price_status' => 'manual'];
+                        $payload['custom_prices']=$current?->custom_prices ?? [];
+                        foreach ($columns as $column=>$code) if (isset($row[$column]) && $row[$column]!=='') $payload['custom_prices'][$code]=['amount'=>bcadd($row[$column],'0',2),'mode'=>'manual','status'=>'manual'];
                         $changes[$unit->id] = $payload;
                         $finalUnits[$unit->id] = $payload;
                     } catch (ValidationException $exception) {
@@ -93,10 +105,13 @@ class ProductUnitPriceCsvService
                 foreach ($changes as $unitId => $payload) {
                     $current = $existing->firstWhere('unit_id', $unitId);
                     if ($current) {
+                        foreach ($payload['custom_prices'] as $code=>$price) if (($price['amount'] ?? null)!==PriceTypes::amount($current,$code)) $pricing->record($product,$current,$code,(string)(PriceTypes::amount($current,$code)??'0'),(string)($price['amount']??'0'),null,'unit_price_import',auth()->id());
                         $current->update($payload);
                         $stats['units_updated']++;
                     } else {
-                        $product->product_units()->create(['unit_id' => $unitId] + $payload);
+                        $created=$product->product_units()->make(['unit_id' => $unitId] + $payload);
+                        PriceTypes::saveCustom($created,$payload['custom_prices'] ?? [], \App\Models\PricingRule::all()->keyBy('code'),auth()->id());
+                        $created->save();
                         $stats['units_created']++;
                     }
                 }

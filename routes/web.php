@@ -217,6 +217,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/products/import', [ProductImportController::class, 'store'])->name('products.import.store');
             Route::post('/products/import/unit-prices', [ProductImportController::class, 'storeUnitPrices'])->name('products.import.unit-prices.store');
         });
+        Route::post('/settings/price-types', [PricingRuleController::class, 'store'])->name('price-types.store')->middleware('permission:manage_settings');
+        Route::patch('/settings/price-types/{rule}', [PricingRuleController::class, 'metadata'])->name('price-types.update')->middleware('permission:manage_settings');
         Route::post('/settings/prices/{rule}/preview', [PricingRuleController::class, 'preview'])->name('pricing.preview')->middleware('permission:manage_settings');
         Route::patch('/settings/prices/{rule}', [PricingRuleController::class, 'update'])->name('pricing.update')->middleware('permission:manage_settings');
         Route::get('/products', [ProductController::class, 'index'])->name('products.index')->middleware('permission:manage_products');

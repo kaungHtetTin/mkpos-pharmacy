@@ -1,3 +1,4 @@
+import AdditionalUnitPrices from '@/Components/AdditionalUnitPrices';
 import ViewportPanel from '@/Components/ViewportPanel';
 import React from 'react';
 import { automaticPrice } from '@/Utils/automaticPricing';
@@ -89,6 +90,8 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
         product_units: [...medicine.product_units]
             .sort((a, b) => Number(Boolean(b.is_base_unit)) - Number(Boolean(a.is_base_unit)))
             .map((pu, index) => ({
+            _existing: Boolean(pu.id),
+            custom_prices: pu.custom_prices || {},
             unit_id: pu.unit_id,
             unit_name: pu.unit?.name || pu.unit_name || '',
             unit_short_name: pu.unit?.short_name || pu.unit_short_name || '',
@@ -447,14 +450,14 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
                                                 <TableCell className="unit-name-cell">Unit name</TableCell>
                                                 <TableCell>Short name</TableCell>
                                                 <TableCell align="right"><Tooltip title="Number of base units contained in this unit"><Box component="span" sx={{ cursor: 'help', borderBottom: '1px dotted' }}>Base qty.</Box></Tooltip></TableCell>
-                                                <TableCell>Selling price</TableCell>
+                                                <TableCell>Retail price</TableCell>
                                                 <TableCell>Wholesale price</TableCell>
                                                 <TableCell align="center">Default</TableCell>
                                                 <TableCell><Box component="span" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>Actions</Box></TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                            {data.product_units.map((unit, index) => {
+                                {data.product_units.map((unit, index) => {
                                                 return (
                                                     <React.Fragment key={index}>
                                                         <TableRow>
@@ -472,7 +475,7 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
                                                                 const mode = `${field}_mode`;
                                                                 const automatic = unit[mode] === 'automatic';
                                                                 const calculated = automaticPrice(pricingCost, pricingRules[field] || {}, String(unit.conversion_factor));
-                                                                const label = field === 'selling_price' ? 'Selling' : 'Wholesale';
+                                                                const label = field === 'selling_price' ? 'Retail' : 'Wholesale';
                                                                 return (
                                                                     <TableCell key={field}>
                                                                         <Box sx={{ display: 'grid', gridTemplateColumns: '88px minmax(0, 1fr)' }}>
@@ -499,6 +502,8 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
                                         </TableBody>
                                     </Table>
                                 </TableContainer>
+                                {errors.custom_prices && <Alert severity="error">{errors.custom_prices}</Alert>}
+                                <Box sx={{ mt: 1.5 }}><AdditionalUnitPrices cost={pricingCost} rows={data.product_units} rules={pricing_rules} onChange={(rows) => setData('product_units', rows)} /></Box>
                                 {data.product_units.map((unit, index) => {
                                     const rowErrors = Object.entries(errors).filter(([key]) => key.startsWith(`product_units.${index}.`));
                                     return rowErrors.length > 0 && <Box key={index} id={`unit-errors-${index}`} role="alert" sx={{ mt: 0.75 }}>

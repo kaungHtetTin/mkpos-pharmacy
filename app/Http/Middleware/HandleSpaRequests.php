@@ -34,6 +34,7 @@ class HandleSpaRequests
         };
 
         return [
+            'priceTypes' => fn () => app(\App\Tenancy\BusinessContext::class)->id() ? \App\Services\PriceTypes::choices() : [],
             'business' => app(\App\Tenancy\BusinessContext::class)->business()?->only(['id','name','slug','status']),
             'subscription' => ($business = app(\App\Tenancy\BusinessContext::class)->business()) ? app(\App\Billing\SubscriptionAccess::class)->summary($business) : null,
             'office_mfa_required' => (bool) config('operations.mfa_required', false),

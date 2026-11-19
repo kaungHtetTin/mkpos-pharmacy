@@ -7,6 +7,7 @@ import ReportFilterToolbar from '@/Components/ReportFilterToolbar';
 import CsvExportButton from '@/Components/CsvExportButton';
 import { Head, useForm, router, usePage } from '@/spa';
 import {
+    MenuItem,
     Box,
     Chip,
     Paper,
@@ -39,7 +40,7 @@ import {
 } from '@mui/icons-material';
 
 export default function CustomerIndex({ auth, customers, filters }) {
-    const { translations = {}, settings = {} } = usePage().props;
+    const { translations = {}, settings = {}, priceTypes = [] } = usePage().props;
     const __ = (key) => translations[key] || key;
     const [open, setOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -67,6 +68,7 @@ export default function CustomerIndex({ auth, customers, filters }) {
         phone: '',
         email: '',
         address: '',
+        preferred_price_type: '',
     });
 
     const handleOpen = (customer = null) => {
@@ -78,6 +80,7 @@ export default function CustomerIndex({ auth, customers, filters }) {
                 phone: customer.phone || '',
                 email: customer.email || '',
                 address: customer.address || '',
+                preferred_price_type: priceTypes.some((p) => p.code===customer.preferred_price_type) ? customer.preferred_price_type : '',
             });
         } else {
             setEditMode(false);
@@ -88,6 +91,7 @@ export default function CustomerIndex({ auth, customers, filters }) {
                 phone: '',
                 email: '',
                 address: '',
+        preferred_price_type: '',
             });
         }
         setOpen(true);
@@ -240,6 +244,7 @@ export default function CustomerIndex({ auth, customers, filters }) {
                         </IconButton>
                     </DialogTitle>
                     <DialogContent dividers>
+                    <TextField fullWidth select size="small" label="Preferred price type" value={data.preferred_price_type || ''} onChange={(e) => setData('preferred_price_type',e.target.value)} sx={{ mt: 2, mb: 1 }} error={Boolean(errors.preferred_price_type)} helperText={errors.preferred_price_type || "Applied when this customer is selected at POS; the cashier can change it."}><MenuItem value="">Retail (default)</MenuItem>{priceTypes.map((type) => <MenuItem key={type.code} value={type.code}>{type.name}</MenuItem>)}</TextField>
                         <Stack spacing={2.5} sx={{ mt: 1 }}>
                             <TextField
                                 label={__('Customer Name')}

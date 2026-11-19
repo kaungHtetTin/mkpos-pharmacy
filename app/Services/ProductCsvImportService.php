@@ -167,11 +167,7 @@ class ProductCsvImportService
                             'wholesale_price_mode' => 'manual',
                         ];
                     }
-                    if ($isUpdate) {
-                        $pricing->saveUnits($product, $unitRows);
-                    } else {
-                        foreach ($unitRows as $unitRow) $product->product_units()->create($unitRow);
-                    }
+                    $pricing->saveUnits($product, $unitRows);
                     $pricing->refreshProduct($product, 'product_import', auth()->id());
                 } catch (ValidationException $exception) {
                     $errors[] = "Row {$row['_line']}: ".str_replace("Import failed. No changes were saved.\n", '', $exception->validator->errors()->first('file'));

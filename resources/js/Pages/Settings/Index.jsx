@@ -17,7 +17,7 @@ import { compressImage } from '@/Utils/compressImage';
 import { AppBarActions } from '@/Components/AppBarPortal';
 
 const sections = [
-    ['prices', 'Automatic Pricing', 'Selling and wholesale price rules', PriceChange],
+    ['prices', 'Automatic Pricing', 'Retail, wholesale and custom price rules', PriceChange],
     ['business', 'Business Profile', 'Identity used across the application', Business],
     ['regional', 'Regional & Currency', 'Language, time and money formats', Language],
     ['pos', 'POS & Branch Devices', 'Workflow defaults and branch hardware', PointOfSale],

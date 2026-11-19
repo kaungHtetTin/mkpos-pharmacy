@@ -94,7 +94,7 @@ class PosController extends Controller
                 'tax:id,name,rate',
                 'taxes:id,name,rate',
                 'product_units' => function ($q) {
-                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'wholesale_price', 'is_base_unit', 'is_default_selling_unit')
+                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'custom_prices', 'wholesale_price', 'is_base_unit', 'is_default_selling_unit')
                         ->with(['unit:id,name,short_name']);
                 },
             ])
@@ -135,6 +135,7 @@ class PosController extends Controller
                             'short_name' => $pu->unit?->short_name,
                             'conversion_factor' => (int) $pu->conversion_factor,
                             'selling_price' => (float) $pu->selling_price,
+                            'custom_prices' => $pu->custom_prices ?? [],
                             'wholesale_price' => (float) ($pu->wholesale_price ?? $pu->selling_price),
                             'is_base_unit' => (bool) $pu->is_base_unit,
                             'is_default_selling_unit' => (bool) $pu->is_default_selling_unit,
@@ -186,7 +187,7 @@ class PosController extends Controller
                 'tax:id,name,rate',
                 'taxes:id,name,rate',
                 'product_units' => function ($q) {
-                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'wholesale_price', 'is_base_unit', 'is_default_selling_unit')
+                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'custom_prices', 'wholesale_price', 'is_base_unit', 'is_default_selling_unit')
                         ->with(['unit:id,name,short_name']);
                 },
             ])
@@ -228,7 +229,8 @@ class PosController extends Controller
                         'short_name' => $pu->unit?->short_name,
                         'conversion_factor' => (int) $pu->conversion_factor,
                         'selling_price' => (float) $pu->selling_price,
-                        'wholesale_price' => (float) ($pu->wholesale_price ?? $pu->selling_price),
+                        'custom_prices' => $pu->custom_prices ?? [],
+                            'wholesale_price' => (float) ($pu->wholesale_price ?? $pu->selling_price),
                         'is_base_unit' => (bool) $pu->is_base_unit,
                         'is_default_selling_unit' => (bool) $pu->is_default_selling_unit,
                     ];
@@ -285,7 +287,7 @@ class PosController extends Controller
                 'tax:id,name,rate',
                 'taxes:id,name,rate',
                 'product_units' => function ($q) {
-                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'wholesale_price', 'is_base_unit', 'is_default_selling_unit')
+                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'custom_prices', 'wholesale_price', 'is_base_unit', 'is_default_selling_unit')
                         ->with(['unit:id,name,short_name']);
                 },
             ])
@@ -328,7 +330,8 @@ class PosController extends Controller
                     'short_name' => $pu->unit?->short_name,
                     'conversion_factor' => (int) $pu->conversion_factor,
                     'selling_price' => (float) $pu->selling_price,
-                    'wholesale_price' => (float) ($pu->wholesale_price ?? $pu->selling_price),
+                    'custom_prices' => $pu->custom_prices ?? [],
+                            'wholesale_price' => (float) ($pu->wholesale_price ?? $pu->selling_price),
                     'is_base_unit' => (bool) $pu->is_base_unit,
                     'is_default_selling_unit' => (bool) $pu->is_default_selling_unit,
                 ];
@@ -352,14 +355,14 @@ class PosController extends Controller
             'payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
             'payment_status' => 'required|in:Paid,Credit,Partial,Due',
             'due_date' => 'nullable|required_if:payment_status,Credit|date_format:Y-m-d|after_or_equal:today',
-            'sale_channel' => 'nullable|in:retail,wholesale',
+            'sale_channel' => 'nullable|string|max:30',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.unit_id' => 'required|exists:units,id',
             'items.*.quantity' => 'required|numeric|min:0.01|max:999999.99',
             'items.*.foc_quantity' => 'nullable|numeric|min:0|max:999999.99',
             'items.*.foc_unit_id' => 'nullable|exists:units,id',
-            'items.*.price_type' => 'nullable|in:retail,wholesale',
+            'items.*.price_type' => 'nullable|string|max:30',
         ]);
 
         $branchId = $request->user()->currentBranchId();
@@ -380,7 +383,8 @@ class PosController extends Controller
             ]);
         }
 
-        $saleChannel = ($validated['sale_channel'] ?? 'retail') === 'wholesale' ? 'wholesale' : 'retail';
+        $saleChannel = $validated['sale_channel'] ?? 'retail';
+        \App\Services\PriceTypes::rule($saleChannel);
 
         $items = collect($validated['items'])->map(function ($item) use ($saleChannel) {
             $item['quantity'] = (float) $item['quantity'];
@@ -392,7 +396,7 @@ class PosController extends Controller
 
         $productIds = $items->pluck('product_id')->unique()->values();
         $products = Product::whereIn('id', $productIds)
-            ->with(['tax:id,rate', 'taxes:id,rate', 'product_units:product_id,unit_id,conversion_factor,selling_price,wholesale_price,selling_price_mode,wholesale_price_mode,is_base_unit,is_default_selling_unit'])
+            ->with(['tax:id,rate', 'taxes:id,rate', 'product_units:product_id,unit_id,conversion_factor,selling_price,custom_prices,wholesale_price,selling_price_mode,wholesale_price_mode,is_base_unit,is_default_selling_unit'])
             ->get()
             ->keyBy('id');
 
@@ -460,10 +464,7 @@ class PosController extends Controller
             }
 
             $priceType = $item['price_type'] ?? 'retail';
-            app(\App\Services\AutomaticPricingService::class)->assertSellable($productUnit, $priceType === 'wholesale' ? 'wholesale_price' : 'selling_price');
-            $originalUnitPrice = $priceType === 'wholesale'
-                ? (float) ($productUnit->wholesale_price ?? $productUnit->selling_price)
-                : (float) $productUnit->selling_price;
+            $originalUnitPrice = \App\Services\PriceTypes::quote($productUnit, $priceType);
             $discountPercentage = min(max((float) ($product->discount_percentage ?? 0), 0), 100);
             $lineGross = $item['quantity'] * $originalUnitPrice;
             $lineDiscount = $lineGross * ($discountPercentage / 100);
@@ -502,6 +503,7 @@ class PosController extends Controller
                 'unit_price' => $unitPrice,
                 'original_unit_price' => $originalUnitPrice,
                 'price_type' => $priceType,
+                'price_type_name' => \App\Services\PriceTypes::name($priceType),
                 'discount_percentage' => $discountPercentage,
                 'discount_amount' => $lineDiscount,
                 'tax_amount' => $lineTax,
@@ -624,6 +626,7 @@ class PosController extends Controller
                         'cost_backfilled' => false,
                         'unit_price' => $line['unit_price'],
                         'price_type' => $line['price_type'],
+                        'price_type_name' => $line['price_type_name'],
                         'original_unit_price' => $line['original_unit_price'],
                         'discount_percentage' => $line['discount_percentage'],
                         'discount_amount' => $line['quantity'] > 0 ? $line['discount_amount'] * ($quantityInUnit / (float) $line['quantity']) : 0,
@@ -659,6 +662,7 @@ class PosController extends Controller
                 'foc_quantity' => (float) $line['foc_quantity'],
                 'unit_price' => (float) $line['unit_price'],
                 'price_type' => $line['price_type'],
+                        'price_type_name' => $line['price_type_name'],
                 'discount_percentage' => (float) $line['discount_percentage'],
                 'discount_amount' => (float) $line['discount_amount'],
                 'total_price' => (float) $line['quantity'] * (float) $line['unit_price'],
@@ -824,7 +828,7 @@ class PosController extends Controller
             })
             ->orderBy('name')
             ->limit($limit)
-            ->select(['id', 'name', 'phone', 'email', 'address'])
+            ->select(['id', 'name', 'phone', 'email', 'address', 'preferred_price_type'])
             ->withCreditSummary()
             ->get();
 
@@ -837,6 +841,7 @@ class PosController extends Controller
     public function storeCustomer(Request $request)
     {
         $validated = $request->validate([
+            'preferred_price_type' => ['nullable', \Illuminate\Validation\Rule::in(array_column(\App\Services\PriceTypes::choices(), 'code'))],
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',

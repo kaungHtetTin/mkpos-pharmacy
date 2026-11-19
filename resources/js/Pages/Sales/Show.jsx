@@ -77,11 +77,11 @@ export default function SaleShow({ auth, sale, returns = [], summary = {} }) {
                     <Paper sx={{ p: 1.5, minWidth: 0 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Sale Items</Typography>
                         <TableContainer><Table size="small">
-                            <TableHead><TableRow><TableCell>Product / Batch</TableCell><TableCell>Unit</TableCell><TableCell align="right">Qty</TableCell><TableCell align="right">Unit Price</TableCell><TableCell align="right">Discount</TableCell><TableCell align="right">Cost</TableCell><TableCell align="right">Total</TableCell></TableRow></TableHead>
+                            <TableHead><TableRow><TableCell>Product / Batch</TableCell><TableCell>Unit</TableCell><TableCell>Price type</TableCell><TableCell align="right">Qty</TableCell><TableCell align="right">Unit Price</TableCell><TableCell align="right">Discount</TableCell><TableCell align="right">Cost</TableCell><TableCell align="right">Total</TableCell></TableRow></TableHead>
                             <TableBody>{items.map((item) => <TableRow key={item.id} hover>
                                 <TableCell><Typography variant="body2" sx={{ fontWeight: 700 }}>{item.product?.name || '-'}</Typography><Typography variant="caption" color="text.secondary">{item.product?.generic_name || item.product?.barcode || ''} · Batch {item.batch?.batch_number || '-'}</Typography></TableCell>
                                 <TableCell>{item.unit?.short_name || item.unit?.name || '-'}</TableCell>
-                                <TableCell align="right">{item.quantity}{Number(item.foc_quantity || 0) > 0 ? ` + ${item.foc_quantity} FOC` : ''}</TableCell>
+                                <TableCell>{item.price_type_name || (item.price_type==='wholesale' ? 'Wholesale' : item.price_type==='retail' ? 'Retail' : item.price_type)}</TableCell><TableCell align="right">{item.quantity}{Number(item.foc_quantity || 0) > 0 ? ` + ${item.foc_quantity} FOC` : ''}</TableCell>
                                 <TableCell align="right">${money(item.unit_price)}</TableCell>
                                 <TableCell align="right">${money(item.discount_amount)}</TableCell>
                                 <TableCell align="right">${money(item.cost_total)}</TableCell>

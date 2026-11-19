@@ -13,6 +13,7 @@ class Customer extends Model
     use HasFactory, HasUuid;
 
     protected $fillable = [
+        'preferred_price_type',
         'name',
         'phone',
         'email',

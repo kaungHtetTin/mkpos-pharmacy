@@ -69,7 +69,7 @@ class CashierPosController extends Controller
             ->with([
                 'taxes:id,name,rate',
                 'product_units' => function ($q) {
-                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'wholesale_price', 'selling_price_mode', 'wholesale_price_mode', 'is_base_unit', 'is_default_selling_unit')
+                    $q->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'custom_prices', 'wholesale_price', 'selling_price_mode', 'wholesale_price_mode', 'is_base_unit', 'is_default_selling_unit')
                         ->with(['unit:id,name,short_name']);
                 },
             ])
@@ -96,6 +96,7 @@ class CashierPosController extends Controller
                             'unit_short_name' => $pu->unit->short_name ?? '',
                             'conversion_factor' => $pu->conversion_factor,
                             'selling_price' => $pu->selling_price,
+                            'custom_prices' => $pu->custom_prices ?? [],
                             'wholesale_price' => $pu->wholesale_price ?? $pu->selling_price,
                             'is_base_unit' => $pu->is_base_unit,
                             'is_default_selling_unit' => $pu->is_default_selling_unit,
@@ -130,7 +131,7 @@ class CashierPosController extends Controller
             });
         }
 
-        $customers = $query->select('id', 'name', 'phone', 'address')->withCreditSummary()
+        $customers = $query->select('id', 'name', 'phone', 'address', 'preferred_price_type')->withCreditSummary()
             ->orderBy('name')
             ->limit(50)
             ->get();
@@ -162,6 +163,7 @@ class CashierPosController extends Controller
         }
 
         $validated = $request->validate([
+            'preferred_price_type' => ['nullable', \Illuminate\Validation\Rule::in(array_column(\App\Services\PriceTypes::choices(), 'code'))],
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string|max:500',
@@ -193,6 +195,7 @@ class CashierPosController extends Controller
         }
 
         $validated = $request->validate([
+            'preferred_price_type' => ['nullable', \Illuminate\Validation\Rule::in(array_column(\App\Services\PriceTypes::choices(), 'code'))],
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string|max:500',
@@ -365,7 +368,7 @@ class CashierPosController extends Controller
             'items.*.foc_quantity' => 'nullable|numeric|min:0',
             'items.*.foc_product_unit_id' => 'nullable|exists:product_units,id',
             'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.price_type' => 'nullable|in:retail,wholesale',
+            'items.*.price_type' => 'nullable|string|max:30',
             'items.*.tax_rate' => 'nullable|numeric|min:0',
         ]);
 
@@ -418,7 +421,7 @@ class CashierPosController extends Controller
             $products = Product::whereIn('id', $productIds)
                 ->with(['taxes:id,rate', 'product_units' => function ($q) use ($productUnitIds) {
                     $q->whereIn('id', $productUnitIds)
-                        ->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'wholesale_price', 'selling_price_mode', 'wholesale_price_mode', 'is_base_unit');
+                        ->select('id', 'product_id', 'unit_id', 'conversion_factor', 'selling_price', 'custom_prices', 'wholesale_price', 'selling_price_mode', 'wholesale_price_mode', 'is_base_unit');
                 }])
                 ->get()
                 ->keyBy('id');
@@ -449,10 +452,7 @@ class CashierPosController extends Controller
                 $focConversionFactor = max((int) $focProductUnit->conversion_factor, 1);
                 $baseQuantity = (int) round($item['quantity'] * $conversionFactor);
                 $focBaseQuantity = (int) round($item['foc_quantity'] * $focConversionFactor);
-                app(\App\Services\AutomaticPricingService::class)->assertSellable($productUnit, $item['price_type'] === 'wholesale' ? 'wholesale_price' : 'selling_price');
-                $originalUnitPrice = $item['price_type'] === 'wholesale'
-                    ? (float) ($productUnit->wholesale_price ?? $productUnit->selling_price)
-                    : (float) $productUnit->selling_price;
+                $originalUnitPrice = \App\Services\PriceTypes::quote($productUnit, $item['price_type']);
                 $discountPercentage = min(max((float) ($product->discount_percentage ?? 0), 0), 100);
                 $lineGross = $item['quantity'] * $originalUnitPrice;
                 $lineDiscount = $lineGross * ($discountPercentage / 100);
@@ -483,6 +483,7 @@ class CashierPosController extends Controller
                     'unit_price' => $unitPrice,
                     'original_unit_price' => $originalUnitPrice,
                     'price_type' => $item['price_type'],
+                    'price_type_name' => \App\Services\PriceTypes::name($item['price_type']),
                     'discount_percentage' => $discountPercentage,
                     'discount_amount' => $lineDiscount,
                     'tax_amount' => $taxAmount,
@@ -572,6 +573,7 @@ class CashierPosController extends Controller
                         'cost_backfilled' => false,
                         'unit_price' => $line['unit_price'],
                         'price_type' => $line['price_type'],
+                        'price_type_name' => $line['price_type_name'],
                         'original_unit_price' => $line['original_unit_price'],
                         'discount_percentage' => $line['discount_percentage'],
                         'discount_amount' => $line['discount_amount'] * ($quantityInUnit / (float) $line['quantity']),
@@ -820,6 +822,7 @@ class CashierPosController extends Controller
                 'unit_price' => $item->unit_price,
                 'original_unit_price' => $item->original_unit_price,
                 'price_type' => $item->price_type,
+                'price_type_name' => $item->price_type_name,
                 'discount_percentage' => $item->discount_percentage,
                 'discount_amount' => $item->discount_amount,
                 'total_price' => $item->total_price,
@@ -913,6 +916,7 @@ class CashierPosController extends Controller
             : Setting::get($legacy, $default);
 
         $settings = [
+            'price_types' => \App\Services\PriceTypes::choices(),
             'pharmacy_name'       => Setting::get('invoice.pharmacy_name', config('app.name')),
             'receipt_header'      => Setting::get('invoice.receipt_header', ''),
             'receipt_footer'      => Setting::get('invoice.receipt_footer', ''),

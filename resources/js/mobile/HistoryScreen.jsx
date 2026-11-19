@@ -20,7 +20,7 @@ function SaleDetail({ sale, currency }) {
             <div className="detail-items">
                 {items.map((item) => (
                     <div key={item.id}>
-                        <span><strong>{item.product?.name || 'Item'}</strong><small>{Number(item.quantity)} {item.unit?.short_name || item.unit?.name || ''}{Number(item.foc_quantity || 0) > 0 ? ` + ${Number(item.foc_quantity)} FOC` : ''}</small></span>
+                        <span><strong>{item.product?.name || 'Item'}</strong><small>{item.price_type_name ? `${item.price_type_name} · ` : ''}{Number(item.quantity)} {item.unit?.short_name || item.unit?.name || ''}{Number(item.foc_quantity || 0) > 0 ? ` + ${Number(item.foc_quantity)} FOC` : ''}</small></span>
                         <b>{money(item.total_price, currency)}</b>
                     </div>
                 ))}

@@ -36,7 +36,7 @@ class ProductImportController extends Controller
     public function unitPriceTemplate()
     {
         return $this->download('medicine-unit-prices-'.now()->format('Y-m-d-His').'.csv', function ($output) {
-            fputcsv($output, ProductUnitPriceCsvService::HEADERS, ',', '"', '');
+            fputcsv($output, ProductUnitPriceCsvService::headers(), ',', '"', '');
             Product::query()->with('product_units.unit')->chunkById(250, function ($products) use ($output) {
                 foreach ($products as $product) {
                     foreach ($product->product_units as $productUnit) {
@@ -46,6 +46,7 @@ class ProductImportController extends Controller
                             $productUnit->conversion_factor, $productUnit->is_base_unit ? 'yes' : 'no',
                             $productUnit->is_default_selling_unit ? 'yes' : 'no',
                             $productUnit->selling_price, $productUnit->wholesale_price,
+                            ...array_map(fn ($code) => \App\Services\PriceTypes::amount($productUnit,$code) ?? '', ProductUnitPriceCsvService::customColumns()),
                         ], ',', '"', '');
                     }
                 }

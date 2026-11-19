@@ -72,7 +72,7 @@ class SettingsController extends Controller
 
         return Spa::render('Settings/Index', [
             'initial_section' => request()->query('section', 'business'),
-            'pricing_rules' => \App\Models\PricingRule::orderBy('code')->get(),
+            'pricing_rules' => \App\Models\PricingRule::orderBy('sort_order')->orderBy('name')->get(),
             'price_changes' => \App\Tenancy\BusinessQuery::table('price_changes')->orderByDesc('id')->limit(30)->get(),
             'pos_behavior' => $posBehavior,
             'branch_preferences' => $branchPreferences,

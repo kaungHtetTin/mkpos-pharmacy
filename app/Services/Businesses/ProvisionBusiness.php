@@ -36,7 +36,7 @@ final class ProvisionBusiness
                 Setting::set('invoice.pharmacy_name',$business->name);
                 Setting::set('app.currency_symbol',$data['currency_symbol'] ?? '$');
                 DB::table('pricing_states')->insert(['business_id'=>$business->id,'id'=>1,'version'=>1]);
-                foreach (['selling_price'=>'Selling price','wholesale_price'=>'Wholesale price'] as $code=>$name) PricingRule::forceCreate(['code'=>$code,'name'=>$name]);
+                foreach (['selling_price'=>'Retail','wholesale_price'=>'Wholesale'] as $code=>$name) PricingRule::forceCreate(['code'=>$code,'name'=>$name]);
             });
             return $business;
         });

@@ -11,6 +11,6 @@ class PricingRule extends Model
     protected $primaryKey = 'code';
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['pricing_mode', 'markup_percent', 'rounding', 'minimum_profit', 'version'];
-    protected $casts = ['markup_percent' => 'decimal:4', 'minimum_profit' => 'decimal:2', 'rounding' => 'integer', 'version' => 'integer'];
+    protected $fillable = ['name', 'is_active', 'sort_order', 'pricing_mode', 'markup_percent', 'rounding', 'minimum_profit', 'version'];
+    protected $casts = ['is_active'=>'boolean', 'sort_order'=>'integer', 'markup_percent' => 'decimal:4', 'minimum_profit' => 'decimal:2', 'rounding' => 'integer', 'version' => 'integer'];
 }

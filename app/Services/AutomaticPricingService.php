@@ -21,7 +21,7 @@ class AutomaticPricingService
 
     public function assertSellable(ProductUnit $unit, string $field): void
     {
-        if ($unit->{$field.'_mode'} === 'automatic' && bccomp((string) $unit->$field, '0', 2) <= 0) {
+        if (PriceTypes::mode($unit,$field) === 'automatic' && bccomp((string) (PriceTypes::amount($unit,$field) ?? '0'), '0', 2) <= 0) {
             throw ValidationException::withMessages(['items' => 'This automatic price needs a buying cost. Set the medicine cost or a manual price before selling.']);
         }
     }
@@ -61,30 +61,31 @@ class AutomaticPricingService
     {
         $product = Product::query()->lockForUpdate()->findOrFail($product->id);
         $cost = $this->readCost($product);
-        $rules = $onlyRule ? collect([$onlyRule]) : PricingRule::all();
+        $rules = $onlyRule ? collect([$onlyRule]) : PriceTypes::rules();
         $stats = ['changed' => 0, 'cost_required' => 0];
         foreach ($product->product_units()->with('unit')->lockForUpdate()->get() as $unit) {
             foreach ($rules as $rule) {
                 $field = $rule->code;
                 if ($rule->pricing_mode === 'manual') {
-                    $unit->fill([$field.'_mode' => 'manual', $field.'_status' => 'manual']);
+                    PriceTypes::set($unit,$field,'mode','manual');
+                    PriceTypes::set($unit,$field,'status',PriceTypes::amount($unit,$field)===null?'missing':'manual');
                     continue;
                 }
-                if ($enroll) $unit->{$field.'_mode'} = 'automatic';
-                if ($unit->{$field.'_mode'} !== 'automatic') {
-                    $unit->{$field.'_status'} = 'manual';
+                if ($enroll) PriceTypes::set($unit,$field,'mode','automatic');
+                if (PriceTypes::mode($unit,$field) !== 'automatic') {
+                    PriceTypes::set($unit,$field,'status','manual');
                     continue;
                 }
                 $amount = $this->calculate($cost, $rule->toArray(), (string) $unit->conversion_factor);
                 if ($amount === null) {
-                    $unit->{$field.'_status'} = 'cost_required';
+                    PriceTypes::set($unit,$field,'status','cost_required');
                     $stats['cost_required']++;
                     continue;
                 }
-                $unit->{$field.'_status'} = 'calculated';
-                if (bccomp((string) $unit->$field, $amount, 2) !== 0) {
-                    $this->record($product, $unit, $field, (string) $unit->$field, $amount, $cost, $trigger, $actor, $rule);
-                    $unit->$field = $amount;
+                PriceTypes::set($unit,$field,'status','calculated');
+                if (bccomp((string) (PriceTypes::amount($unit,$field) ?? '0'), $amount, 2) !== 0) {
+                    $this->record($product, $unit, $field, (string) (PriceTypes::amount($unit,$field) ?? '0'), $amount, $cost, $trigger, $actor, $rule);
+                    PriceTypes::set($unit,$field,'amount',$amount);
                     $stats['changed']++;
                 }
             }
@@ -111,15 +112,15 @@ class AutomaticPricingService
     {
         $unit = ProductUnit::where('product_id', $item['product_id'])->where('unit_id', $item['unit_id'])->firstOrFail();
         foreach (self::FIELDS as $field) {
-            if ($unit->{$field.'_mode'} === 'automatic') continue;
+            if (PriceTypes::mode($unit,$field) === 'automatic') continue;
             $amount = number_format((float) $item[$field], 2, '.', '');
             if (bccomp($amount, '0', 2) <= 0) {
                 throw ValidationException::withMessages(['items' => 'Manual selling and wholesale prices must be greater than zero.']);
             }
-            if (bccomp((string) $unit->$field, $amount, 2) !== 0) {
-                $this->record($unit->product, $unit, $field, (string) $unit->$field, $amount, null, 'purchase_manual', $actor);
+            if (bccomp((string) (PriceTypes::amount($unit,$field) ?? '0'), $amount, 2) !== 0) {
+                $this->record($unit->product, $unit, $field, (string) (PriceTypes::amount($unit,$field) ?? '0'), $amount, null, 'purchase_manual', $actor);
             }
-            $unit->$field = $amount;
+            PriceTypes::set($unit,$field,'amount',$amount);
         }
         $unit->save();
     }
@@ -153,6 +154,9 @@ class AutomaticPricingService
                 $row[$field.'_mode'] = $mode;
                 if ($mode === 'automatic') $row[$field] = $unit->exists ? $unit->$field : 0;
             }
+            $custom = $row['custom_prices'] ?? [];
+            unset($row['custom_prices']);
+            PriceTypes::saveCustom($unit, $custom, $rules, auth()->id());
             $unit->fill($row)->save();
             $retained[] = $unit->id;
         }
@@ -171,16 +175,16 @@ class AutomaticPricingService
                 $cost = $this->readCost($product);
                 $affected = false;
                 foreach ($product->product_units as $unit) {
-                    if ($unit->{$rule->code.'_mode'} !== 'automatic' && !($enroll && $product->status === 'Active')) continue;
+                    if (PriceTypes::mode($unit,$rule->code) !== 'automatic' && !($enroll && $product->status === 'Active')) continue;
                     $amount = $this->calculate($cost, $values, (string) $unit->conversion_factor);
                     $affected = true;
                     $counts['prices']++;
-                    if ($unit->{$rule->code.'_mode'} === 'manual') $counts['manual_overrides']++;
+                    if (PriceTypes::mode($unit,$rule->code) === 'manual') $counts['manual_overrides']++;
                     if ($amount === null) $counts['cost_required']++;
                     hash_update($hash, json_encode([$product->id, $product->pricing_version, $unit->id,
-                        $unit->conversion_factor, $unit->{$rule->code}, $unit->{$rule->code.'_mode'}, $cost]));
+                        $unit->conversion_factor, PriceTypes::amount($unit,$rule->code), PriceTypes::mode($unit,$rule->code), $cost]));
                     if (count($examples) < 20) $examples[] = ['product' => $product->name, 'unit' => $unit->unit->name,
-                        'old_price' => $unit->{$rule->code}, 'new_price' => $amount, 'base_cost' => $cost];
+                        'old_price' => PriceTypes::amount($unit,$rule->code), 'new_price' => $amount, 'base_cost' => $cost];
                 }
                 if ($affected) $counts['products']++;
             }

@@ -419,3 +419,8 @@ body.modal-open { overflow: hidden; }
 .login-footnote { margin-top: 12px; }
 
 .app-header__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Custom price types stay compact and swipe horizontally on small screens. */
+.price-mode { min-width: 0; }
+.price-mode > div { display: flex; min-width: 0; max-width: 100%; overflow-x: auto; }
+.price-mode button { flex: 0 0 auto; white-space: nowrap; }

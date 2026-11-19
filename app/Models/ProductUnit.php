@@ -13,6 +13,7 @@ class ProductUnit extends Model
     use HasFactory, HasUuid;
 
     protected $fillable = [
+        'custom_prices',
         'product_id',
         'unit_id',
         'conversion_factor',
@@ -27,6 +28,7 @@ class ProductUnit extends Model
     ];
 
     protected $casts = [
+        'custom_prices' => 'array',
         'conversion_factor' => 'integer',
         'selling_price' => 'decimal:2',
         'wholesale_price' => 'decimal:2',

@@ -1,3 +1,4 @@
+import { unitPrice as configuredUnitPrice, defaultPriceTypes, priceTypeName } from '@/Utils/priceTypes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PosLayout from '@/Layouts/PosLayout';
 import { usePage, Head, useForm, router } from '@/spa';
@@ -112,6 +113,7 @@ export default function PosIndex({
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [customerSectionExpanded, setCustomerSectionExpanded] = useState(false);
     const [salePriceType, setSalePriceType] = useState('retail');
+    const { priceTypes = defaultPriceTypes } = usePage().props;
     const [mobileStep, setMobileStep] = useState('products');
 
     const scanBuffer = useRef('');
@@ -152,10 +154,7 @@ export default function PosIndex({
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
-    const resolveUnitPrice = (unit, priceType = 'retail') => {
-        if (!unit) return 0;
-        return Number(priceType === 'wholesale' ? (unit.wholesale_price ?? unit.selling_price) : unit.selling_price) || 0;
-    };
+    const resolveUnitPrice = configuredUnitPrice;
     const resolveLineDiscount = (line) => {
         const qty = Number(line.quantity || 0);
         const unitPrice = Number(line.unit_price || 0);
@@ -490,6 +489,7 @@ export default function PosIndex({
         const units = product?.units || [];
         const preferredUnit = units.find((u) => u.is_default_selling_unit) || units.find((u) => u.is_base_unit) || units[0];
 
+        if (preferredUnit && resolveUnitPrice(preferredUnit, salePriceType) === null) { setScanError('Price not set. Set this unit price or explicitly select Retail.'); return; }
         if (!preferredUnit) {
             setScanError(__('Selected product has no units configured.'));
             return;
@@ -562,6 +562,7 @@ export default function PosIndex({
         if (!next || next === salePriceType) return;
 
         setSalePriceType(next);
+        setScanError(cart.some((line) => resolveUnitPrice((line.units || []).find((u) => u.unit_id===line.unit_id), next)===null) ? 'Price not set. Set this unit price or explicitly select Retail.' : '');
         setCart((prev) =>
             prev.map((line) => {
                 const selectedUnit = (line.units || []).find((u) => u.unit_id === line.unit_id);
@@ -920,6 +921,7 @@ export default function PosIndex({
 
     const submit = (e) => {
         e.preventDefault();
+        if (cart.some((line) => line.unit_price === null)) { setScanError('Price not set. Set this unit price or explicitly select Retail.'); return; }
         if (!hasActiveSession) {
             setScanError(__('Open cashier session before completing sale.'));
             return;
@@ -1105,6 +1107,7 @@ export default function PosIndex({
                                     <GridViewIcon fontSize="small" />
                                 </ToggleButton>
                             </ToggleButtonGroup>
+                        {cart.some((line) => line.unit_price === null) && <Alert severity="warning" sx={{ mt: 1 }}>Price not set for {priceTypeName(salePriceType, priceTypes)}. Set a price or explicitly select Retail.</Alert>}
                             <Chip size="small" label={`${__('Branch')}: ${branchName || branchId || '-'}`} variant="outlined" sx={{ height: 24, '& .MuiChip-label': { px: 0.75, fontSize: 10, fontWeight: 700 } }} />
                         </Stack>
 
@@ -1185,14 +1188,14 @@ export default function PosIndex({
                                     fontWeight: 800,
                                     textTransform: 'none',
                                 },
+                                maxWidth: '100%', overflowX: 'auto',
                                 '& .MuiToggleButton-root.Mui-selected': {
                                     bgcolor: 'primary.main !important',
                                     color: 'primary.contrastText !important',
                                 },
                             }}
                         >
-                            <ToggleButton value="retail">{__('Retail')}</ToggleButton>
-                            <ToggleButton value="wholesale">{__('Wholesale')}</ToggleButton>
+                            {priceTypes.map((type) => <ToggleButton key={type.code} value={type.code}>{type.name}</ToggleButton>)}
                         </ToggleButtonGroup>
 
                         {cart.length > 0 && (
@@ -1382,7 +1385,7 @@ export default function PosIndex({
                                     const preferred = units.find((u) => u.is_default_selling_unit) || units.find((u) => u.is_base_unit) || units[0];
                                     const price = resolveUnitPrice(preferred, salePriceType);
                                     const discountPercentage = Number(p.discount_percentage || 0);
-                                    const discountedPrice = Math.max(price - (price * (discountPercentage / 100)), 0);
+                                    const discountedPrice = price === null ? null : Math.max(price - (price * (discountPercentage / 100)), 0);
                                     const unitLabel = preferred?.short_name || preferred?.name || '';
                                     const imageUrl = p.image_path ? storageUrl(p.image_path) : null;
 
@@ -1464,7 +1467,7 @@ export default function PosIndex({
 
                                                 <Stack direction="row" alignItems="baseline" spacing={0.4} sx={{ mt: 0.5, minWidth: 0 }}>
                                                     <Typography variant="subtitle2" sx={{ minWidth: 0, fontSize: 12.5, fontWeight: 900, color: 'primary.main', whiteSpace: 'nowrap' }}>
-                                                        {currencySymbol}{discountedPrice.toFixed(2)} / {unitLabel || __('Unit')}
+                                                        {currencySymbol}{discountedPrice === null ? 'Price not set' : discountedPrice.toFixed(2)} / {unitLabel || __('Unit')}
                                                     </Typography>
                                                     {discountPercentage > 0 && (
                                                         <Typography variant="caption" color="success.main" sx={{ flexShrink: 0, fontSize: 9.5, fontWeight: 800 }}>
@@ -1677,7 +1680,7 @@ export default function PosIndex({
                                                             </Typography>
                                                         )}
                                                         <Typography variant="caption" color="text.secondary">
-                                                            {__('Price')}: {currencySymbol}{unitPrice.toFixed(2)}
+                                                            {__('Price')}: {currencySymbol}{line.unit_price === null ? 'Price not set' : unitPrice.toFixed(2)}
                                                         </Typography>
                                                     </Box>
                                                     <Typography variant="subtitle2" sx={{ fontWeight: 900 }}>
@@ -1893,7 +1896,7 @@ export default function PosIndex({
                                                             ))}
                                                         </TextField>
                                                         <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, pr: 0.15, fontSize: 9.5, fontWeight: 800, whiteSpace: 'nowrap' }}>
-                                                            {currencySymbol}{unitPrice.toFixed(2)}
+                                                            {currencySymbol}{line.unit_price === null ? 'Price not set' : unitPrice.toFixed(2)}
                                                         </Typography>
                                                     </Stack>
                                                 </TableCell>
@@ -2125,7 +2128,7 @@ export default function PosIndex({
                                                 fullWidth
                                                 options={customerOptions}
                                                 value={selectedCustomer}
-                                                onChange={(e, value) => { setSelectedCustomer(value); setCustomerSearchInput(value?.name || ''); }}
+                                                onChange={(e, value) => { setSelectedCustomer(value); if (value?.preferred_price_type && priceTypes.some((p) => p.code === value.preferred_price_type)) changeSalePriceType(value.preferred_price_type); setCustomerSearchInput(value?.name || ''); }}
                                                 inputValue={customerSearchInput}
                                                 onInputChange={(e, value, reason) => { if (reason === 'input' || reason === 'clear') setCustomerSearchInput(value || ''); }}
                                             filterOptions={(options) => options}
@@ -2464,7 +2467,7 @@ export default function PosIndex({
                                             fullWidth
                                             options={customerOptions}
                                             value={selectedCustomer}
-                                            onChange={(e, value) => { setSelectedCustomer(value); setCustomerSearchInput(value?.name || ''); }}
+                                            onChange={(e, value) => { setSelectedCustomer(value); if (value?.preferred_price_type && priceTypes.some((p) => p.code === value.preferred_price_type)) changeSalePriceType(value.preferred_price_type); setCustomerSearchInput(value?.name || ''); }}
                                             inputValue={customerSearchInput}
                                             onInputChange={(e, value, reason) => { if (reason === 'input' || reason === 'clear') setCustomerSearchInput(value || ''); }}
                                             filterOptions={(options) => options}

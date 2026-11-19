@@ -11,6 +11,7 @@ const scoped = suffix => {
 export const keys = {
     token: `${PREFIX}token`,
     profile: `${PREFIX}profile`,
+    priceSettings: branchId => scoped(`price-settings.${branchId || 'none'}`),
     products: branchId => scoped(`products.${branchId || 'none'}`),
     get customers() { return scoped('customers'); },
     checkoutAttempt: branchId => scoped(`checkout-attempt.${branchId || 'none'}`),
