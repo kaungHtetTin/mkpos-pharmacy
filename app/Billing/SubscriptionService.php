@@ -119,6 +119,7 @@ class SubscriptionService
                 $payment = SubscriptionPayment::create([
                     'business_id'=>$invoice->business_id,'invoice_id'=>$invoice->id,'submitted_by'=>$user->id,'request_key'=>$data['request_key'],
                     'amount_minor'=>$invoice->amount_minor,'currency'=>$invoice->currency,'method'=>$data['method'],'reference'=>trim($data['reference']),
+                    'payment_method_id'=>$data['payment_method_id']??null,'payment_method_snapshot'=>$data['payment_method_snapshot']??null,
                     'reference_hash'=>$hash,'payment_date'=>$data['payment_date'],'receipt_path'=>$uploaded,'status'=>'pending',
                 ]);
                 PlatformAudit::record('billing.payment_submitted',$officeActor ?? $user,$invoice->business_id,['invoice_id'=>$invoice->id,'payment_id'=>$payment->id,'submitted_for'=>$user->id]);

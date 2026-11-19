@@ -209,4 +209,64 @@ class UnifiedBusinessOfficeTest extends TestCase
         $this->assertDatabaseCount('subscription_invoices',0);$this->assertDatabaseCount('subscription_payments',0);
         $this->artisan('platform:normalize-trial-currency')->assertSuccessful();
     }
+    private function screenshot(): \Illuminate\Http\UploadedFile
+    {
+        return \Illuminate\Http\UploadedFile::fake()->createWithContent('payment.png',base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='));
+    }
+    private function destination(): \App\Models\PlatformPaymentMethod
+    {
+        return \App\Models\PlatformPaymentMethod::create(['name'=>'Example Wallet','type'=>'other','account_name'=>'Office','account_number'=>'TEST-001','instructions'=>'Send screenshot','is_active'=>true,'sort_order'=>1]);
+    }
+    private function directRequest(array $overrides=[]): array
+    {
+        return array_replace(['plan_id'=>$this->plan->id,'payment_method_id'=>$this->destination()->id,'request_key'=>(string)Str::uuid(),'reference'=>'TX-'.Str::random(10),'payment_date'=>today()->toDateString(),'receipt'=>$this->screenshot()],$overrides);
+    }
+    public function test_owner_submits_screenshot_in_one_step_then_office_approves_once(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');$data=$this->directRequest();
+        $this->actingAs($this->owner)->post('/billing/requests',$data)->assertRedirect()->assertSessionHasNoErrors();
+        $invoice=SubscriptionInvoice::sole();$payment=SubscriptionPayment::sole();
+        $this->assertSame('open',$invoice->status);$this->assertSame('pending',$payment->status);$this->assertSame(2500,$payment->amount_minor);
+        $this->assertSame('Example Wallet',$payment->payment_method_snapshot['name']);
+        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($payment->receipt_path);
+        $this->assertDatabaseCount('subscription_periods',0);$this->assertDatabaseCount('platform_finance_receipts',0);
+        $data['receipt']=$this->screenshot();$this->post('/billing/requests',$data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('subscription_payments',1);$this->assertCount(1,\Illuminate\Support\Facades\Storage::disk('local')->allFiles());
+        $this->actingAs($this->office)->post($this->url('payments/'.$payment->id.'/review'),['decision'=>'approve','confirmed'=>true,'note'=>'Screenshot checked'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('paid',$invoice->fresh()->status);$this->assertDatabaseCount('subscription_periods',1);$this->assertDatabaseCount('platform_finance_receipts',1);
+    }
+    public function test_owner_cannot_submit_missing_pdf_or_oversized_screenshot_or_hidden_method(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');$data=$this->directRequest();unset($data['receipt']);$this->actingAs($this->owner);
+        $this->post('/billing/requests',$data)->assertSessionHasErrors('receipt');
+        $this->post('/billing/requests',$data+['receipt'=>\Illuminate\Http\UploadedFile::fake()->create('proof.pdf',1,'application/pdf')])->assertSessionHasErrors('receipt');
+        $this->post('/billing/requests',$data+['receipt'=>\Illuminate\Http\UploadedFile::fake()->create('huge.png',5121,'image/png')])->assertSessionHasErrors('receipt');
+        \App\Models\PlatformPaymentMethod::findOrFail($data['payment_method_id'])->update(['is_active'=>false]);
+        $this->post('/billing/requests',$data+['receipt'=>$this->screenshot()])->assertSessionHasErrors('payment_method_id');
+        $this->assertDatabaseCount('subscription_invoices',0);$this->assertDatabaseCount('subscription_payments',0);$this->assertCount(0,\Illuminate\Support\Facades\Storage::disk('local')->allFiles());
+    }
+    public function test_existing_open_renewal_is_reused_and_pending_request_cannot_duplicate(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');$invoice=$this->invoice();$data=$this->directRequest();
+        $this->actingAs($this->owner)->post('/billing/requests',$data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($invoice->id,SubscriptionPayment::sole()->invoice_id);$this->assertDatabaseCount('subscription_invoices',1);
+        $data['request_key']=(string)Str::uuid();$data['receipt']=$this->screenshot();$this->post('/billing/requests',$data)->assertSessionHasErrors('payment');
+        $this->assertDatabaseCount('subscription_payments',1);$this->assertCount(1,\Illuminate\Support\Facades\Storage::disk('local')->allFiles());
+    }
+    public function test_request_is_owner_scoped_and_amounts_cannot_be_supplied_by_client(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');$data=$this->directRequest();
+        $this->actingAs($this->owner)->post('/billing/requests',$data+['business_id'=>$this->other->id,'amount_minor'=>1,'status'=>'approved'])->assertSessionHasErrors(['business_id','amount_minor','status']);
+        $this->actingAs($this->office)->post('/billing/requests',$data)->assertRedirect(route('platform.dashboard'));
+        $this->assertDatabaseCount('subscription_invoices',0);
+    }
+    public function test_payment_methods_do_not_require_type_and_names_are_snapshotted(): void
+    {
+        $this->post('/platform/payment-methods',['name'=>'Simple Bank','account_name'=>'Office','account_number'=>'123','instructions'=>'Upload screenshot','is_active'=>true,'sort_order'=>0])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('platform_payment_methods',['name'=>'Simple Bank','type'=>'other']);
+        \Illuminate\Support\Facades\Storage::fake('local');$data=$this->directRequest();$this->actingAs($this->owner)->post('/billing/requests',$data)->assertRedirect()->assertSessionHasNoErrors();
+        \App\Models\PlatformPaymentMethod::findOrFail($data['payment_method_id'])->update(['name'=>'Renamed destination']);
+        $this->assertSame('Example Wallet',SubscriptionPayment::sole()->payment_method_snapshot['name']);
+        $this->actingAs($this->other->users()->withoutGlobalScopes()->first())->get('/billing/payments/'.SubscriptionPayment::sole()->id.'/receipt')->assertNotFound();
+    }
 }

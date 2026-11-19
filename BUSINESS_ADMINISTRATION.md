@@ -108,3 +108,25 @@ remains independently selectable. No database migration is needed.
 Plan codes are internal identifiers generated automatically when a plan is
 created. They are absent from plan forms and listings, and remain stable when
 a plan is renamed or edited. Office users do not need to choose or manage codes.
+
+## Owner subscription requests with screenshots
+
+Owners choose a paid plan and submit a payment screenshot directly from Billing.
+They do not create an invoice first. All active payment destinations show their
+names, account details and instructions on the page and in the request form.
+A destination and JPG/PNG/WebP screenshot (maximum 5 MB) are mandatory; reference
+is optional. Payment dates use the platform's Myanmar business date.
+
+Submission atomically creates/reuses the internal billing record and creates one
+pending payment. It never activates paid access or posts revenue before office
+approval. The same request key is idempotent. A pending request blocks duplicates;
+a rejected request can be resubmitted with a new screenshot. Quoted terms on an
+existing unpaid renewal are preserved. Images stay in private storage, accessible
+only to the business owner and authorized office billing staff.
+
+Payment method Type is removed from configuration forms and listings. New records
+use an internal classification; existing classifications remain intact. Two
+nullable payment columns preserve the selected destination ID and its account
+snapshot, so later destination edits do not rewrite payment history. Existing
+manual office payment recording and finance approval remain available. Legacy
+owner payment-submit endpoints also require screenshots.

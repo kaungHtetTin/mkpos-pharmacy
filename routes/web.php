@@ -349,6 +349,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/business-export', [\App\Http\Controllers\BusinessExportController::class,'index'])->name('business-export.index');
     Route::post('/business-export', [\App\Http\Controllers\BusinessExportController::class,'download'])->middleware('throttle:business-exports')->name('business-export.download');
     Route::get('/billing', [\App\Http\Controllers\BillingController::class,'index'])->name('billing.index');
+    Route::post('/billing/requests', [\App\Http\Controllers\BillingController::class,'requestSubscription'])->middleware('throttle:10,1')->name('billing.requests.store');
     Route::post('/billing/invoices', [\App\Http\Controllers\BillingController::class,'invoice'])->middleware('throttle:10,1')->name('billing.invoices.store');
     Route::post('/billing/invoices/{invoice}/payments', [\App\Http\Controllers\BillingController::class,'submit'])->middleware('throttle:10,1')->name('billing.payments.store');
     Route::post('/billing/invoices/{invoice}/void', [\App\Http\Controllers\BillingController::class,'void'])->name('billing.invoices.void');

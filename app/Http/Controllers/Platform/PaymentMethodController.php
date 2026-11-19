@@ -22,8 +22,9 @@ class PaymentMethodController extends Controller
     }
     private function save(Request $r, PlatformPaymentMethod $method)
     {
-        $d = $r->validate(['name' => 'required|string|max:100', 'type' => 'required|in:bank_transfer,mobile_wallet,cash', 'account_name' => 'nullable|string|max:150', 'account_number' => 'nullable|string|max:150', 'instructions' => 'nullable|string|max:2000', 'is_active' => 'required|boolean', 'sort_order' => 'required|integer|min:0|max:10000']);
+        $d = $r->validate(['name' => 'required|string|max:100', 'account_name' => 'nullable|string|max:150', 'account_number' => 'nullable|string|max:150', 'instructions' => 'nullable|string|max:2000', 'is_active' => 'required|boolean', 'sort_order' => 'required|integer|min:0|max:10000']);
         $new = !$method->exists;
+        if ($new) $d['type'] = 'other';
         \Illuminate\Support\Facades\DB::transaction(function () use ($r, $method, $d, $new) {
             $method->fill($d)->save();
             PlatformAudit::record($new ? 'billing.payment_method_created' : 'billing.payment_method_updated', $r->user(), null, ['method_id' => $method->id, 'active' => $method->is_active]);

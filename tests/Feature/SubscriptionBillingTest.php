@@ -32,6 +32,10 @@ class SubscriptionBillingTest extends TestCase
         $this->b=app(ProvisionBusiness::class)->create(['name'=>'Subscription Beta','slug'=>'subscription-beta'],$this->other);
     }
     private function within(Business $business, callable $callback) { return app(BusinessContext::class)->run($business,$callback(...)); }
+    private function screenshot(): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent('payment.png',base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='));
+    }
     private function plan(array $values=[]): SubscriptionPlan
     {
         return SubscriptionPlan::create(array_replace(['code'=>'plan-'.Str::lower(Str::random(8)),'name'=>'Standard','amount_minor'=>1999,'currency'=>'MMK','interval_months'=>1,'grace_days'=>3,'max_branches'=>2,'max_users'=>3,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true,'is_trial'=>false],$values));
@@ -103,7 +107,7 @@ class SubscriptionBillingTest extends TestCase
     public function test_owner_submits_payment_after_expiry_and_office_approval_is_explicit(): void
     {
         $invoice=$this->invoice();$this->expire();
-        $this->actingAs($this->owner)->postJson('/billing/invoices/'.$invoice->id.'/payments',['request_key'=>(string)Str::uuid(),'method'=>'cash','reference'=>'CASH-001','payment_date'=>today()->toDateString()])->assertRedirect();
+        $this->actingAs($this->owner)->postJson('/billing/invoices/'.$invoice->id.'/payments',['request_key'=>(string)Str::uuid(),'method'=>'cash','reference'=>'CASH-001','payment_date'=>today()->toDateString(),'receipt'=>$this->screenshot()])->assertRedirect();
         $payment=SubscriptionPayment::firstOrFail();
         $this->actingAs($this->office)->postJson('/platform/billing/payments/'.$payment->id.'/review',['decision'=>'approve','confirmed'=>false])->assertUnprocessable();
         $this->postJson('/platform/billing/payments/'.$payment->id.'/review',['decision'=>'approve','confirmed'=>true])->assertRedirect();
@@ -229,7 +233,7 @@ class SubscriptionBillingTest extends TestCase
     {
         $invoice=$this->invoice();$data=['request_key'=>(string)Str::uuid(),'method'=>'bank_transfer','reference'=>'SERVER-PRICE','payment_date'=>today()->toDateString(),'amount_minor'=>1,'status'=>'approved'];
         $this->actingAs($this->owner)->postJson('/billing/invoices/'.$invoice->id.'/payments',$data)->assertUnprocessable()->assertJsonValidationErrors('amount_minor');
-        unset($data['amount_minor']);$this->postJson('/billing/invoices/'.$invoice->id.'/payments',$data)->assertRedirect();
+        unset($data['amount_minor']);$data['receipt']=$this->screenshot();$this->postJson('/billing/invoices/'.$invoice->id.'/payments',$data)->assertRedirect();
         $payment=SubscriptionPayment::firstOrFail();$this->assertSame('pending',$payment->status);$this->assertSame($invoice->amount_minor,$payment->amount_minor);
     }
 
@@ -281,5 +285,9 @@ class SubscriptionBillingTest extends TestCase
         $this->assertStringStartsWith('plan-',$plans[0]->code);$code=$plans[0]->code;
         $this->put('/platform/plans/'.$plans[0]->id,array_replace($data,['name'=>'Renamed plan','code'=>'system-trial']))->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame($code,$plans[0]->fresh()->code);$this->assertSame('Renamed plan',$plans[0]->fresh()->name);
+    }
+    public function test_cashier_cannot_submit_subscription_requests(): void
+    {
+        $cashier=$this->cashier();$this->actingAs($cashier)->post('/billing/requests',[])->assertForbidden();
     }
 }

@@ -22,9 +22,10 @@ class BillingController extends Controller
         $business = app(BusinessContext::class)->business();
         $data = [
             'subscription'=>$access->summary($business),'usage'=>$access->usage($business->id),
-            'plans'=>SubscriptionPlan::where('currency', 'MMK')->where('is_active',true)->where('is_public',true)->where('is_trial',false)->orderBy('amount_minor')->get(),
+            'plans'=>SubscriptionPlan::where('currency', 'MMK')->where('is_active',true)->where('is_public',true)->where('amount_minor','>',0)->where('is_trial',false)->orderBy('amount_minor')->get(),
             'invoices'=>SubscriptionInvoice::where('business_id',$business->id)->with(['payments'=>fn($q)=>$q->latest()])->latest()->paginate(15)->through(fn($invoice)=>$this->invoicePayload($invoice)),
             'payment_methods'=>\App\Models\PlatformPaymentMethod::where('is_active',true)->orderBy('sort_order')->orderBy('name')->get(['id','name','type','account_name','account_number','instructions']),
+            'payment_today'=>now('Asia/Yangon')->toDateString(),
             'payment_settings'=>PlatformBillingSetting::findOrFail(1)->only('payment_instructions','support_email'),
         ];
         return $request->is('api/*') ? response()->json($data) : Spa::render('Billing/Index',$data);
@@ -43,6 +44,19 @@ class BillingController extends Controller
         return $request->is('api/*') ? response()->json($this->invoicePayload($invoice),201) : back()->with('success','Subscription invoice ready.');
     }
 
+    public function requestSubscription(Request $request, \App\Billing\SubscriptionRequestService $service)
+    {
+        $this->owner($request);
+        $data = $request->validate([
+            'plan_id'=>'required|uuid|exists:subscription_plans,id', 'payment_method_id'=>'required|uuid|exists:platform_payment_methods,id',
+            'request_key'=>'required|uuid', 'reference'=>'nullable|string|max:160', 'payment_date'=>'required|date_format:Y-m-d|before_or_equal:'.now('Asia/Yangon')->toDateString(),
+            'receipt'=>'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'amount_minor'=>'prohibited', 'currency'=>'prohibited', 'business_id'=>'prohibited', 'status'=>'prohibited',
+        ]);
+        $payment = $service->submit(app(BusinessContext::class)->business(), SubscriptionPlan::findOrFail($data['plan_id']), $request->user(), $data, $request->file('receipt'));
+        return $request->is('api/*') ? response()->json($payment, 201) : back()->with('success','Subscription request submitted. The office will review your screenshot before activating access.');
+    }
+
     private function ownInvoice(string $id): SubscriptionInvoice
     {
         return SubscriptionInvoice::where('business_id',app(BusinessContext::class)->requireId())->findOrFail($id);
@@ -51,12 +65,13 @@ class BillingController extends Controller
     public function submit(Request $request, string $invoice, SubscriptionService $service)
     {
         $this->owner($request);
+        $record = $this->ownInvoice($invoice);
         $data=$request->validate([
             'request_key'=>'required|uuid','method'=>'required|in:bank_transfer,mobile_wallet,cash','reference'=>'required|string|max:160',
-            'payment_date'=>'required|date|before_or_equal:today','receipt'=>'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:5120',
+            'payment_date'=>'required|date|before_or_equal:today','receipt'=>'required|image|mimes:jpg,jpeg,png,webp|max:5120',
             'amount_minor'=>'prohibited','currency'=>'prohibited','business_id'=>'prohibited',
         ]);
-        $payment=$service->submit($this->ownInvoice($invoice),$request->user(),$data,$request->file('receipt'));
+        $payment=$service->submit($record,$request->user(),$data,$request->file('receipt'));
         return $request->is('api/*') ? response()->json($payment,201) : back()->with('success','Payment submitted for platform-office review. Access changes only after approval.');
     }
 
@@ -78,6 +93,7 @@ class BillingController extends Controller
 
     public function receipt(Request $request, string $payment)
     {
+        if ($request->user()->is_platform_admin) abort_unless(\App\Operations\OfficeAccess::allows($request->user(), 'billing'),403);
         $record=SubscriptionPayment::findOrFail($payment);
         if (!$request->user()->is_platform_admin) {
             $this->owner($request);
