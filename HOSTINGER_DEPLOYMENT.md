@@ -5,6 +5,20 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Automatic internal plan codes — 19 November 2026
+
+Source patch `b81ac1c` removes Plan code from creation/editing and plan listings.
+New plans receive a unique internal UUID-based code automatically. Existing codes
+remain stable on edits, including when names change. Names may contain Myanmar
+text and do not need to be unique. MMK pricing and month durations are preserved.
+
+Validation: **282 tests / 1,893 assertions**, both production builds, two
+JavaScript checks, four local browser groups and three live groups passed.
+Local checks created/edited synthetic plans without supplying codes. Live forms
+were opened/canceled and existing terms/prices were unchanged. No schema migration
+or existing-data update was required. Source/manifests and encrypted backups are
+retained; temporary deployment files were removed. No Git push was performed.
+
 ## Custom plan duration in months — 19 November 2026
 
 Source patch `d9a2bc7` replaces Monthly/Yearly with a required Duration (months)
