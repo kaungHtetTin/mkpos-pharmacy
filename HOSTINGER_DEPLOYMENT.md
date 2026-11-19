@@ -5,6 +5,25 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Responsive POS catalog scrolling — 19 November 2026
+
+Frontend source `027451f` is deployed to both pharmacy public asset entries.
+The private app path, backend, database and scheduler remain at `518087c`.
+On small screens the POS scrolls the document, so the previous catalog-only
+scroll listener stopped at 30 products. End-of-list observation now follows
+both document and desktop panel scrolling in grid/list views. A Load more
+fallback and explicit retry preserve loaded products after request failures.
+Search/category changes cancel and discard stale requests.
+
+Both production builds and two JavaScript checks passed. Fourteen browser
+groups passed locally and live, using 73 browser-only fixture products across
+360, 390, 768, 1024 and 1440px widths in both views. Each page loaded exactly
+once, stopped at the last page, recovered from a failed page and discarded
+stale category/search responses. The real owner catalog and office finance
+access also passed smoke checks. No products, shifts or sales were created.
+Private source and both manifest backups are retained; old hashed live assets
+remain available for existing sessions. No Git push was performed.
+
 ## Founder finance and bank books — 19 November 2026
 
 Source `518087c` is live in `_pharmacy_founder_finance_518087c` for both pharmacy
