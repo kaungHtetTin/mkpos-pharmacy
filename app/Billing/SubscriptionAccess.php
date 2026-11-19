@@ -48,6 +48,7 @@ class SubscriptionAccess
         }
         if ($business->status !== 'Active') { $state = 'suspended'; $canOperate = false; }
         return $this->cache[$key] = [
+            'is_complimentary'=>(bool)($plan['is_complimentary']??false),
             'business_id'=>$business->id,'state'=>$state,'can_operate'=>$canOperate,'plan'=>$plan,'access_until'=>$until?->toIso8601String(),
             'period_ends_at'=>$period?->ends_at->toIso8601String(),'trial_ends_at'=>$subscription?->trial_ends_at?->toIso8601String(),
             'auto_renew'=>$subscription?->auto_renew ?? false,'cancel_at_period_end'=>$subscription && !$subscription->auto_renew,

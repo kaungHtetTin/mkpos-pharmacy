@@ -67,3 +67,21 @@ cross-business mutation denial, office roles, invoice editing/voiding, exact cen
 idempotent approval, finance receipts, trial/renewal rules and customer privacy.
 Local browser scenarios cover modal saves, account resets, suspension, payment
 review and phone sizing. No database schema migration is needed.
+
+## Free-of-charge plan grants
+
+Open Subscription controls → Grant plan FOC. Choose any active non-trial plan,
+enter 1–36 months and an audit reason, then confirm the free grant. Office owners
+and billing operators can grant FOC access. It uses a zero-charge settled invoice
+numbered FOC-… with the chosen plan's feature/limit snapshot and selected duration.
+The normal plan price is unchanged. There is no payment, financial receipt or
+revenue. Internal reasons remain in the office audit, outside the customer plan
+snapshot.
+
+For trial/expired businesses access begins now; an unexpired paid period remains
+intact and the free period follows it. Resolve open invoices first; an already
+covered future period blocks another grant. Retrying the same request creates
+no duplicate period. Suspension remains in effect until explicitly lifted.
+Automatic renewal is turned off to avoid a later charge; the office or owner can
+explicitly resume ordinary renewal if desired. FOC access expires on its end date.
+No schema migration is required.

@@ -49,6 +49,53 @@ class SubscriptionService
         });
     }
 
+    public function grantComplimentary(Business $business, SubscriptionPlan $plan, User $actor, string $requestKey, int $months, string $reason): SubscriptionInvoice
+    {
+        abort_unless(\App\Operations\OfficeAccess::allows($actor, 'billing'), 403);
+        if ($months < 1 || $months > 36) $this->invalid('months', 'Choose between 1 and 36 months.');
+        if (trim($reason) === '' || mb_strlen($reason) > 500) $this->invalid('note', 'Enter a reason of at most 500 characters.');
+        return DB::transaction(function () use ($business, $plan, $actor, $requestKey, $months, $reason) {
+            Business::whereKey($business->id)->lockForUpdate()->firstOrFail();
+            $existing = SubscriptionInvoice::where('business_id', $business->id)->where('request_key', $requestKey)->first();
+            if ($existing) {
+                if ($existing->plan_id !== $plan->id || !($existing->plan_snapshot['is_complimentary'] ?? false)
+                    || (int) ($existing->plan_snapshot['complimentary_months'] ?? 0) !== $months) {
+                    $this->invalid('request_key', 'This request was already used with different grant details.');
+                }
+                return $existing;
+            }
+            $plan = SubscriptionPlan::whereKey($plan->id)->lockForUpdate()->firstOrFail();
+            if (!$plan->is_active || $plan->is_trial) $this->invalid('plan_id', 'Choose an active non-trial plan.');
+            if (SubscriptionInvoice::where('business_id', $business->id)->where('status', 'open')->exists()) {
+                $this->invalid('invoice', 'Resolve or void the open invoice before granting a free plan.');
+            }
+            if (SubscriptionPeriod::where('business_id', $business->id)->where('starts_at', '>', now())->exists()) {
+                $this->invalid('subscription', 'The next subscription period is already covered.');
+            }
+            $snapshot = array_merge($plan->snapshot(), [
+                'name' => $plan->name . ' · FOC', 'amount_minor' => 0,
+                'is_complimentary' => true, 'complimentary_months' => $months,
+                'original_amount_minor' => $plan->amount_minor,
+            ]);
+            $invoice = SubscriptionInvoice::create([
+                'business_id' => $business->id, 'plan_id' => $plan->id,
+                'number' => 'FOC-' . now()->format('Ymd') . '-' . Str::upper(Str::random(10)),
+                'request_key' => $requestKey, 'amount_minor' => 0, 'currency' => $plan->currency,
+                'plan_snapshot' => $snapshot, 'status' => 'open', 'due_at' => now(),
+            ]);
+            $this->settle($invoice, $actor);
+            // Complimentary access must never silently turn into a paid renewal.
+            BusinessSubscription::where('business_id', $business->id)->firstOrFail()
+                ->update(['auto_renew' => false, 'canceled_at' => now()]);
+            app(SubscriptionAccess::class)->forget();
+            PlatformAudit::record('billing.complimentary_plan_granted', $actor, $business->id, [
+                'invoice_id' => $invoice->id, 'plan_id' => $plan->id, 'months' => $months,
+                'note' => $reason, 'amount_minor' => 0, 'auto_renew' => false,
+            ]);
+            return $invoice->fresh();
+        });
+    }
+
     public function submit(SubscriptionInvoice $invoice, User $user, array $data, ?UploadedFile $receipt = null, ?User $officeActor = null): SubscriptionPayment
     {
         if ($officeActor) abort_unless(\App\Operations\OfficeAccess::allows($officeActor, 'billing'), 403);
@@ -107,7 +154,7 @@ class SubscriptionService
         $subscription = BusinessSubscription::where('business_id',$invoice->business_id)->lockForUpdate()->firstOrFail();
         $last = SubscriptionPeriod::where('business_id',$invoice->business_id)->latest('ends_at')->first();
         $start = $last && $last->ends_at->isFuture() ? $last->ends_at->copy() : now();
-        $end = $start->copy()->addMonthsNoOverflow((int)$invoice->plan_snapshot['interval_months']);
+        $end = $start->copy()->addMonthsNoOverflow((int)($invoice->plan_snapshot['complimentary_months'] ?? $invoice->plan_snapshot['interval_months']));
         SubscriptionPeriod::create(['business_id'=>$invoice->business_id,'invoice_id'=>$invoice->id,'plan_snapshot'=>$invoice->plan_snapshot,'starts_at'=>$start,'ends_at'=>$end]);
         $invoice->update(['status'=>'paid','paid_at'=>now(),'period_starts_at'=>$start,'period_ends_at'=>$end]);
         $subscription->update(['plan_id'=>$invoice->plan_id,'plan_snapshot'=>$invoice->plan_snapshot]);

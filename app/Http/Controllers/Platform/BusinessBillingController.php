@@ -18,6 +18,14 @@ class BusinessBillingController extends Controller
         abort_unless(OfficeAccess::allows($request->user(), 'billing'), 403);
     }
 
+    public function complimentary(Request $request, Business $business, SubscriptionService $service)
+    {
+        $this->authorizeBilling($request);
+        $data = $request->validate(['plan_id' => 'required|uuid|exists:subscription_plans,id', 'request_key' => 'required|uuid', 'months' => 'required|integer|min:1|max:36', 'note' => 'required|string|max:500', 'confirmed' => 'required|accepted']);
+        $service->grantComplimentary($business, SubscriptionPlan::findOrFail($data['plan_id']), $request->user(), $data['request_key'], (int) $data['months'], $data['note']);
+        return back()->with('success', 'FOC plan granted. No payment or revenue was recorded. Automatic renewal is disabled.');
+    }
+
     public function renewal(Request $request, Business $business, SubscriptionService $service)
     {
         $this->authorizeBilling($request);

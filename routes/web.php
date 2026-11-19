@@ -381,6 +381,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/payment-methods', [\App\Http\Controllers\Platform\PaymentMethodController::class,'index'])->name('payment-methods.index');
         Route::post('/payment-methods', [\App\Http\Controllers\Platform\PaymentMethodController::class,'store'])->name('payment-methods.store');
         Route::put('/payment-methods/{method}', [\App\Http\Controllers\Platform\PaymentMethodController::class,'update'])->name('payment-methods.update');
+        Route::post('/businesses/{business}/complimentary', [\App\Http\Controllers\Platform\BusinessBillingController::class,'complimentary'])->middleware('throttle:office-finance-write')->name('businesses.complimentary');
         Route::put('/businesses/{business}/subscription', [\App\Http\Controllers\Platform\BusinessBillingController::class,'renewal'])->middleware('throttle:office-finance-write')->name('businesses.subscription');
         Route::post('/businesses/{business}/invoices', [\App\Http\Controllers\Platform\BusinessBillingController::class,'storeInvoice'])->middleware('throttle:office-finance-write')->name('businesses.invoices.store');
         Route::put('/businesses/{business}/invoices/{invoice}', [\App\Http\Controllers\Platform\BusinessBillingController::class,'updateInvoice'])->middleware('throttle:office-finance-write')->name('businesses.invoices.update');

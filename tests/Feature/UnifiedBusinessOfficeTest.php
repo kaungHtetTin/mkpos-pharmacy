@@ -95,4 +95,79 @@ class UnifiedBusinessOfficeTest extends TestCase
         $i=$this->invoice();$this->get($this->url(),['X-SPA'=>'true'])->assertOk()->assertJsonPath('props.invoices_page.total',1)->assertJsonPath('props.members_page.total',1)->assertJsonPath('props.owner_contacts.0.email',$this->owner->email);
         $this->office->forceFill(['platform_role'=>'admin'])->save();$r=$this->get($this->url(),['X-SPA'=>'true'])->assertOk()->assertJsonPath('props.invoices_page',null)->assertJsonPath('props.payments_page',null);$this->assertStringNotContainsString($i->number,$r->getContent());
     }
+    public function test_foc_grants_access_without_payment_revenue_or_changing_plan_price(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $data = ['plan_id' => $this->plan->id, 'request_key' => (string) Str::uuid(), 'months' => 3, 'note' => 'Partner promotion', 'confirmed' => true];
+        $this->post($this->url('complimentary'), $data)->assertRedirect()->assertSessionHasNoErrors();
+        $invoice = SubscriptionInvoice::sole();
+        $this->assertSame(0, $invoice->amount_minor);
+        $this->assertSame('paid', $invoice->status);
+        $this->assertStringStartsWith('FOC-', $invoice->number);
+        $this->assertTrue($invoice->period_starts_at->equalTo(now()));
+        $this->assertTrue($invoice->period_ends_at->equalTo(now()->addMonthsNoOverflow(3)));
+        $this->assertSame(2500, $this->plan->fresh()->amount_minor);
+        $this->assertDatabaseCount('subscription_payments', 0);
+        $this->assertDatabaseCount('platform_finance_receipts', 0);
+        $this->assertDatabaseCount('platform_finance_entries', 0);
+        $summary = app(\App\Billing\SubscriptionAccess::class)->summary($this->business);
+        $this->assertTrue($summary['can_operate']);$this->assertTrue($summary['is_complimentary']);$this->assertFalse($summary['auto_renew']);
+        $this->assertSame($this->plan->features, $summary['plan']['features']);
+        $this->assertArrayNotHasKey('note', $summary['plan']);
+        $this->assertDatabaseHas('platform_activity_logs', ['business_id' => $this->business->id, 'actor_id' => $this->office->id, 'action' => 'billing.complimentary_plan_granted']);
+        $this->post($this->url('complimentary'), $data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('subscription_invoices', 1);$this->assertDatabaseCount('subscription_periods', 1);
+        $this->post($this->url('complimentary'), array_replace($data, ['months' => 6]))->assertSessionHasErrors('request_key');
+        $this->travelTo($invoice->period_ends_at->copy()->addSecond());
+        app(\App\Billing\SubscriptionAccess::class)->forget();
+        $this->assertFalse(app(\App\Billing\SubscriptionAccess::class)->summary($this->business)['can_operate']);
+        $this->assertFalse(app(SubscriptionService::class)->process($this->business));
+        $this->assertDatabaseCount('subscription_invoices', 1);
+    }
+    public function test_foc_preserves_current_paid_period_and_does_not_duplicate_future_grants(): void
+    {
+        $this->travelTo(now()->startOfSecond());$invoice = $this->invoice();$data = $this->payment(['approve'=>true,'confirmed'=>true]);
+        $this->post($this->url('invoices/'.$invoice->id.'/payments'),$data)->assertRedirect()->assertSessionHasNoErrors();
+        $end = $invoice->fresh()->period_ends_at->copy();
+        $grant = ['plan_id'=>$this->plan->id,'request_key'=>(string)Str::uuid(),'months'=>2,'note'=>'Retention grant','confirmed'=>true];
+        $this->post($this->url('complimentary'),$grant)->assertRedirect()->assertSessionHasNoErrors();
+        $foc = SubscriptionInvoice::where('number','like','FOC-%')->sole();
+        $this->assertTrue($foc->period_starts_at->equalTo($end));
+        $this->assertTrue($foc->period_ends_at->equalTo($end->copy()->addMonthsNoOverflow(2)));
+        $this->assertDatabaseCount('platform_finance_receipts',1);
+        $this->assertSame(2500,PlatformFinanceReceipt::sole()->amount_minor);
+        $this->post($this->url('complimentary'),array_replace($grant,['request_key'=>(string)Str::uuid()]))->assertSessionHasErrors('subscription');
+        $this->assertDatabaseCount('subscription_periods',2);
+    }
+    public function test_foc_requires_confirmation_valid_duration_and_authorized_office_role(): void
+    {
+        $data=['plan_id'=>$this->plan->id,'request_key'=>(string)Str::uuid(),'months'=>1,'note'=>'Promotion','confirmed'=>true];
+        foreach([0,37] as $months)$this->post($this->url('complimentary'),array_replace($data,['months'=>$months]))->assertSessionHasErrors('months');
+        $this->post($this->url('complimentary'),array_replace($data,['confirmed'=>false]))->assertSessionHasErrors('confirmed');
+        $this->post($this->url('complimentary'),array_replace($data,['note'=>'']))->assertSessionHasErrors('note');
+        foreach(['admin','support'] as $role){$this->office->forceFill(['platform_role'=>$role])->save();$this->post($this->url('complimentary'),$data)->assertForbidden();}
+        $this->actingAs($this->owner)->post($this->url('complimentary'),$data)->assertForbidden();
+        $this->assertDatabaseCount('subscription_invoices',0);
+        $this->actingAs($this->office);$this->office->forceFill(['platform_role'=>'billing'])->save();
+        $this->post($this->url('complimentary'),$data)->assertRedirect()->assertSessionHasNoErrors();
+    }
+    public function test_foc_cannot_bypass_unresolved_invoice_or_grant_an_inactive_or_trial_plan(): void
+    {
+        $data=['plan_id'=>$this->plan->id,'request_key'=>(string)Str::uuid(),'months'=>1,'note'=>'Promotion','confirmed'=>true];
+        $this->plan->update(['is_active'=>false]);$this->post($this->url('complimentary'),$data)->assertSessionHasErrors('plan_id');
+        $this->plan->update(['is_active'=>true,'is_trial'=>true]);$this->post($this->url('complimentary'),$data)->assertSessionHasErrors('plan_id');
+        $this->plan->update(['is_trial'=>false]);$i=$this->invoice();
+        $this->post($this->url('complimentary'),$data)->assertSessionHasErrors('invoice');
+        $this->assertDatabaseCount('subscription_invoices',1);$this->assertDatabaseCount('subscription_periods',0);
+    }
+    public function test_foc_business_scope_and_suspension_are_preserved(): void
+    {
+        $this->business->update(['status'=>'Suspended']);
+        $data=['plan_id'=>$this->plan->id,'request_key'=>(string)Str::uuid(),'months'=>1,'note'=>'Suspended partner grant','confirmed'=>true];
+        $this->post($this->url('complimentary'),$data)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($this->business->id,SubscriptionInvoice::sole()->business_id);
+        $summary=app(\App\Billing\SubscriptionAccess::class)->summary($this->business);
+        $this->assertSame('suspended',$summary['state']);$this->assertFalse($summary['can_operate']);
+        $this->assertTrue(BusinessSubscription::where('business_id',$this->other->id)->sole()->auto_renew);
+    }
 }
