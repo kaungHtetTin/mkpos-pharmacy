@@ -309,9 +309,7 @@ class SalesController extends Controller
                     ]);
                 }
 
-                $inventory->update([
-                    'quantity' => (int) $inventory->quantity + $baseQuantity,
-                ]);
+                \App\Inventory\StockLedger::change($inventory, $baseQuantity, 'sale_void', $lockedSale, $user->id, $validated['reason'], $batch?->batch_number);
             }
 
             $lockedSale->update([

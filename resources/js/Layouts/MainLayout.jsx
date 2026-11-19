@@ -45,6 +45,7 @@ const pageDescriptions = {
     'Category Management': 'Organize medicines into consistent groups for faster selling and reporting.',
     'Tax Configuration': 'Maintain the tax rules applied to purchases and sales.',
     'Inventory Stock Reports': 'Compare available stock by branch, batch, and medicine.',
+    'Stock movements': 'Track purchases, sales, returns, transfers, adjustments and reversals across your business.',
     'Inventory Detail': 'Review batch quantities, expiry dates, valuation, and movement history.',
     'Inventory Control': 'Record auditable stock corrections for damage, loss, and counting differences.',
     'Stock Transfers': 'Move stock between branches with clear source and destination records.',

@@ -103,6 +103,7 @@ class SaleVoidTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHasNoErrors();
 
+        $this->assertDatabaseHas('stock_movements', ['source_id' => $sale->id, 'action' => 'sale_void', 'quantity' => 3, 'before_quantity' => 7, 'after_quantity' => 10, 'actor_id' => $user->id]);
         $this->assertSame('Voided', $sale->fresh()->status);
         $this->assertSame($user->id, $sale->fresh()->voided_by_user_id);
         $this->assertSame('Wrong medicine selected', $sale->fresh()->void_reason);

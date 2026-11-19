@@ -110,6 +110,7 @@ class InventoryController extends Controller
         ]);
 
         $branchId = $validated['branch_id'] ?? null;
+        $movementData = $this->movementData($request, $product);
         $product->load(['category:id,name']);
 
         $batches = InventoryBatch::query()
@@ -152,7 +153,7 @@ class InventoryController extends Controller
 
         $batchQuantity = (int) $batches->sum('quantity');
 
-        return Spa::render('Inventory/Show', [
+        return Spa::render('Inventory/Show', [...$movementData,
             'product' => [
                 'id' => $product->id,
                 'name' => $product->name,
@@ -170,8 +171,42 @@ class InventoryController extends Controller
                 'quantity_difference' => $aggregateQuantity - $batchQuantity,
                 'stock_status' => $this->stockStatus($aggregateQuantity, (int) $product->min_stock_level),
             ],
-            'filters' => $request->only(['branch_id']),
+            'filters' => $request->only(['branch_id', 'action', 'from', 'to', 'search']),
         ]);
+    }
+
+    public function movements(Request $request)
+    {
+        return Spa::render('Inventory/Movements', [
+            ...$this->movementData($request),
+            'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
+            'filters' => $request->only(['branch_id', 'action', 'from', 'to', 'search']),
+        ]);
+    }
+
+    private function movementData(Request $request, ?Product $product = null): array
+    {
+        $filters = $request->validate([
+            'branch_id' => ['nullable', 'exists:branches,id'],
+            'action' => ['nullable', \Illuminate\Validation\Rule::in(array_keys(\App\Inventory\StockLedger::ACTIONS))],
+            'search' => ['nullable', 'string', 'max:160'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', ...($request->filled('from') ? ['after_or_equal:from'] : [])],
+        ]);
+        $query = \App\Models\StockMovement::query()
+            ->when($product, fn ($q) => $q->where('product_id', $product->id))
+            ->when($filters['branch_id'] ?? null, fn ($q, $id) => $q->where('branch_id', $id))
+            ->when($filters['action'] ?? null, fn ($q, $action) => $q->where('action', $action))
+            ->when($filters['search'] ?? null, function ($q, $search) {
+                $q->where(fn ($q) => $q->where('product_name', 'like', '%'.$search.'%')
+                    ->orWhere('reference', 'like', '%'.$search.'%')->orWhere('batch_number', 'like', '%'.$search.'%'));
+            });
+        if (!empty($filters['from'])) $query->where('occurred_at', '>=', \Carbon\CarbonImmutable::parse($filters['from'], 'Asia/Yangon')->startOfDay()->utc());
+        if (!empty($filters['to'])) $query->where('occurred_at', '<', \Carbon\CarbonImmutable::parse($filters['to'], 'Asia/Yangon')->addDay()->startOfDay()->utc());
+        return [
+            'movements' => $query->orderByDesc('occurred_at')->orderByDesc('id')->paginate(25)->withQueryString(),
+            'movementActions' => \App\Inventory\StockLedger::ACTIONS,
+        ];
     }
 
     private function stockStatus(int $stock, int $minStockLevel): string

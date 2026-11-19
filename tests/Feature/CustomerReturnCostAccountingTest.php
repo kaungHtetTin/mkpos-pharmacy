@@ -105,6 +105,7 @@ class CustomerReturnCostAccountingTest extends TestCase
         $this->assertSame('Approved', $return->status);
         $this->assertEquals(10, $return->settlement_paid);
         $this->assertSame(11, $batch->fresh()->quantity);
+        $this->assertDatabaseHas('stock_movements', ['source_id' => $return->id, 'action' => 'customer_return', 'quantity' => 1, 'before_quantity' => 10, 'after_quantity' => 11]);
         $this->assertEquals(6.909091, round((float) $batch->fresh()->purchase_price, 6));
         $this->assertSame(11, Inventory::where('product_id', $product->id)->value('quantity'));
     }

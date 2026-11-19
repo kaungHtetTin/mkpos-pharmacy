@@ -60,7 +60,7 @@ class InventoryAdjustmentController extends Controller
                 ['branch_id' => $validated['branch_id'], 'product_id' => $validated['product_id']],
                 ['quantity' => 0]
             );
-            $inventory->increment('quantity', $validated['quantity']);
+            \App\Inventory\StockLedger::change($inventory, (int) $validated['quantity'], 'adjustment', $adjustment, note: $validated['adjustment_type'].': '.($validated['reason'] ?? ''), batch: $validated['inventory_batch_id'] ? InventoryBatch::findOrFail($validated['inventory_batch_id'])->batch_number : null);
 
             // Update Batch Inventory if specified
             if ($validated['inventory_batch_id']) {

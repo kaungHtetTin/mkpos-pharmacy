@@ -54,6 +54,7 @@ class ReturnFinancialFlowTest extends TestCase
         $this->assertEquals(0, (float) $return->fresh()->settlement_due);
         $this->assertEquals(0, (float) $return->items()->first()->cost_total);
         $this->assertSame(10, $batch->fresh()->quantity);
+        $this->assertDatabaseCount('stock_movements', 0);
     }
 
     public function test_supplier_return_applies_payable_credit_and_tracks_refund_receipt(): void
@@ -85,6 +86,7 @@ class ReturnFinancialFlowTest extends TestCase
         $this->assertEquals(40, (float) $purchase->fresh()->return_credit_amount);
         $this->assertEquals(0, (float) $supplier->fresh()->balance);
         $this->assertSame(8, $batch->fresh()->quantity);
+        $this->assertDatabaseHas('stock_movements', ['source_id' => $return->id, 'action' => 'supplier_return', 'quantity' => -2, 'after_quantity' => 8]);
 
         $service->settle($return, $user, ['amount' => 10, 'payment_method' => 'Card', 'reference_number' => 'REFUND-123']);
         $this->assertEquals(10, (float) $return->fresh()->settlement_paid);

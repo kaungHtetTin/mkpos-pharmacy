@@ -590,8 +590,7 @@ class CashierPosController extends Controller
                     'product_id' => $line['product_id'],
                 ]);
 
-                $inventory->quantity = max(($inventory->quantity ?? 0) - (int) $line['total_base_quantity'], 0);
-                $inventory->save();
+                \App\Inventory\StockLedger::change($inventory, -(int) $line['total_base_quantity'], 'mobile_sale', $sale, clamp: true);
             }
 
             return $sale->load(['items.product:id,name', 'items.unit:id,name,short_name', 'items.focUnit:id,name,short_name', 'customer:id,name,phone', 'saleStaff:id,name']);

@@ -85,7 +85,8 @@ class StockTransferController extends Controller
                 // 1. Check if source batch has enough stock
                 $sourceBatch = InventoryBatch::where('id', $item['inventory_batch_id'])
                     ->where('branch_id', $validated['from_branch_id'])
-                    ->firstOrFail();
+                    ->where('product_id', $item['product_id'])
+                    ->lockForUpdate()->firstOrFail();
 
                 if ($sourceBatch->quantity < $item['quantity']) {
                     throw new \Exception("Insufficient stock in batch {$sourceBatch->batch_number} at source branch.");
@@ -100,9 +101,8 @@ class StockTransferController extends Controller
 
                 // 3. Deduct from source inventory and batch
                 $sourceBatch->decrement('quantity', $item['quantity']);
-                Inventory::where('branch_id', $validated['from_branch_id'])
-                    ->where('product_id', $item['product_id'])
-                    ->decrement('quantity', $item['quantity']);
+                $sourceInventory = Inventory::firstOrNew(['branch_id' => $validated['from_branch_id'], 'product_id' => $item['product_id']]);
+                \App\Inventory\StockLedger::change($sourceInventory, -(int) $item['quantity'], 'transfer_out', $transfer, batch: $sourceBatch->batch_number, clamp: !$sourceInventory->exists);
 
                 // 4. Add to destination inventory and batch (or create new batch record at destination)
                 $destBatch = InventoryBatch::where('branch_id', $validated['to_branch_id'])
@@ -129,7 +129,7 @@ class StockTransferController extends Controller
                     ['branch_id' => $validated['to_branch_id'], 'product_id' => $item['product_id']],
                     ['quantity' => 0]
                 );
-                $destInventory->increment('quantity', $item['quantity']);
+                \App\Inventory\StockLedger::change($destInventory, (int) $item['quantity'], 'transfer_in', $transfer, batch: $sourceBatch->batch_number);
             }
         });
 

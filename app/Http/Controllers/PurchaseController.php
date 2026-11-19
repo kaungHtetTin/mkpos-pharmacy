@@ -350,7 +350,7 @@ class PurchaseController extends Controller
                     ['quantity' => 0]
                 );
 
-                $inventory->increment('quantity', $item['base_quantity']);
+                \App\Inventory\StockLedger::change($inventory, (int) $item['base_quantity'], 'purchase', $purchase, batch: $item['batch_number']);
 
                 $pricing->purchasePrices($item, auth()->id());
             }
@@ -480,7 +480,7 @@ class PurchaseController extends Controller
             $oldSupplier = $lockedSuppliers->get($purchase->supplier_id);
             $oldSupplier->update(['balance' => (float) $oldSupplier->balance - (float) $purchase->due_amount]);
 
-            $this->reversePurchaseInventory($purchase);
+            $this->reversePurchaseInventory($purchase, 'purchase_edit_reversal');
 
             $affectedProductIds = $purchase->items->pluck('product_id')->merge(collect($preparedItems)->pluck('product_id'));
 
@@ -519,7 +519,7 @@ class PurchaseController extends Controller
                     ['branch_id' => $validated['branch_id'], 'product_id' => $item['product_id']],
                     ['quantity' => 0]
                 );
-                $inventory->increment('quantity', $item['base_quantity']);
+                \App\Inventory\StockLedger::change($inventory, (int) $item['base_quantity'], 'purchase_edit', $purchase, batch: $item['batch_number']);
 
                 $batch = InventoryBatch::where('branch_id', $validated['branch_id'])
                     ->where('product_id', $item['product_id'])
@@ -588,7 +588,7 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            $this->reversePurchaseInventory($purchase);
+            $this->reversePurchaseInventory($purchase, 'purchase_delete');
 
             $affectedProductIds = $purchase->items->pluck('product_id');
             $purchase->items()->delete();
@@ -660,7 +660,7 @@ class PurchaseController extends Controller
         }
     }
 
-    protected function reversePurchaseInventory(Purchase $purchase): void
+    protected function reversePurchaseInventory(Purchase $purchase, string $action): void
     {
         $purchase->loadMissing('items');
 
@@ -677,7 +677,7 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            $inventory->decrement('quantity', $requiredQuantity);
+            \App\Inventory\StockLedger::change($inventory, -$requiredQuantity, $action, $purchase);
         }
 
         $batchGroups = $purchase->items->groupBy(function ($item) {

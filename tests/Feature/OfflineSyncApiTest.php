@@ -101,6 +101,8 @@ class OfflineSyncApiTest extends TestCase
         $this->assertSame($cashSession->id, Sale::where('client_reference', 'android-sale-001')->value('cash_session_id'));
         $this->assertSame($user->id, Sale::where('client_reference', 'android-sale-001')->value('sale_staff_id'));
         $this->assertSame(8, Inventory::where('product_id', $product->id)->first()->quantity);
+        $this->assertDatabaseCount('stock_movements', 1);
+        $this->assertDatabaseHas('stock_movements', ['action' => 'offline_sale', 'quantity' => -2, 'before_quantity' => 10, 'after_quantity' => 8]);
         $this->assertSame(8, InventoryBatch::where('product_id', $product->id)->first()->quantity);
 
         $this->assertEquals(50.000000, (float) SaleItem::first()->base_unit_cost);
@@ -115,6 +117,8 @@ class OfflineSyncApiTest extends TestCase
 
         $this->assertSame(1, Sale::where('client_reference', 'android-sale-001')->count());
         $this->assertSame(8, Inventory::where('product_id', $product->id)->first()->quantity);
+        $this->assertDatabaseCount('stock_movements', 1);
+        $this->assertDatabaseHas('stock_movements', ['action' => 'offline_sale', 'quantity' => -2, 'before_quantity' => 10, 'after_quantity' => 8]);
         $this->assertSame(8, InventoryBatch::where('product_id', $product->id)->first()->quantity);
 
         $cashSession->update(['status' => 'closed', 'closed_at' => now()]);

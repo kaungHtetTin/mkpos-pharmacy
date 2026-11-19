@@ -642,9 +642,7 @@ class PosController extends Controller
                     ['quantity' => 0]
                 );
 
-                $inventory->update([
-                    'quantity' => max(0, (int) $inventory->quantity - $baseToDeduct),
-                ]);
+                \App\Inventory\StockLedger::change($inventory, -$baseToDeduct, 'sale', $sale, $userId, clamp: true);
             }
         });
 

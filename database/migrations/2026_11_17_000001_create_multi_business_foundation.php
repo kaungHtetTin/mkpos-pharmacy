@@ -10,7 +10,7 @@ return new class extends Migration {
     public function up(): void
     {
         // This project deliberately targets a clean install. Never silently assign live records.
-        foreach (array_merge(['users'],BusinessSchema::TABLES) as $table) {
+        foreach (array_merge(['users'],BusinessSchema::FOUNDATION_TABLES) as $table) {
             if (DB::table($table)->exists()) throw new RuntimeException('Phase 1 requires a fresh database. Do not run this migration against an existing business installation.');
         }
         Schema::create('businesses', function (Blueprint $table) {
@@ -37,21 +37,21 @@ return new class extends Migration {
             $table->unique(['business_id','user_id']);
             $table->index(['user_id','status']);
         });
-        foreach (BusinessSchema::TABLES as $name) {
+        foreach (BusinessSchema::FOUNDATION_TABLES as $name) {
             Schema::table($name, function (Blueprint $table) { $table->foreignUuid('business_id')->constrained('businesses')->restrictOnDelete(); });
         }
         foreach (['role_user','branch_user','product_tax'] as $name) {
             Schema::table($name, function (Blueprint $table) { $table->foreignUuid('business_id')->constrained('businesses')->cascadeOnDelete(); });
         }
-        foreach (array_diff(BusinessSchema::TABLES,['pricing_rules','pricing_states']) as $name) {
+        foreach (array_diff(BusinessSchema::FOUNDATION_TABLES,['pricing_rules','pricing_states']) as $name) {
             Schema::table($name, fn (Blueprint $table) => $table->unique(['business_id','id'], $name.'_business_record_unique'));
         }
-        foreach (BusinessSchema::TABLES as $name) {
+        foreach (BusinessSchema::FOUNDATION_TABLES as $name) {
             foreach (BusinessSchema::REFERENCES as $column=>$target) {
                 if (Schema::hasColumn($name,$column)) Schema::table($name, fn (Blueprint $table) => $table->foreign(['business_id',$column], substr($name.'_'.$column.'_business_fk',0,64))->references(['business_id','id'])->on($target)->restrictOnDelete());
             }
         }
-        foreach (BusinessSchema::TABLES as $name) foreach (['user_id','sale_staff_id','actor_id','closed_by_user_id','voided_by_user_id'] as $column) {
+        foreach (BusinessSchema::FOUNDATION_TABLES as $name) foreach (['user_id','sale_staff_id','actor_id','closed_by_user_id','voided_by_user_id'] as $column) {
             if (Schema::hasColumn($name,$column)) Schema::table($name, fn (Blueprint $table) => $table->foreign(['business_id',$column],substr($name.'_'.$column.'_member_fk',0,64))->references(['business_id','user_id'])->on('business_memberships')->restrictOnDelete());
         }
         foreach (['role_user'=>['role_id'=>'roles'],'branch_user'=>['branch_id'=>'branches'],'product_tax'=>['product_id'=>'products','tax_id'=>'taxes']] as $name=>$references) foreach ($references as $column=>$target) Schema::table($name, fn (Blueprint $table) => $table->foreign(['business_id',$column],$name.'_'.$column.'_business_fk')->references(['business_id','id'])->on($target)->cascadeOnDelete());

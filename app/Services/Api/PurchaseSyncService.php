@@ -202,7 +202,7 @@ class PurchaseSyncService
                     'branch_id' => $validated['branch_id'],
                     'product_id' => $item['product_id'],
                 ], ['quantity' => 0]);
-                $inventory->increment('quantity', $item['base_quantity']);
+                \App\Inventory\StockLedger::change($inventory, (int) $item['base_quantity'], 'offline_purchase', $purchase, batch: $item['batch_number']);
 
                 $pricing->purchasePrices($item, $user->id);
             }

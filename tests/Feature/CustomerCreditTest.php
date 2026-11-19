@@ -153,6 +153,7 @@ class CustomerCreditTest extends TestCase
     public function test_cashier_api_enforces_overdue_restriction_and_saves_credit_date(): void
     {
         $this->postJson('/api/cashier/sales', $this->payload())->assertSuccessful();
+        $this->assertDatabaseHas('stock_movements', ['action' => 'mobile_sale', 'quantity' => -1, 'before_quantity' => 20, 'after_quantity' => 19, 'actor_id' => $this->cashier->id]);
         $this->assertSame('Credit', Sale::firstOrFail()->receivable_status);
         $this->sale(['due_date' => today()->subDay()]);
         $this->postJson('/api/cashier/sales', $this->payload())->assertUnprocessable()->assertJsonValidationErrors('payment_status');

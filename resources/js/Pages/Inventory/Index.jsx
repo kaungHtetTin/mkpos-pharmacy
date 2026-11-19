@@ -30,6 +30,7 @@ import {
     Category as CategoryIcon,
     InfoOutlined as StatusIcon,
     Refresh as ResetIcon,
+    History as HistoryIcon,
 } from '@mui/icons-material';
 
 export default function InventoryIndex({ auth, inventory, branches, categories, filters }) {
@@ -92,6 +93,7 @@ export default function InventoryIndex({ auth, inventory, branches, categories, 
                                 <>
                                     <Button variant="contained" type="submit" startIcon={<FilterIcon />}>Apply</Button>
                                     <Button variant="outlined" onClick={handleReset} startIcon={<ResetIcon />}>Reset</Button>
+                                    <Button variant="outlined" startIcon={<HistoryIcon />} onClick={() => router.get(route('inventory.movements'), branchId ? { branch_id: branchId } : {})}>Movement history</Button>
                                     <CsvExportButton source={inventory} dataKey="inventory" filename="inventory.csv" />
                                 </>
                             )}

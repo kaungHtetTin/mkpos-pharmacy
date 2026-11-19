@@ -105,6 +105,9 @@ class PurchaseWorkflowTest extends TestCase
         $this->assertEquals(620, (float) $purchase->fresh()->due_amount);
         $this->assertEquals(620, (float) $supplier->fresh()->balance);
         $this->assertSame(60, $createdBatch->fresh()->quantity);
+        $this->assertDatabaseHas('stock_movements', ['source_id' => $purchase->id, 'action' => 'purchase', 'quantity' => 50, 'before_quantity' => 0, 'after_quantity' => 50]);
+        $this->assertDatabaseHas('stock_movements', ['source_id' => $purchase->id, 'action' => 'purchase_edit_reversal', 'quantity' => -50, 'after_quantity' => 0]);
+        $this->assertDatabaseHas('stock_movements', ['source_id' => $purchase->id, 'action' => 'purchase_edit', 'quantity' => 60, 'after_quantity' => 60]);
 
         $this->actingAs($user)->post('/supplier-payments', [
             'supplier_id' => $supplier->id,

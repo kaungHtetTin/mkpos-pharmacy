@@ -209,7 +209,7 @@ class ReturnService
                         throw ValidationException::withMessages(['status' => 'Insufficient stock in the original batch for this supplier return.']);
                     }
                     $batch->decrement('quantity', $quantity);
-                    $inventory->decrement('quantity', $quantity);
+                    \App\Inventory\StockLedger::change($inventory, -$quantity, 'supplier_return', $entry, batch: $batch->batch_number);
                 } elseif ($item->restock) {
                     if (!$inventory) {
                         $inventory = Inventory::create(['branch_id' => $entry->branch_id, 'product_id' => $item->product_id, 'quantity' => 0]);
@@ -222,7 +222,7 @@ class ReturnService
                             ? (($oldQty * (float) $batch->purchase_price) + ($quantity * (float) $item->base_unit_cost)) / $newQty
                             : (float) $item->base_unit_cost,
                     ]);
-                    $inventory->increment('quantity', $quantity);
+                    \App\Inventory\StockLedger::change($inventory, $quantity, 'customer_return', $entry, batch: $batch->batch_number);
                 }
             }
 

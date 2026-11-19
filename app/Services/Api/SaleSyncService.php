@@ -273,8 +273,7 @@ class SaleSyncService
                     'product_id' => $line['product_id'],
                 ]);
 
-                $inventory->quantity = max(($inventory->quantity ?? 0) - (int) $line['total_base_quantity'], 0);
-                $inventory->save();
+                \App\Inventory\StockLedger::change($inventory, -(int) $line['total_base_quantity'], 'offline_sale', $sale, clamp: true);
             }
 
             return $sale;

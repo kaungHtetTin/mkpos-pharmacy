@@ -1,4 +1,5 @@
 import React from 'react';
+import StockMovementHistory from '@/Components/StockMovementHistory';
 import MainLayout from '@/Layouts/MainLayout';
 import { AppBarBack } from '@/Components/AppBarPortal';
 import CsvExportButton from '@/Components/CsvExportButton';
@@ -30,14 +31,14 @@ import {
     WarningAmber as WarningIcon,
 } from '@mui/icons-material';
 
-export default function InventoryShow({ auth, product, branches, branchGroups, summary, filters }) {
+export default function InventoryShow({ auth, product, branches, branchGroups, summary, filters, movements, movementActions }) {
     const selectedBranchId = filters?.branch_id || '';
     const hasQuantityMismatch = Number(summary?.quantity_difference || 0) !== 0;
 
     const handleBranchChange = (branchId) => {
         router.get(
             route('inventory.show', product.id),
-            branchId ? { branch_id: branchId } : {},
+            { ...filters, branch_id: branchId, page: 1 },
             { preserveState: true, replace: true }
         );
     };
@@ -128,6 +129,8 @@ export default function InventoryShow({ auth, product, branches, branchGroups, s
                         Aggregate stock and batch stock differ by {summary.quantity_difference}.
                     </Alert>
                 )}
+
+                <StockMovementHistory movements={movements} movementActions={movementActions} branches={branches} filters={filters} productId={product.id} />
 
                 <Paper sx={{ p: 2 }}>
                     <TableContainer>
