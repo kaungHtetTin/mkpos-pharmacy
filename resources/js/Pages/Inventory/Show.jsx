@@ -57,7 +57,7 @@ export default function InventoryShow({ auth, product, branches, branchGroups, s
             <Head title={`${product.name} Inventory`} />
             <AppBarBack href={route('inventory.index', selectedBranchId ? { branch_id: selectedBranchId } : {})} label="Back to Stock Balance" />
 
-            <Box sx={{ p: { xs: 1, md: 1.25 } }}>
+            <Box sx={{ p: { xs: 1, md: 1.25 }, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: { xs: 2, md: 3 } }}>
                 <ReportFilterToolbar
                     appBar
                     ariaLabel="Inventory detail filters"
@@ -88,7 +88,7 @@ export default function InventoryShow({ auth, product, branches, branchGroups, s
                     </TextField>
                 </ReportFilterToolbar>
 
-                <Paper sx={{ p: 2, mb: 2 }}>
+                <Paper sx={{ p: 2, mb: 0 }}>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between">
                         <Box>
                             <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -125,16 +125,17 @@ export default function InventoryShow({ auth, product, branches, branchGroups, s
                 </Paper>
 
                 {hasQuantityMismatch && (
-                    <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 2 }}>
+                    <Alert severity="warning" icon={<WarningIcon />} sx={{ mb: 0 }}>
                         Aggregate stock and batch stock differ by {summary.quantity_difference}.
                     </Alert>
                 )}
 
                 <StockMovementHistory movements={movements} movementActions={movementActions} branches={branches} filters={filters} productId={product.id} />
 
-                <Paper sx={{ p: 2 }}>
+                <Paper component="section" aria-label="Stock batches" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1.5 }}>Stock batches</Typography>
                     <TableContainer>
-                        <Table size="small">
+                        <Table size="small" aria-label="Inventory batches">
                             <TableHead>
                                 <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'light' ? 'grey.50' : 'rgba(255, 255, 255, 0.05)' }}>
                                     <TableCell sx={{ fontWeight: 'bold' }}>Batch Number</TableCell>
