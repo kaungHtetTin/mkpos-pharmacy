@@ -725,6 +725,7 @@ export default function PurchaseIndex({ auth, purchases, suppliers, products, br
                 onClose={processing ? undefined : handleClose}
                 maxWidth="xl"
                 fullWidth
+                sx={{ '&& .MuiDialog-paper .MuiInputBase-root .MuiInputBase-input': { textAlign: 'left' } }}
                 PaperProps={{
                     sx: {
                         width: 'min(1440px, calc(100vw - 16px))',
