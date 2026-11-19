@@ -9,7 +9,7 @@ Configure privately, then regenerate Laravel's configuration cache:
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
-PLATFORM_MFA_REQUIRED=true
+PLATFORM_MFA_REQUIRED=false
 SESSION_SECURE_COOKIE=true
 SESSION_SAME_SITE=lax
 PLATFORM_BACKUP_PATH=/PRIVATE/PERSISTENT/DIRECTORY
@@ -49,7 +49,7 @@ Rehearse on an isolated installation with a new database. Never import a full pl
 3. Create a **new empty database** and a least-privilege user through the hosting control panel. Import `database.sql` there using a client that prompts for its password. The dump contains DROP/CREATE statements; selecting the correct new database is essential. Keep the original database intact.
 4. Configure an isolated release with the original APP_KEY and the new database credentials. Restore `media/businesses` to storage/app/businesses, `media/private/businesses` to storage/app/private/businesses, `media/billing` to storage/app/billing, and `media/public` to public/storage. Preserve private permissions. Confirm the configured public disk points to the real public/storage directory.
 5. Reconcile business, account, branch, product, inventory, sale, purchase, invoice and payment counts; check sample totals, media checksums and business IDs against the snapshot. Test two businesses to verify isolation. Run a newer migration only when deliberately upgrading the restored release.
-6. Invalidate restored Sanctum tokens and remember tokens; clear cached sessions before exposing the restore. If database sessions are configured, clear the sessions table too. Do this only in the new restore database. Existing session files are not part of the archive and should not be copied. Clear configuration/view caches, rebuild production caches and verify MFA enrollment using normal office login.
+6. Invalidate restored Sanctum tokens and remember tokens; clear cached sessions before exposing the restore. If database sessions are configured, clear the sessions table too. Do this only in the new restore database. Existing session files are not part of the archive and should not be copied. Clear configuration/view caches, rebuild production caches and verify normal office login and role restrictions.
 7. For live cutover, pause writes, reconcile the final snapshot, switch the front controller/database configuration atomically and verify owner, office and cashier login plus operational pages. Repoint the pharmacy scheduler. Keep rollback files and the old database until recovery is accepted.
 8. Record actual restore timing and any transactions entered after the snapshot that require reconciliation. Do not claim zero data loss without that reconciliation.
 
@@ -57,7 +57,7 @@ The Phase 3 development rehearsal restored an encrypted snapshot into a newly cr
 
 ## Office access and incidents
 
-Office staff enroll an authenticator at their next login. Recovery codes are single use. A trusted server operator can reset lost enrollment using the audited `platform:admin --reset-mfa --force` command documented in PHASE_3.md. Recheck the intended office role before running it. Never grant a business membership to an office identity.
+Office login uses email and password. Mandatory authenticator verification was disabled at the user's request on 19 November 2026; the Security links and setup/challenge actions are unavailable while disabled. The production environment must retain `PLATFORM_MFA_REQUIRED=false` when rebuilding caches or deploying another release. Stored enrollment fields are retained without schema changes. If explicitly re-enabled later, recovery codes are single use. A trusted server operator can reset lost enrollment using the audited `platform:admin --reset-mfa --force` command documented in PHASE_3.md. Recheck the intended office role before running it. Never grant a business membership to an office identity.
 
 For a support incident, require an owner ticket and explicit expiring diagnostics approval. The current diagnostic scope is counts only. Full business data access or an assisted export needs a separately authorized operator procedure; no implicit platform impersonation exists.
 

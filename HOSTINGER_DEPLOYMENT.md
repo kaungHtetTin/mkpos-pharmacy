@@ -5,6 +5,21 @@ PHP 8.4.27. The deployed application source is commit `fe0d7e3`, including passw
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Office password login — 19 November 2026
+
+The user requested removal of mandatory office authenticator verification.
+Sources `966398d` and `d9fd5a5` are deployed on both Pharmacy POS entries, with
+`PLATFORM_MFA_REQUIRED=false` in the private environment and rebuilt config
+cache. Security navigation is hidden; its old URL returns to the dashboard and
+setup/code endpoints are disabled. Email/password login and office role checks
+remain. No account passwords, business data or schema changed. The full suite
+passes 218 tests (1,407 assertions); both builds and JavaScript checks pass.
+Five live groups passed for password-only entry, hidden Security links, office
+sections/profile, security URL redirect and business login/pricing. Temporary
+deployment files were removed (HTTP 404) and private rollback copies retained.
+See [PLATFORM_OFFICE_HOSTING.md](PLATFORM_OFFICE_HOSTING.md) for operations.
+No Git push was performed.
+
 ## Dedicated office portal — 19 November 2026
 
 The platform office is now available at https://pharmacyposoffice.pwarmyar.com,

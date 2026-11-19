@@ -16,8 +16,10 @@ overrides work with Laravel's configuration cache and do not rewrite the shared
 
 Existing office accounts, passwords, role restrictions and MFA enrollment are
 retained. Business credentials cannot sign in through the office portal; office
-login still requires MFA before access to dashboard, email, profile and other
-administration. Signup, tenant routes, cashier and APIs are unavailable on the
+login now opens the dashboard using email and password. Mandatory authenticator
+verification was removed at the user's request on 19 November 2026. The Security
+links are hidden, the old security URL returns to the dashboard, and setup/code
+submission is disabled. The production setting is `PLATFORM_MFA_REQUIRED=false`. Signup, tenant routes, cashier and APIs are unavailable on the
 office entry. Office password recovery only issues/accepts tokens for office
 accounts and generates links on the office origin. Mail configuration is the
 same encrypted platform setting used by the business entry.
@@ -77,3 +79,20 @@ the staged office build and the initial placeholder; its path is recorded in
 the placeholder, remove its public index and invalidate the changed PHP files
 in OPcache. Retain business data and do not restore an old SQL dump for rollback.
 Coordinate any later source changes before restoring shared files.
+
+## Password-only office login update — 19 November 2026
+
+Sources `966398d` and `d9fd5a5` disable the requirement and remove its navigation
+from the sidebar, account menu and section toolbar. The auth footer no longer
+claims that two-factor authentication protects the office entry. Production
+.env and its rebuilt Laravel configuration cache both disable the requirement;
+the default configuration is also disabled. Existing account credentials,
+roles, cookies, data and schema are retained. Optional authenticator code remains
+available in source for explicit future re-enablement; setup and challenge
+endpoints are inactive while disabled.
+
+The full suite passed 218 tests and 1,407 assertions, both builds and JavaScript
+checks passed. Live verification covers direct password login, removed Security
+links, all office sections/profile, the old security URL redirect, and normal
+business login/pricing. Private backups retain the prior configuration and
+manifests. No Git push was performed.
