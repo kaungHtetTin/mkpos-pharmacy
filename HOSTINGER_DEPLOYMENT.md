@@ -5,6 +5,30 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Mobile business-owner POS flow — 20 November 2026
+
+Phones and tablets below the desktop breakpoint use a dedicated Products → Cart →
+Payment → Sale complete flow. Search and category/price-type controls lead the
+catalog, products use touch-friendly rows, and a safe-area-aware bottom dock keeps
+the cart total and next action reachable. Infinite loading, explicit load-more
+recovery, barcode search, unit selection and business price types are retained.
+
+Cart rows put quantity and unit controls first, with free quantities under Item
+options. Changing the overall price type and clearing the cart require explicit
+confirmation. Combined base-unit stock, missing prices and invalid quantities
+block payment. A closed shift permits browsing but requires opening a shift before
+payment. The payment page supports walk-in or named customers, new customers,
+payment methods, cash/change, credit eligibility and due dates. Full upfront
+payments must use Pay in full. Failed submissions retain the cart; the completion
+screen appears only after the server returns a receipt, with printing and Start
+new sale actions. Same-page browser Back preserves the cart between steps.
+
+Desktop POS, cashier PWA assets, Laravel backend logic and database schema are
+unchanged. Browser scenarios use intercepted product/payment fixtures; they do
+not create operational sales. Shared navigation, login, loading and business
+storage regression checks also pass. Live deployment verification is recorded
+below after publishing.
+
 ## Separate mobile app bar — 20 November 2026
 
 Frontend patch `e92e3ea` gives phones and tablets below the desktop breakpoint a

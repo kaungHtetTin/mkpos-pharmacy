@@ -1,3 +1,4 @@
+import MobilePosWorkspace from '@/Components/POS/MobilePosWorkspace';
 import { unitPrice as configuredUnitPrice, defaultPriceTypes, priceTypeName } from '@/Utils/priceTypes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PosLayout from '@/Layouts/PosLayout';
@@ -109,12 +110,13 @@ export default function PosIndex({
     const [closingCountedInput, setClosingCountedInput] = useState('');
     const [closingNotesInput, setClosingNotesInput] = useState('');
     const [sessionSubmitting, setSessionSubmitting] = useState(false);
-    const [shiftDialogOpen, setShiftDialogOpen] = useState(!activeSession?.id);
+    const [shiftDialogOpen, setShiftDialogOpen] = useState(!isSmallScreen && !activeSession?.id);
     const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
     const [customerSectionExpanded, setCustomerSectionExpanded] = useState(false);
     const [salePriceType, setSalePriceType] = useState('retail');
     const { priceTypes = defaultPriceTypes } = usePage().props;
     const [mobileStep, setMobileStep] = useState('products');
+    const [mobileReceipt, setMobileReceipt] = useState(null);
 
     const scanBuffer = useRef('');
     const lastScanTime = useRef(0);
@@ -217,13 +219,13 @@ export default function PosIndex({
     }, [activeSession?.id, activeSession?.expected_amount]);
 
     useEffect(() => {
-        if (!behavior.barcode_focus) return;
+        if (!behavior.barcode_focus || isSmallScreen) return;
         const t = setTimeout(() => searchInputRef.current?.focus(), 150);
         return () => clearTimeout(t);
-    }, [behavior.barcode_focus]);
+    }, [behavior.barcode_focus, isSmallScreen]);
 
     useEffect(() => {
-        if (isSmallScreen && cart.length === 0 && mobileStep !== 'products') {
+        if (isSmallScreen && cart.length === 0 && ['cart','checkout'].includes(mobileStep)) {
             setMobileStep('products');
         }
     }, [cart.length, isSmallScreen, mobileStep]);
@@ -480,14 +482,14 @@ export default function PosIndex({
         }
     };
 
-    const addProductToCart = (product) => {
+    const addProductToCart = (product, chosenUnit = null) => {
         if (isOutOfStock(product)) {
             setScanError(`${product?.name || __('Product')}: ${__('Out of stock')}`);
             return;
         }
 
         const units = product?.units || [];
-        const preferredUnit = units.find((u) => u.is_default_selling_unit) || units.find((u) => u.is_base_unit) || units[0];
+        const preferredUnit = chosenUnit || units.find((u) => u.is_default_selling_unit) || units.find((u) => u.is_base_unit) || units[0];
 
         if (preferredUnit && resolveUnitPrice(preferredUnit, salePriceType) === null) { setScanError('Price not set. Set this unit price or explicitly select Retail.'); return; }
         if (!preferredUnit) {
@@ -921,6 +923,7 @@ export default function PosIndex({
 
     const submit = (e) => {
         e.preventDefault();
+        if (processing) return;
         if (cart.some((line) => line.unit_price === null)) { setScanError('Price not set. Set this unit price or explicitly select Retail.'); return; }
         if (!hasActiveSession) {
             setScanError(__('Open cashier session before completing sale.'));
@@ -931,6 +934,8 @@ export default function PosIndex({
             preserveScroll: true,
             onSuccess: async (page) => {
                 const receipt = page?.props?.flash?.sale_receipt;
+                if (isSmallScreen && !receipt) { setScanError(page?.props?.flash?.error || 'Sale was not confirmed. Your cart has been kept.'); return; }
+                if (isSmallScreen) setMobileReceipt(receipt);
                 if (receipt && behavior.auto_print_receipt) {
                     await printSaleReceipt(receipt);
                 }
@@ -953,7 +958,8 @@ export default function PosIndex({
                 setData('due_date', inputDate(7));
                 setData('sale_channel', salePriceType);
                 setPaymentDialogOpen(false);
-                setMobileStep('products');
+                setMobileStep(isSmallScreen ? 'complete' : 'products');
+                if (isSmallScreen) fetchCatalog({ categoryId: selectedCategoryId, page: 1, append: false });
                 setCustomerSectionExpanded(false);
                 if (behavior.barcode_focus) {
                     setTimeout(() => searchInputRef.current?.focus(), 100);
@@ -1022,12 +1028,12 @@ export default function PosIndex({
     );
 
     return (
-        <PosLayout header={__(pageTitle)}>
+        <PosLayout header={isSmallScreen ? ({products:'POS · Products',cart:'POS · Cart',checkout:'POS · Payment',complete:'Sale complete'}[mobileStep] || __(pageTitle)) : __(pageTitle)}>
             <Head title={pageTitle} />
 
             <Box
                 sx={{
-                    p: { xs: 1.25, md: 1.5 },
+                    p: { xs: 0, md: 1.5 },
                     bgcolor: 'background.default',
                     height: { md: 'calc(100dvh - 48px)' },
                     minHeight: 0,
@@ -1036,6 +1042,14 @@ export default function PosIndex({
                     flexDirection: { md: 'column' },
                 }}
             >
+                {isSmallScreen ? <MobilePosWorkspace
+                    step={mobileStep} onStep={setMobileStep} currency={currencySymbol} receipt={mobileReceipt}
+                    error={scanError || displayError} processing={processing} errors={errors} creditDetails={creditDetails}
+                    catalog={{ products: searchResults, categories: catalogCategories, category: selectedCategoryId, onCategory: setSelectedCategoryId, query: searchQuery, onQuery: setSearchQuery, onScan: () => fetchSearch({ autoAddFromBarcode: true, clearInputAfterSearch: true }), searchRef: searchInputRef, endRef: catalogEndRef, loading: searchLoading || catalogLoading, error: catalogError || scanError, footer: catalogFooter, name: getProductDisplayName }}
+                    order={{ lines: cart, totals, priceType: salePriceType, types: priceTypes, session: hasActiveSession, stockIssue: hasStockIssue, requested: resolveRequestedBaseQuantity, lineTotal: resolveDiscountedLineTotal }}
+                    payment={{ data, set: setData, methods: paymentMethods || [], customer: selectedCustomer, customers: customerOptions, customersLoading: customerLoading, customerQuery: customerSearchInput, onCustomerQuery: setCustomerSearchInput, onCustomer: (customer) => { setSelectedCustomer(customer); setCustomerSearchInput(customer?.name || ''); if (customer?.preferred_price_type && priceTypes.some((type) => type.code===customer.preferred_price_type)) changeSalePriceType(customer.preferred_price_type); }, paidCash: isPaidCashSale, shortage: cashShortageValue, change: changeDueValue }}
+                    actions={{ add: addProductToCart, update: updateCartLine, remove: removeCartLine, clear: () => setCart([]), priceType: changeSalePriceType, shift: () => setShiftDialogOpen(true), newCustomer: openNewCustomer, submit, print: printSaleReceipt, newSale: () => { setMobileReceipt(null); changeSalePriceType('retail'); setMobileStep('products'); } }}
+                /> : <>
                 {displayError && (
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {displayError}
@@ -2287,6 +2301,7 @@ export default function PosIndex({
                         </Stack>
                     </Paper>
                 </Box>
+                </>}
             </Box>
 
             <Dialog open={shiftDialogOpen} onClose={() => !sessionSubmitting && setShiftDialogOpen(false)} maxWidth="xs" fullWidth>

@@ -295,12 +295,16 @@ export function SpaProvider({ initialPage, resolve, children }) {
     useEffect(() => router.bind(visit), [visit]);
 
     useEffect(() => {
-        const handlePopstate = () => visit(window.location.href, {
-            method: 'get',
-            replace: true,
-            fromPopstate: true,
-            preserveScroll: true,
-        });
+        const handlePopstate = (event) => {
+            // Mobile POS owns same-URL cart/payment history without reloading its cart.
+            if (window.matchMedia('(max-width: 980.95px)').matches && event.state?.posMobileStep && pageRef.current.component === 'POS/Index' && new URL(pageRef.current.url, window.location.origin).pathname === window.location.pathname) return;
+            return visit(window.location.href, {
+                method: 'get',
+                replace: true,
+                fromPopstate: true,
+                preserveScroll: true,
+            });
+        };
         window.addEventListener('popstate', handlePopstate);
         return () => window.removeEventListener('popstate', handlePopstate);
     }, [visit]);
