@@ -251,4 +251,24 @@ class SubscriptionBillingTest extends TestCase
         $this->postJson('/api/sync/sales',['sales'=>[$payload]])->assertForbidden()->assertJsonPath('feature','offline_sync');
     }
 
+    public function test_office_can_define_each_duration_in_months_and_reject_invalid_terms(): void
+    {
+        $this->actingAs($this->office);
+        $data=['code'=>'months-plan','name'=>'Flexible months','price'=>'25000','currency'=>'MMK','interval_months'=>2,'grace_days'=>0,'max_branches'=>1,'max_users'=>2,'max_products'=>10,'features'=>['cashier'=>true,'offline_sync'=>true,'reports'=>true],'is_active'=>true,'is_public'=>true];
+        foreach([1,2,3,12,36] as $months){
+            $this->post('/platform/plans',array_replace($data,['code'=>'months-'.$months,'interval_months'=>$months]))->assertRedirect()->assertSessionHasNoErrors();
+            $this->assertDatabaseHas('subscription_plans',['code'=>'months-'.$months,'interval_months'=>$months,'amount_minor'=>2500000,'currency'=>'MMK']);
+        }
+        foreach([0,37,2.5,'bad'] as $months)$this->post('/platform/plans',array_replace($data,['interval_months'=>$months]))->assertSessionHasErrors('interval_months');
+    }
+    public function test_multi_month_payment_expiry_and_plan_edits_preserve_invoice_snapshot(): void
+    {
+        $plan=$this->plan(['interval_months'=>2]);$invoice=$this->invoice($plan);
+        $plan->update(['interval_months'=>3]);$this->approve($invoice);
+        $invoice=$invoice->fresh();$this->assertTrue($invoice->period_ends_at->equalTo($invoice->period_starts_at->copy()->addMonthsNoOverflow(2)));
+        $this->assertSame(2,$invoice->plan_snapshot['interval_months']);
+        $next=$this->invoice($plan);$this->approve($next);$next=$next->fresh();
+        $this->assertTrue($next->period_starts_at->equalTo($invoice->period_ends_at));
+        $this->assertTrue($next->period_ends_at->equalTo($next->period_starts_at->copy()->addMonthsNoOverflow(3)));
+    }
 }

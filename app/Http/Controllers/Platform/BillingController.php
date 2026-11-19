@@ -74,7 +74,7 @@ class BillingController extends Controller
         $data=$request->validate([
             'code'=>['required','string','max:60','regex:/^[a-z][a-z0-9-]*$/',Rule::notIn(['system-trial']),Rule::unique('subscription_plans','code')->ignore($record->id)],
             'name'=>'required|string|max:120','price'=>'required|string','currency'=>'required|in:MMK',
-            'interval_months'=>['required',Rule::in([1,12])],'grace_days'=>'required|integer|min:0|max:30',
+            'interval_months'=>'required|integer|min:1|max:36','grace_days'=>'required|integer|min:0|max:30',
             'max_branches'=>'nullable|integer|min:1|max:1000000','max_users'=>'nullable|integer|min:1|max:1000000','max_products'=>'nullable|integer|min:1|max:10000000',
             'features'=>'required|array:cashier,offline_sync,reports','features.cashier'=>'required|boolean','features.offline_sync'=>'required|boolean','features.reports'=>'required|boolean',
             'is_active'=>'required|boolean','is_public'=>'required|boolean',

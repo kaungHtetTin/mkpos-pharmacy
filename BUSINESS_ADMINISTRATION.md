@@ -94,3 +94,13 @@ only. Existing financial/invoice snapshots retain their original currency; no
 exchange rate or relabeling is applied to historical amounts. Zero-value system
 trial metadata is normalized to MMK without changing trial dates or limits.
 Business POS currency settings are separate from platform subscription currency.
+
+## Plan duration in months
+
+Paid plans define an integer duration from 1 to 36 months. The Price for full
+duration field is the total charge for that whole term in MMK. Listings, owner
+billing and office invoice selectors display 1 month, 2 months, 3 months, etc.
+Payment approval grants that many calendar months using end-of-month-safe date
+arithmetic. Editing a plan affects future invoices; existing invoice and paid
+period snapshots keep their original duration and price. FOC grant duration
+remains independently selectable. No database migration is needed.
