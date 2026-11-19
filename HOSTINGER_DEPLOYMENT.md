@@ -1,9 +1,50 @@
 # Hostinger deployment
 
 Phase 3 is live at https://pharmacypos.pwarmyar.com using Laravel 13.42.0 and
-PHP 8.4.27. The deployed application source is commit `b18bf6d`, including the expanded platform office, password recovery,
+PHP 8.4.27. The deployed application source is commit `518087c`, including founder finance, the expanded platform office, password recovery,
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
+
+## Founder finance and bank books — 19 November 2026
+
+Source `518087c` is live in `_pharmacy_founder_finance_518087c` for both pharmacy
+entries. The office Finance group provides bank books, founder capital/profit
+statements, future share settings, income/expenses, transfers, allocations,
+payouts, capital returns, opening adjustments, preserved reversals and CSV.
+See [FOUNDER_FINANCE.md](FOUNDER_FINANCE.md) for setup and accounting rules.
+
+Seven additive tables were migrated. Approved subscription receipts are imported
+once without invented receiving books; future approvals post their receipt in
+the same transaction, using the selected currency's current default. The
+idempotent `platform:finance-sync` reconciliation ran during preparation and
+cutover and is scheduled every five minutes under the existing app scheduler.
+No founders, bank books, manual entries or balances were seeded live. At
+preparation there were zero approved payments and zero finance records.
+
+Private rollback backups saved the preceding app and both public entries
+(26,327,327 bytes) and SQL database (129,688 bytes). A fresh encrypted backup
+was created and verified after migration/reconciliation (17,829 bytes). Existing
+account credentials, sessions, APP_KEY, SMTP settings, subscription data and
+password-only office access were retained. The persistent backup directory and
+key remain. Both caches were purged, the scheduler was repointed and confirmed,
+and the previous pharmacy job was removed; the four unrelated jobs remain.
+Temporary installer/archive were removed and return HTTP 404.
+
+Validation: **263 tests and 1,654 assertions**, both production builds, two
+JavaScript checks, ten synthetic end-to-end browser groups and **ten live
+groups** passed. Tests cover exact cents, snapshots, retries, receipt atomicity,
+legacy import/repair, currencies, overdrafts, founder obligations, reversals,
+role/privacy boundaries and separate export/write throttles. Live checks were
+read-only apart from normal authentication/audit records: no founders, bank
+books, manual entries, allocations or actual money movements were created.
+Existing business identity, billing, medicine pricing, cashier offline shell
+and the original reference office all remain available.
+
+Rollback restores both preceding entry scripts/manifests and scheduler target.
+Keep the additive finance tables and all newer operational records. Do not
+restore an old SQL dump over posted transactions. On a later reactivation,
+finance reconciliation recovers approved receipts missed while the old source
+was active. No Git push was performed.
 
 ## Expanded office administration — 19 November 2026
 

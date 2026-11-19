@@ -108,3 +108,12 @@ installed. See [OFFICE_FEATURE_COMPARISON.md](OFFICE_FEATURE_COMPARISON.md) for
 coverage and [HOSTINGER_DEPLOYMENT.md](HOSTINGER_DEPLOYMENT.md) for backup and
 validation evidence. New office navigation groups are Workspace, Subscriptions
 and Office settings, filtered by the existing role model.
+
+## Founder finance — 19 November 2026
+
+Both entries now share `_pharmacy_founder_finance_518087c`, source `518087c`.
+The pharmacy scheduler points to this release, including five-minute approved
+receipt reconciliation. Credentials, copied sessions and password-only office
+login remain unchanged. The seven-table additive finance migration introduced
+no seeded founders, bank accounts or balances. See [FOUNDER_FINANCE.md](FOUNDER_FINANCE.md)
+and the deployment log for validation, backup sizes and rollback requirements.

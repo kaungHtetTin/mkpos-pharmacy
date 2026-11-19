@@ -114,3 +114,14 @@ role/privacy boundaries, filtered statements/CSV and separate posting/export
 rate limits. Both production builds and JavaScript checks pass. Ten synthetic
 Chromium groups exercised the full workflow and compact mobile dialogs. No real
 money was transferred or messages sent during verification.
+
+## Live deployment
+
+Source `518087c` is deployed to both pharmacy entries; the dedicated office URL
+is https://pharmacyposoffice.pwarmyar.com/platform/finance. Ten live groups
+passed for login/navigation, currency balances, founder/bank setup, filters and
+CSV, mobile forms, office billing/backup health, tenant isolation, medicine
+pricing, cashier offline access and the unchanged reference app. Verification
+posted no live finance records and transferred no money. New finance tables and
+an encrypted backup were verified before activation. The scheduler is confirmed
+on the active release and temporary deployment files return HTTP 404.

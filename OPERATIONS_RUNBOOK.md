@@ -64,3 +64,14 @@ For a support incident, require an owner ticket and explicit expiring diagnostic
 If a backup fails, retain prior archives, inspect private logs and disk space, verify PHP AES support and private environment keys, then rerun and verify. If keys are exposed, rotate them through a reviewed procedure and retain the keys needed for historical archive decryption in secure escrow. Do not rotate APP_KEY casually: encrypted MFA enrollment depends on it.
 
 The production mail transport remains separately configured; no reminder email or password-reset delivery is claimed while it uses the log driver. Physical receipt hardware remains an onsite verification task.
+
+## Platform financial ledger
+
+The existing application scheduler also runs `platform:finance-sync` every five
+minutes to recover approved subscription receipts missing from the finance book.
+The command is idempotent and leaves historical receipts unassigned. The normal
+approval path posts new receipts atomically with settlement. Keep one scheduler
+for the active shared release. Founder shares and bank receiving defaults must
+be configured by an office owner/billing role as described in
+[FOUNDER_FINANCE.md](FOUNDER_FINANCE.md); never seed guessed ownership or balances.
+Preserve ledger tables and allocation snapshots during rollback/restoration.
