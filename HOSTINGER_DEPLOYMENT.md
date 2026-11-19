@@ -5,6 +5,18 @@ PHP 8.4.27. The deployed application source is commit `fe0d7e3`, including passw
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Dedicated office portal — 19 November 2026
+
+The platform office is now available at https://pharmacyposoffice.pwarmyar.com,
+using source `446b168`, existing office accounts/MFA and the existing database.
+The separate PwarMyar Office at office.pwarmyar.com remains untouched. The new
+entry has office-only login, a separate secure cookie, SSL and HTTPS redirect.
+No migrations or additional scheduler were needed. Shared application files
+were backed up and checked before deployment. Full validation passed 217 tests
+(1,382 assertions), both builds, two JavaScript checks and seven live groups.
+See [PLATFORM_OFFICE_HOSTING.md](PLATFORM_OFFICE_HOSTING.md) for paths, limitations,
+future deployment requirements and rollback. No Git push was performed.
+
 ## Units & pricing editor — 19 November 2026
 
 Frontend source `9df8299` is deployed over the existing recovery release. The
