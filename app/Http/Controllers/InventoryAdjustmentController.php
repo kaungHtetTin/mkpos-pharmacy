@@ -25,7 +25,7 @@ class InventoryAdjustmentController extends Controller
 
         return Spa::render('Inventory/Adjustments', [
             'adjustments' => $query->latest()->paginate(15)->withQueryString(),
-            'products' => Product::select('id', 'name')->where('status', 'Active')->orderBy('name')->get(),
+            'products' => Product::select('id', 'name', 'generic_name', 'barcode')->where('status', 'Active')->orderBy('name')->get(),
             'branches' => Branch::select('id', 'name')->orderBy('name')->get(),
             'filters' => $request->only(['search']),
         ]);

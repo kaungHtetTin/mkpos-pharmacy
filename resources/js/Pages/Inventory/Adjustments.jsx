@@ -1,3 +1,4 @@
+import { createFilterOptions } from '@mui/material/Autocomplete';
 import React, { useState, useEffect } from 'react';
 import DataTableFooter from '@/Components/DataTableFooter';
 import MainLayout from '@/Layouts/MainLayout';
@@ -5,6 +6,7 @@ import ReportFilterToolbar from '@/Components/ReportFilterToolbar';
 import CsvExportButton from '@/Components/CsvExportButton';
 import { Head, useForm, router } from '@/spa';
 import {
+    Autocomplete,
     Box,
     Button,
     Chip,
@@ -35,10 +37,16 @@ import {
     Warning as WarningIcon,
 } from '@mui/icons-material';
 
+const filterProducts = createFilterOptions({
+    limit: 100,
+    stringify: product => [product.name, product.generic_name, product.barcode].filter(Boolean).join(' '),
+});
+
 export default function InventoryAdjustments({ auth, adjustments, products, branches, filters }) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
     const adjustmentRows = adjustments?.data || adjustments || [];
+    const [productQuery, setProductQuery] = useState('');
     const [batches, setBatches] = useState([]);
     const [loadingBatches, setLoadingBatches] = useState(false);
 
@@ -53,23 +61,24 @@ export default function InventoryAdjustments({ auth, adjustments, products, bran
     });
 
     useEffect(() => {
-        if (data.product_id && data.branch_id) {
-            setLoadingBatches(true);
-            fetch(route('inventory.batches.get', { product: data.product_id, branch: data.branch_id }))
-                .then(res => res.json())
-                .then(data => {
-                    setBatches(data);
-                    setLoadingBatches(false);
-                })
-                .catch(() => setLoadingBatches(false));
-        } else {
-            setBatches([]);
-        }
+        const controller = new AbortController();
+        let active = true;
+        setBatches([]);
+        setData('inventory_batch_id', '');
+        if (!data.product_id || !data.branch_id) { setLoadingBatches(false); return; }
+        setLoadingBatches(true);
+        fetch(route('inventory.batches.get', { product: data.product_id, branch: data.branch_id }), { signal: controller.signal })
+            .then(response => { if (!response.ok) throw new Error('Batch loading failed'); return response.json(); })
+            .then(items => { if (active) setBatches(items); })
+            .catch(() => {})
+            .finally(() => { if (active) setLoadingBatches(false); });
+        return () => { active = false; controller.abort(); };
     }, [data.product_id, data.branch_id]);
 
     const handleOpen = () => setOpen(true);
     const handleClose = () => {
         setOpen(false);
+        setProductQuery('');
         reset();
     };
 
@@ -191,21 +200,39 @@ export default function InventoryAdjustments({ auth, adjustments, products, bran
                                 ))}
                             </TextField>
 
-                            <TextField
-                                select
-                                label="Product"
+                            <Autocomplete
                                 fullWidth
                                 size="small"
-                                value={data.product_id}
-                                onChange={e => setData('product_id', e.target.value)}
-                                error={!!errors.product_id}
-                                helperText={errors.product_id}
-                                required
-                            >
-                                {products.map(product => (
-                                    <MenuItem key={product.id} value={product.id}>{product.name}</MenuItem>
-                                ))}
-                            </TextField>
+                                options={products}
+                                value={products.find(product => product.id === data.product_id) || null}
+                                inputValue={productQuery}
+                                onInputChange={(_, query, reason) => {
+                                    if (reason === 'input' || reason === 'clear') {
+                                        setProductQuery(query);
+                                        if (data.product_id) setData({ ...data, product_id: '', inventory_batch_id: '' });
+                                    }
+                                }}
+                                onChange={(_, product) => {
+                                    setProductQuery(product?.name || '');
+                                    setData({ ...data, product_id: product?.id || '', inventory_batch_id: '' });
+                                }}
+                                getOptionLabel={product => product.name || ''}
+                                getOptionKey={product => product.id}
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                                filterOptions={filterProducts}
+                                autoHighlight
+                                openOnFocus
+                                clearOnEscape
+                                noOptionsText="No matching products"
+                                renderOption={(props, product) => {
+                                    const { key, ...optionProps } = props;
+                                    return <Box component="li" key={product.id} {...optionProps}><Box>
+                                        <Typography variant="body2">{product.name}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{[product.generic_name, product.barcode].filter(Boolean).join(' · ')}</Typography>
+                                    </Box></Box>;
+                                }}
+                                renderInput={params => <TextField {...params} label="Product" placeholder="Search product name or barcode" required error={!!errors.product_id} helperText={errors.product_id || 'Search by name, generic name or barcode'} />}
+                            />
 
                             <TextField
                                 select
@@ -280,7 +307,7 @@ export default function InventoryAdjustments({ auth, adjustments, products, bran
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleClose}>Cancel</Button>
-                        <Button type="submit" variant="contained" disabled={processing}>
+                        <Button type="submit" variant="contained" disabled={processing || !data.product_id}>
                             Process Adjustment
                         </Button>
                     </DialogActions>
