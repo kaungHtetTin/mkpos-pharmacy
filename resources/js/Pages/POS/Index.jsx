@@ -95,6 +95,7 @@ export default function PosIndex({
     const [catalogPage, setCatalogPage] = useState(1);
     const [catalogHasMore, setCatalogHasMore] = useState(false);
     const [catalogLoading, setCatalogLoading] = useState(false);
+    const [catalogError, setCatalogError] = useState('');
     const [customerOptions, setCustomerOptions] = useState([]);
     const [customerSearchInput, setCustomerSearchInput] = useState('');
     const [customerLoading, setCustomerLoading] = useState(false);
@@ -117,6 +118,11 @@ export default function PosIndex({
     const lastScanTime = useRef(0);
     const searchInputRef = useRef(null);
     const catalogLoadingRef = useRef(false);
+    const productRequestRef = useRef(0);
+    const productAbortRef = useRef(null);
+    const searchTimerRef = useRef(null);
+    const catalogScrollRef = useRef(null);
+    const catalogEndRef = useRef(null);
     const silentPrintFallbackRef = useRef(false);
 
     const { data, setData, post, processing, errors } = useForm({
@@ -326,59 +332,49 @@ export default function PosIndex({
         return query.length >= 3 && !/\s/.test(query);
     };
 
+    const startProductRequest = () => {
+        window.clearTimeout(searchTimerRef.current);
+        productAbortRef.current?.abort();
+        const controller = new AbortController();
+        productAbortRef.current = controller;
+        return { controller, requestId: ++productRequestRef.current };
+    };
+
     const fetchSearch = async (options = {}) => {
         const { autoAddFromBarcode = false, clearInputAfterSearch = false, categoryId = selectedCategoryId } = options;
         const query = searchQuery.trim();
+        if (!query) return fetchCatalog({ categoryId, page: 1, append: false });
+        const { controller, requestId } = startProductRequest();
+        catalogLoadingRef.current = false;
+        setCatalogLoading(false);
+        setCatalogHasMore(false);
+        setCatalogError('');
         setScanError('');
-
-        if (!query) {
-            await fetchCatalog({ categoryId, page: 1, append: false });
-            return;
-        }
-
         setSearchLoading(true);
         try {
-            const response = await fetch(route('pos.products', { query, category_id: categoryId || null }));
+            const response = await fetch(route('pos.products', { query, category_id: categoryId || null }), { signal: controller.signal });
+            if (!response.ok) throw new Error('Product search failed');
             const data = await response.json();
+            if (requestId !== productRequestRef.current) return;
             const products = Array.isArray(data) ? data : [];
             setSearchResults(products);
-
             if (autoAddFromBarcode && isLikelyBarcode(query)) {
                 const normalizedQuery = normalizeBarcode(query);
                 const match = products.find((product) => normalizeBarcode(product?.barcode) === normalizedQuery);
-                if (match) {
-                    addProductToCart(match);
-                }
+                if (match) addProductToCart(match);
             }
-        } finally {
-            setSearchLoading(false);
             if (clearInputAfterSearch) {
                 setSearchQuery('');
-                if (behavior.barcode_focus) {
-                    window.setTimeout(() => searchInputRef.current?.focus(), 0);
-                }
+                if (behavior.barcode_focus) window.setTimeout(() => searchInputRef.current?.focus(), 0);
             }
+        } catch (error) {
+            if (error.name !== 'AbortError' && requestId === productRequestRef.current) {
+                setScanError(__('Unable to load products. Please try again.'));
+            }
+        } finally {
+            if (requestId === productRequestRef.current) setSearchLoading(false);
         }
     };
-
-    const searchRequestRef = useRef(0);
-
-    useEffect(() => {
-        const requestId = ++searchRequestRef.current;
-        const timer = window.setTimeout(() => {
-            if (!searchQuery.trim()) {
-                fetchCatalog({ categoryId: selectedCategoryId, page: 1, append: false });
-                return;
-            }
-            fetchSearch({ categoryId: selectedCategoryId });
-        }, 250);
-
-        return () => {
-            window.clearTimeout(timer);
-            // Mark pending responses stale when the query changes before they finish.
-            searchRequestRef.current = requestId + 1;
-        };
-    }, [searchQuery]);
 
     const fetchCategories = async () => {
         try {
@@ -391,62 +387,84 @@ export default function PosIndex({
     };
 
     const fetchCatalog = async ({ categoryId, page, append }) => {
-        if (catalogLoadingRef.current) return;
-
+        if (append && catalogLoadingRef.current) return;
+        const { controller, requestId } = startProductRequest();
         catalogLoadingRef.current = true;
+        setSearchLoading(false);
         setScanError('');
+        setCatalogError('');
         setCatalogLoading(true);
         try {
-            const response = await fetch(route('pos.catalog', { category_id: categoryId || null, page, per_page: 30 }));
+            const response = await fetch(route('pos.catalog', { category_id: categoryId || null, page, per_page: 30 }), { signal: controller.signal });
+            if (!response.ok) throw new Error('Product catalog failed');
             const payload = await response.json();
-            const items = Array.isArray(payload?.data) ? payload.data : [];
-            const meta = payload?.meta || {};
-            const hasMore = Number(meta.current_page || 1) < Number(meta.last_page || 1);
-
-            setCatalogHasMore(hasMore);
-            setCatalogPage(Number(meta.current_page || page || 1));
-            setSearchResults((prev) => (append ? [...prev, ...items] : items));
+            if (requestId !== productRequestRef.current) return;
+            if (!Array.isArray(payload?.data) || !payload?.meta) throw new Error('Invalid product catalog');
+            const meta = payload.meta;
+            setCatalogHasMore(Number(meta.current_page) < Number(meta.last_page));
+            setCatalogPage(Number(meta.current_page || page));
+            setSearchResults((prev) => {
+                if (!append) return payload.data;
+                const ids = new Set(prev.map((product) => product.id));
+                return [...prev, ...payload.data.filter((product) => !ids.has(product.id))];
+            });
+        } catch (error) {
+            if (error.name !== 'AbortError' && requestId === productRequestRef.current) {
+                setCatalogError(__('Unable to load products. Please try again.'));
+            }
         } finally {
-            catalogLoadingRef.current = false;
-            setCatalogLoading(false);
+            if (requestId === productRequestRef.current) {
+                catalogLoadingRef.current = false;
+                setCatalogLoading(false);
+            }
+        }
+    };
+
+    const loadNextCatalogPage = () => {
+        if (!searchQuery.trim() && catalogHasMore && !catalogLoadingRef.current && !catalogError) {
+            fetchCatalog({ categoryId: selectedCategoryId, page: catalogPage + 1, append: true });
         }
     };
 
     const handleCatalogScroll = (event) => {
         const container = event.currentTarget;
-        const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
-
-        if (
-            remaining <= 180
-            && !searchQuery.trim()
-            && catalogHasMore
-            && !catalogLoadingRef.current
-        ) {
-            fetchCatalog({ categoryId: selectedCategoryId, page: catalogPage + 1, append: true });
-        }
+        if (container.scrollHeight - container.scrollTop - container.clientHeight <= 180) loadNextCatalogPage();
     };
 
-    useEffect(() => {
-        if (catalogCategories.length === 0) {
-            fetchCategories();
-        }
-        if (!searchQuery.trim()) {
-            fetchCatalog({ categoryId: selectedCategoryId, page: 1, append: false });
-        }
-    }, []);
+    useEffect(() => { fetchCategories(); }, []);
 
     useEffect(() => {
-        if (!searchQuery.trim()) {
-            fetchCatalog({ categoryId: selectedCategoryId, page: 1, append: false });
-            return;
-        }
-        fetchSearch({ categoryId: selectedCategoryId });
-    }, [selectedCategoryId]);
+        // Invalidate immediately: an old page must never append after a filter/search changes.
+        ++productRequestRef.current;
+        productAbortRef.current?.abort();
+        catalogLoadingRef.current = false;
+        setCatalogLoading(false);
+        setCatalogError('');
+        setCatalogHasMore(false);
+        setCatalogPage(1);
+        setSearchResults([]);
+        searchTimerRef.current = window.setTimeout(() => {
+            if (searchQuery.trim()) fetchSearch({ categoryId: selectedCategoryId });
+            else fetchCatalog({ categoryId: selectedCategoryId, page: 1, append: false });
+        }, searchQuery.trim() ? 250 : 0);
+        return () => {
+            window.clearTimeout(searchTimerRef.current);
+            ++productRequestRef.current;
+            productAbortRef.current?.abort();
+            catalogLoadingRef.current = false;
+        };
+    }, [searchQuery, selectedCategoryId]);
 
     useEffect(() => {
-        if (resultsView !== 'grid' || searchQuery.trim()) return;
-        fetchCatalog({ categoryId: selectedCategoryId, page: 1, append: false });
-    }, [resultsView]);
+        if (searchQuery.trim() || !catalogHasMore || catalogLoading || catalogError || !catalogEndRef.current || !window.IntersectionObserver) return;
+        // Phones scroll the document; desktop scrolls the catalog panel.
+        let active = true;
+        const observer = new IntersectionObserver(([entry]) => {
+            if (active && entry.isIntersecting) loadNextCatalogPage();
+        }, { root: isSmallScreen ? null : catalogScrollRef.current, rootMargin: '180px 0px' });
+        observer.observe(catalogEndRef.current);
+        return () => { active = false; observer.disconnect(); };
+    }, [catalogPage, catalogHasMore, catalogLoading, catalogError, searchQuery, selectedCategoryId, resultsView, isSmallScreen, mobileStep]);
 
     const handleBarcodeScan = async (barcode) => {
         setScanError('');
@@ -916,6 +934,8 @@ export default function PosIndex({
                 }
                 setCart([]);
                 if (resultsView === 'table') {
+                    setCatalogPage(1);
+                    setCatalogHasMore(false);
                     setSearchResults([]);
                     setSearchQuery('');
                 }
@@ -987,6 +1007,17 @@ export default function PosIndex({
             setPaymentDialogOpen(true);
         }
     };
+
+    const catalogFooter = !searchQuery.trim() && (
+        <Stack spacing={0.5} alignItems="center" aria-live="polite" sx={{ py: 0.75 }}>
+            {catalogError && <Typography variant="caption" color="error">{catalogError}</Typography>}
+            {catalogLoading && <Typography variant="caption" color="text.secondary">{__('Loading more products...')}</Typography>}
+            {!catalogLoading && (catalogError || catalogHasMore) && <Button size="small" onClick={() => fetchCatalog({ categoryId: selectedCategoryId, page: catalogHasMore ? catalogPage + 1 : 1, append: catalogHasMore })}>
+                {catalogError ? __('Retry loading products') : __('Load more products')}
+            </Button>}
+            {!catalogLoading && !catalogError && !catalogHasMore && searchResults.length > 0 && <Typography variant="caption" color="text.secondary">{__('All products loaded.')}</Typography>}
+        </Stack>
+    );
 
     return (
         <PosLayout header={__(pageTitle)}>
@@ -1123,6 +1154,7 @@ export default function PosIndex({
                                     fullWidth
                                     size="small"
                                     value={String(selectedCategoryId)}
+                                    inputProps={{ 'aria-label': __('Product category') }}
                                     onChange={(event) => setSelectedCategoryId(event.target.value)}
                                     sx={{ '& .MuiInputBase-root': { height: 36, bgcolor: 'background.paper', fontSize: 12 } }}
                                 >
@@ -1256,7 +1288,7 @@ export default function PosIndex({
                         </Typography>
 
                         {resultsView === 'table' ? (
-                            <TableContainer onScroll={handleCatalogScroll} sx={{ mt: 0.75, flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable' }}>
+                            <TableContainer ref={catalogScrollRef} data-pos-catalog onScroll={handleCatalogScroll} sx={{ mt: 0.75, flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable' }}>
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'light' ? 'grey.50' : 'rgba(255, 255, 255, 0.05)' }}>
@@ -1277,6 +1309,7 @@ export default function PosIndex({
                                             return (
                                             <TableRow
                                                 key={p.id}
+                                                data-pos-product-id={p.id}
                                                 hover
                                                 sx={outOfStock ? { bgcolor: 'error.lighter' } : undefined}
                                             >
@@ -1320,11 +1353,14 @@ export default function PosIndex({
                                                 </TableCell>
                                             </TableRow>
                                         )}
+                                        <TableRow><TableCell colSpan={4} sx={{ py: 0 }}><Box ref={catalogEndRef} data-pos-catalog-end>{catalogFooter}</Box></TableCell></TableRow>
                                     </TableBody>
                                 </Table>
                             </TableContainer>
                         ) : (
                             <Box
+                                ref={catalogScrollRef}
+                                data-pos-catalog
                                 onScroll={handleCatalogScroll}
                                 sx={{
                                     mt: { xs: 0.75, md: 0.5 },
@@ -1353,6 +1389,7 @@ export default function PosIndex({
                                     return (
                                         <Card
                                             key={p.id}
+                                            data-pos-product-id={p.id}
                                             variant="outlined"
                                             sx={{
                                                 overflow: 'hidden',
@@ -1463,13 +1500,7 @@ export default function PosIndex({
                                         </Typography>
                                     </Paper>
                                 )}
-                                {searchResults.length > 0 && catalogLoading && (
-                                    <Box sx={{ gridColumn: '1 / -1', py: 0.75, textAlign: 'center' }}>
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                                            {__('Loading more products...')}
-                                        </Typography>
-                                    </Box>
-                                )}
+                                <Box ref={catalogEndRef} data-pos-catalog-end sx={{ gridColumn: '1 / -1' }}>{catalogFooter}</Box>
                             </Box>
                         )}
 
