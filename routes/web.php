@@ -357,6 +357,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/business-members', [\App\Http\Controllers\BusinessController::class,'members'])->name('business-members.index');
     Route::put('/business-members/{user}', [\App\Http\Controllers\BusinessController::class,'updateMember'])->name('business-members.update');
     Route::middleware(['platform.admin',\App\Http\Middleware\OfficeSecurity::class])->prefix('platform')->name('platform.')->group(function () {
+        Route::get('/users', [\App\Http\Controllers\Platform\AccountController::class,'users'])->name('users.index');
+        Route::put('/users/{account}', [\App\Http\Controllers\Platform\AccountController::class,'updateUser'])->name('users.update');
+        Route::put('/users/{account}/password', [\App\Http\Controllers\Platform\AccountController::class,'passwordUser'])->middleware('throttle:10,1')->name('users.password');
+        Route::get('/admins', [\App\Http\Controllers\Platform\AccountController::class,'admins'])->name('admins.index');
+        Route::post('/admins', [\App\Http\Controllers\Platform\AccountController::class,'createAdmin'])->name('admins.store');
+        Route::put('/admins/{account}', [\App\Http\Controllers\Platform\AccountController::class,'updateAdmin'])->name('admins.update');
+        Route::put('/admins/{account}/password', [\App\Http\Controllers\Platform\AccountController::class,'passwordAdmin'])->middleware('throttle:10,1')->name('admins.password');
+        Route::get('/calendar', [\App\Http\Controllers\Platform\InsightsController::class,'calendar'])->name('calendar');
+        Route::get('/reports', [\App\Http\Controllers\Platform\InsightsController::class,'reports'])->name('reports');
+        Route::get('/reports/export', [\App\Http\Controllers\Platform\InsightsController::class,'export'])->middleware('throttle:5,1')->name('reports.export');
+        Route::get('/health', [\App\Http\Controllers\Platform\InsightsController::class,'health'])->name('health');
+        Route::get('/payment-methods', [\App\Http\Controllers\Platform\PaymentMethodController::class,'index'])->name('payment-methods.index');
+        Route::post('/payment-methods', [\App\Http\Controllers\Platform\PaymentMethodController::class,'store'])->name('payment-methods.store');
+        Route::put('/payment-methods/{method}', [\App\Http\Controllers\Platform\PaymentMethodController::class,'update'])->name('payment-methods.update');
+        Route::get('/businesses/{business}', [\App\Http\Controllers\Platform\DirectoryController::class,'show'])->name('businesses.show');
+        Route::put('/businesses/{business}/details', [\App\Http\Controllers\Platform\DirectoryController::class,'update'])->name('businesses.details');
+        Route::post('/businesses/{business}/trial', [\App\Http\Controllers\Platform\DirectoryController::class,'extendTrial'])->name('businesses.trial');
         Route::get('/email',[\App\Http\Controllers\Platform\MailController::class,'index'])->name('email.index');
         Route::put('/email',[\App\Http\Controllers\Platform\MailController::class,'update'])->name('email.update');
         Route::post('/email/test',[\App\Http\Controllers\Platform\MailController::class,'test'])->middleware('throttle:office-mail-test')->name('email.test');

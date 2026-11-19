@@ -34,6 +34,8 @@ class DashboardController extends Controller
     }
     public function audit(Request $r)
     {
-        return Spa::render('Platform/Audit', ['entries' => PlatformActivityLog::with(['actor:id,name', 'business:id,name'])->latest('created_at')->paginate(50)]);
+        $filters = $r->validate(['q' => 'nullable|string|max:100', 'action' => 'nullable|string|max:120', 'from' => 'nullable|date_format:Y-m-d', 'to' => 'nullable|date_format:Y-m-d|after_or_equal:from']);
+        $entries = PlatformActivityLog::with(['actor:id,name', 'business:id,name'])->when($filters['q'] ?? null, fn($q, $v) => $q->where(fn($q) => $q->where('action', 'like', '%' . $v . '%')->orWhereHas('actor', fn($q) => $q->where('name', 'like', '%' . $v . '%')->orWhere('email', 'like', '%' . $v . '%'))->orWhereHas('business', fn($q) => $q->where('name', 'like', '%' . $v . '%'))))->when($filters['action'] ?? null, fn($q, $v) => $q->where('action', $v))->when($filters['from'] ?? null, fn($q, $v) => $q->where('created_at', '>=', $v . ' 00:00:00'))->when($filters['to'] ?? null, fn($q, $v) => $q->where('created_at', '<=', $v . ' 23:59:59'))->latest('created_at')->paginate(50)->withQueryString();
+        return Spa::render('Platform/Audit', ['entries' => $entries, 'filters' => $filters, 'actions' => PlatformActivityLog::select('action')->distinct()->orderBy('action')->pluck('action')]);
     }
 }

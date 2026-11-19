@@ -305,8 +305,13 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
         .filter((group) => group.visibleItems.length > 0);
 
     if(auth.user?.is_platform_admin){
-        const officeItems=[['platform.dashboard','Overview','grid',['owner','admin','billing','support']],['platform.businesses.index','Businesses','store',['owner','admin']],['platform.plans.index','Plans','receipt',['owner','billing']],['platform.billing.index','Payments','wallet',['owner','billing']],['platform.support.index','Support','users',['owner','admin','support']],['platform.audit','Audit','history',['owner','admin']],['platform.email.index','Email','receipt',['owner']],...(office_mfa_required ? [['platform.security.index','Security','shieldCheck',['owner','admin','billing','support']]] : [])];
-        visibleMenuGroups=[{label:'Overview',icon:'grid',visibleItems:officeItems.filter(([, , ,roles])=>roles.includes(auth.user.platform_role)).map(([name,text,icon])=>({key:name,text,icon,href:route(name),routePattern:name,count:0}))}];
+        const groups=[
+            {label:'Workspace',icon:'grid',items:[['platform.dashboard','Overview','grid',['owner','admin','billing','support']],['platform.businesses.index','Businesses','store',['owner','admin']],['platform.users.index','Business accounts','users',['owner','admin']],['platform.support.index','Support','book',['owner','admin','support']]]},
+            {label:'Subscriptions',icon:'wallet',items:[['platform.calendar','Calendar','history',['owner','billing']],['platform.plans.index','Plans','receipt',['owner','billing']],['platform.payment-methods.index','Payment methods','card',['owner','billing']],['platform.billing.index','Payments','wallet',['owner','billing']],['platform.reports','Reports','chart',['owner','billing']]]},
+            {label:'Office settings',icon:'settings',items:[['platform.admins.index','Administrators','users',['owner']],['platform.audit','Audit','history',['owner','admin']],['platform.health','System health','shieldCheck',['owner','admin']],['platform.email.index','Email','receipt',['owner']],...(office_mfa_required ? [['platform.security.index','Security','shieldCheck',['owner','admin','billing','support']]] : [])]},
+        ];
+        visibleMenuGroups=groups.map(group=>({...group,visibleItems:group.items.filter(([, , ,roles])=>roles.includes(auth.user.platform_role)).map(([name,text,icon])=>({key:name,text,icon,href:route(name),routePattern:name==='platform.businesses.index'?'platform.businesses.*':name,count:0}))})).filter(group=>group.visibleItems.length);
+
     }
 
     const selectedGroup = visibleMenuGroups.find((group) => group.visibleItems.some((item) => isActiveRoute(item.routePattern, item.href)));
@@ -637,7 +642,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
             >
                 <Toolbar sx={{ minHeight: '48px !important' }} />
                 {pageErrors.subscription && <Alert severity="error" sx={{ m: 1.5, mb: 0 }}>{Array.isArray(pageErrors.subscription) ? pageErrors.subscription.join(' ') : pageErrors.subscription}</Alert>}
-                {subscription && ['trialing','grace','expired','canceled','canceling','unsubscribed'].includes(subscription.state) && <Alert severity={subscription.can_operate ? 'info' : 'warning'} sx={{ m: 1.5, mb: 0 }} action={auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) ? <Button component={Link} href={route('billing.index')} size="small">Manage billing</Button> : undefined}>Subscription: {subscription.state}. {subscription.access_until && `Access through ${new Date(subscription.access_until).toLocaleDateString()}.`} {!subscription.can_operate && 'Contact your business owner to renew.'}</Alert>}
+                {!auth.user?.is_platform_admin && subscription && ['trialing','grace','expired','canceled','canceling','unsubscribed'].includes(subscription.state) && <Alert severity={subscription.can_operate ? 'info' : 'warning'} sx={{ m: 1.5, mb: 0 }} action={auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) ? <Button component={Link} href={route('billing.index')} size="small">Manage billing</Button> : undefined}>Subscription: {subscription.state}. {subscription.access_until && `Access through ${new Date(subscription.access_until).toLocaleDateString()}.`} {!subscription.can_operate && 'Contact your business owner to renew.'}</Alert>}
                 {children}
             </Box>
 

@@ -24,6 +24,7 @@ class BillingController extends Controller
             'subscription'=>$access->summary($business),'usage'=>$access->usage($business->id),
             'plans'=>SubscriptionPlan::where('is_active',true)->where('is_public',true)->where('is_trial',false)->orderBy('amount_minor')->get(),
             'invoices'=>SubscriptionInvoice::where('business_id',$business->id)->with(['payments'=>fn($q)=>$q->latest()])->latest()->paginate(15)->through(fn($invoice)=>$this->invoicePayload($invoice)),
+            'payment_methods'=>\App\Models\PlatformPaymentMethod::where('is_active',true)->orderBy('sort_order')->orderBy('name')->get(['id','name','type','account_name','account_number','instructions']),
             'payment_settings'=>PlatformBillingSetting::findOrFail(1)->only('payment_instructions','support_email'),
         ];
         return $request->is('api/*') ? response()->json($data) : Spa::render('Billing/Index',$data);
