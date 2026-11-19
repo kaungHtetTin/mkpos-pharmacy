@@ -24,7 +24,13 @@ import {
     ListItemText,
     FormHelperText,
     Radio,
-    ToggleButton,
+    Tooltip,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
 } from '@mui/material';
 import {
     Save as SaveIcon,
@@ -32,6 +38,7 @@ import {
     QrCode as BarcodeIcon,
     AddCircleOutline as AddUnitIcon,
     Medication as ProductIcon,
+    DeleteOutline as DeleteIcon,
 } from '@mui/icons-material';
 
 export default function ProductEdit({ auth, product = null, categories, taxes, units, default_tax_id: defaultTaxId = '', initial_barcode: initialBarcode = '', pricing_rules = [] }) {
@@ -97,7 +104,18 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
         })),
     });
 
+    const unitsTableRef = React.useRef(null);
+    const focusUnitRef = React.useRef(null);
+    React.useEffect(() => {
+        if (focusUnitRef.current === null) return;
+        const input = unitsTableRef.current?.querySelector(`[data-unit-name="${focusUnitRef.current}"]`);
+        input?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        input?.focus({ preventScroll: true });
+        focusUnitRef.current = null;
+    }, [data.product_units.length]);
+
     const handleAddUnit = () => {
+        focusUnitRef.current = data.product_units.length;
         setData('product_units', [...data.product_units, { unit_id: '', unit_name: '', unit_short_name: '', conversion_factor: 1, selling_price: 0, wholesale_price: 0, selling_price_mode: pricingRules.selling_price?.pricing_mode || 'manual', wholesale_price_mode: pricingRules.wholesale_price?.pricing_mode || 'manual', is_base_unit: false, is_default_selling_unit: false }]);
     };
 
@@ -106,6 +124,7 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
         const removedDefault = data.product_units[index].is_default_selling_unit;
         const newUnits = data.product_units.filter((_, i) => i !== index);
         if (removedDefault && newUnits.length > 0) newUnits[0].is_default_selling_unit = true;
+        focusUnitRef.current = Math.min(index, newUnits.length - 1);
         setData('product_units', newUnits);
     };
 
@@ -123,47 +142,36 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
     };
 
     const pricingCost = medicine.pricing_has_purchase ? medicine.pricing_buying_cost : data.pricing_base_cost;
-    const unitGridColumns = 'minmax(132px, 1fr) 64px 52px 96px 82px 102px 82px 58px 76px 50px';
-    const unitCellSx = {
-        minWidth: 0,
-        px: 0.25,
-        py: 0.15,
-        position: 'relative',
-        borderRight: '1px solid',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        display: 'flex',
-        alignItems: 'center',
-        transition: 'background-color 120ms ease, box-shadow 120ms ease',
-        '&:focus-within': {
-            zIndex: 1,
-            bgcolor: 'background.paper',
-            boxShadow: (theme) => `inset 0 0 0 2px ${theme.palette.primary.main}`,
-        },
-        '&:has(.Mui-error)': {
-            zIndex: 1,
-            boxShadow: (theme) => `inset 0 0 0 1px ${theme.palette.error.main}`,
-        },
-        '&:has(.Mui-error):focus-within': {
-            boxShadow: (theme) => `inset 0 0 0 2px ${theme.palette.error.main}`,
-        },
-        '&:last-of-type': { borderRight: 0 },
-    };
     const unitInputSx = {
-        width: '100%',
-        minWidth: 0,
-        '& .MuiInputBase-root': { height: 26, minHeight: '26px !important', borderRadius: 0, fontSize: 10.5 },
-        '& .MuiInputBase-input': { px: 0.4, py: 0.15, fontWeight: 700 },
-        '& .MuiSelect-select': { py: '3px', pr: '18px !important' },
-        '& .MuiSelect-icon': { right: 1, fontSize: 17 },
-        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
-        '& .MuiInputBase-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
-        '& .MuiInputBase-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
-        '& .MuiInputBase-root.Mui-error .MuiOutlinedInput-notchedOutline': { borderWidth: 1, borderColor: 'error.main' },
-        '& .MuiFormHelperText-root': { display: 'none' },
-        '& input[type=number]': { MozAppearance: 'textfield' },
+        // The cell supplies the border; prevent the theme's input ring from doubling it.
+        '&& .MuiInputBase-root': {
+            height: 38, minHeight: 38, borderRadius: 0, fontSize: 12,
+            bgcolor: 'transparent',
+            '&.Mui-disabled': { bgcolor: 'action.hover' },
+            '&.Mui-focused': { bgcolor: 'background.paper', boxShadow: (theme) => `inset 0 0 0 2px ${theme.palette.primary.main}` },
+            '&.Mui-error': { boxShadow: (theme) => `inset 0 0 0 1px ${theme.palette.error.main}` },
+            '&.Mui-error.Mui-focused': { boxShadow: (theme) => `inset 0 0 0 2px ${theme.palette.error.main}` },
+        },
+        '&& .MuiInputBase-input': { px: 1, py: 1, fontWeight: 400, minWidth: 0 },
+        '&& .MuiSelect-select': { pr: '24px', fontSize: 11 },
+        '& .MuiSelect-icon': { right: 3, fontSize: 18 },
+        '&& .MuiOutlinedInput-notchedOutline': { border: '0 !important', boxShadow: 'none !important' },
+        '& input[type=number]': { textAlign: 'right', fontVariantNumeric: 'tabular-nums', MozAppearance: 'textfield' },
         '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': { WebkitAppearance: 'none', m: 0 },
     };
+    const unitErrorLabels = {
+        unit_id: 'Unit', unit_name: 'Unit name', unit_short_name: 'Short name',
+        conversion_factor: 'Base quantity', selling_price_mode: 'Selling mode',
+        selling_price: 'Selling price', wholesale_price_mode: 'Wholesale mode',
+        wholesale_price: 'Wholesale price', is_default_selling_unit: 'Default unit',
+    };
+    const fieldProps = (index, field, label) => ({
+        error: Boolean(errors[`product_units.${index}.${field}`]),
+        inputProps: {
+            'aria-label': `${label}, unit ${index + 1}`,
+            'aria-describedby': errors[`product_units.${index}.${field}`] ? `unit-errors-${index}` : undefined,
+        },
+    });
     const generateBarcode = () => {
         const timestamp = Date.now().toString().slice(-6);
         const random = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
@@ -409,175 +417,101 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
                                     <Button size="small" startIcon={<AddUnitIcon />} onClick={handleAddUnit}>Add Unit</Button>
                                 </Stack>
 
-                                <Stack spacing={0.5} sx={{ mb: 1 }}>
-                                    <TextField size="small" type="number" label="Starting buying cost per base unit" value={data.pricing_base_cost} onChange={(event) => setData('pricing_base_cost', event.target.value)} error={!!errors.pricing_base_cost} helperText={errors.pricing_base_cost || 'Used for automatic pricing until the first purchase. Leave blank if unknown.'} inputProps={{ min: 0, step: '0.000001' }} sx={{ maxWidth: 400 }} />
-                                    <Typography variant="caption" color="text.secondary">Current pricing cost: {pricingCost || 'Not available'} per base unit. Purchase costs exclude free quantities. Automatic prices follow Settings ? Automatic Pricing.</Typography>
+                                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }} sx={{ mb: 1.25 }}>
+                                    <TextField size="small" type="number" label="Starting cost / base unit" value={data.pricing_base_cost} onChange={(event) => setData('pricing_base_cost', event.target.value)} error={!!errors.pricing_base_cost} helperText={errors.pricing_base_cost || 'Optional · used until your first purchase'} inputProps={{ min: 0, step: '0.000001' }} sx={{ maxWidth: { md: 280 } }} />
+                                    <Box sx={{ minWidth: 0 }}>
+                                        <Typography variant="caption" display="block" color="text.secondary">
+                                            Pricing cost: <Box component="strong" sx={{ color: 'text.primary' }}>{pricingCost === '' || pricingCost == null ? 'Not available' : pricingCost}</Box> / base unit
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">Automatic prices follow Settings → Automatic Pricing. Purchase costs exclude free quantities.</Typography>
+                                    </Box>
                                 </Stack>
-                                <Box
-                                    sx={{
-                                        overflowX: 'auto',
-                                        pb: 0.5,
-                                        scrollbarWidth: 'thin',
-                                        '&::-webkit-scrollbar': { height: 7 },
-                                        '&::-webkit-scrollbar-thumb': { bgcolor: 'divider', borderRadius: 4 },
-                                    }}
-                                >
-                                    <Paper variant="outlined" sx={{ p: 0, minWidth: 900, overflow: 'hidden' }}>
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: unitGridColumns, bgcolor: 'action.hover' }}>
-                                            {['Unit name', 'Short', 'Factor', 'Selling mode', 'Selling price', 'Wholesale mode', 'Wholesale', 'Type', 'Default', ''].map((label) => (
-                                                <Box
-                                                    key={label || 'actions'}
-                                                    sx={{
-                                                        ...unitCellSx,
-                                                        minHeight: 27,
-                                                        py: 0,
-                                                        fontSize: 9,
-                                                        lineHeight: 1.05,
-                                                        fontWeight: 800,
-                                                        color: 'text.secondary',
-                                                        textTransform: 'uppercase',
-                                                        overflowWrap: 'anywhere',
-                                                    }}
-                                                >
-                                                    {label}
-                                                </Box>
-                                            ))}
-                                        </Box>
-                                        {data.product_units.map((unit, index) => {
-                                            const sellingAutomatic = unit.selling_price_mode === 'automatic';
-                                            const wholesaleAutomatic = unit.wholesale_price_mode === 'automatic';
-                                            const sellingCalculated = automaticPrice(pricingCost, pricingRules.selling_price || {}, String(unit.conversion_factor));
-                                            const wholesaleCalculated = automaticPrice(pricingCost, pricingRules.wholesale_price || {}, String(unit.conversion_factor));
+                                <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'block', md: 'none' }, mb: 0.5 }}>Scroll sideways to edit prices. Unit names stay visible.</Typography>
+                                <TableContainer ref={unitsTableRef} sx={{ borderRadius: 1, scrollbarWidth: 'thin', maxWidth: '100%', minWidth: 0, contain: 'inline-size' }}>
+                                    <Table size="small" aria-label="Units and pricing" sx={{
+                                        tableLayout: 'fixed', minWidth: 800,
+                                        '&& .MuiTableCell-root': { p: 0, height: 40, borderRight: '1px solid', borderBottom: '1px solid', borderColor: 'divider', verticalAlign: 'middle' },
+                                        '&& .MuiTableCell-head': { px: 1, py: 1, height: 'auto', bgcolor: 'action.hover', color: 'text.secondary', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' },
+                                        '&& .MuiTableCell-root:last-child': { borderRight: 0 },
+                                        '&& tbody .MuiTableCell-root:focus-within, && tbody .MuiTableCell-root:has(.Mui-error)': { boxShadow: 'none', bgcolor: 'transparent' },
+                                        '&& tbody tr:hover': { bgcolor: 'transparent' },
+                                        '&& tbody tr:focus-within > th': { bgcolor: 'action.hover' },
+                                        '&&& .unit-name-cell': { position: 'sticky !important', left: 0, zIndex: 3, bgcolor: (theme) => `${theme.palette.background.paper} !important`, boxShadow: (theme) => `1px 0 0 ${theme.palette.divider}` },
+                                    }}>
+                                        <colgroup>
+                                            <col style={{ width: '22%' }} /><col style={{ width: '9%' }} /><col style={{ width: '12%' }} />
+                                            <col style={{ width: '22%' }} /><col style={{ width: '22%' }} /><col style={{ width: '8%' }} /><col style={{ width: '5%' }} />
+                                        </colgroup>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell className="unit-name-cell">Unit name</TableCell>
+                                                <TableCell>Short name</TableCell>
+                                                <TableCell align="right"><Tooltip title="Number of base units contained in this unit"><Box component="span" sx={{ cursor: 'help', borderBottom: '1px dotted' }}>Base qty.</Box></Tooltip></TableCell>
+                                                <TableCell>Selling price</TableCell>
+                                                <TableCell>Wholesale price</TableCell>
+                                                <TableCell align="center">Default</TableCell>
+                                                <TableCell><Box component="span" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)' }}>Actions</Box></TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {data.product_units.map((unit, index) => {
+                                                return (
+                                                    <React.Fragment key={index}>
+                                                        <TableRow>
+                                                            <TableCell component="th" scope="row" className="unit-name-cell">
+                                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                                    <TextField placeholder={index === 0 ? 'e.g. Tablet' : 'e.g. Box'} value={unit.unit_name} onChange={(event) => handleUnitChange(index, 'unit_name', event.target.value)} {...fieldProps(index, 'unit_name', 'Unit name')} inputProps={{ ...fieldProps(index, 'unit_name', 'Unit name').inputProps, 'data-unit-name': index }} sx={unitInputSx} />
+                                                                    {index === 0 && <Typography component="span" sx={{ px: 0.75, fontSize: 10, color: 'primary.main', whiteSpace: 'nowrap' }}>Base</Typography>}
+                                                                </Box>
+                                                            </TableCell>
+                                                            <TableCell><TextField placeholder="e.g. tab" value={unit.unit_short_name} onChange={(event) => handleUnitChange(index, 'unit_short_name', event.target.value)} {...fieldProps(index, 'unit_short_name', 'Short name')} sx={unitInputSx} /></TableCell>
+                                                            <TableCell>
+                                                                <TextField type="number" value={index === 0 ? 1 : unit.conversion_factor} disabled={index === 0} onChange={(event) => handleUnitChange(index, 'conversion_factor', event.target.value)} {...fieldProps(index, 'conversion_factor', 'Base quantity')} inputProps={{ ...fieldProps(index, 'conversion_factor', 'Base quantity').inputProps, min: 1 }} sx={unitInputSx} />
+                                                            </TableCell>
+                                                            {['selling_price', 'wholesale_price'].map((field) => {
+                                                                const mode = `${field}_mode`;
+                                                                const automatic = unit[mode] === 'automatic';
+                                                                const calculated = automaticPrice(pricingCost, pricingRules[field] || {}, String(unit.conversion_factor));
+                                                                const label = field === 'selling_price' ? 'Selling' : 'Wholesale';
+                                                                return (
+                                                                    <TableCell key={field}>
+                                                                        <Box sx={{ display: 'grid', gridTemplateColumns: '88px minmax(0, 1fr)' }}>
+                                                                            <TextField select value={unit[mode]} onChange={(event) => handleUnitChange(index, mode, event.target.value)} {...fieldProps(index, mode, `${label} mode`)} sx={{ ...unitInputSx, borderRight: '1px solid', borderColor: 'divider' }}>
+                                                                                <MenuItem value="manual">Manual</MenuItem>
+                                                                                <MenuItem value="automatic" disabled={pricingRules[field]?.pricing_mode !== 'automatic'}>Auto</MenuItem>
+                                                                            </TextField>
+                                                                            <TextField type="number" value={automatic ? (calculated ?? unit[field]) : unit[field]} disabled={automatic} onChange={(event) => handleUnitChange(index, field, event.target.value)} {...fieldProps(index, field, `${label} price`)} inputProps={{ ...fieldProps(index, field, `${label} price`).inputProps, min: 0, step: '0.01' }} sx={unitInputSx} />
+                                                                        </Box>
+                                                                    </TableCell>
+                                                                );
+                                                            })}
+                                                            <TableCell align="center">
+                                                                <Radio checked={unit.is_default_selling_unit} onChange={() => handleSetDefaultSellingUnit(index)} name="default-selling-unit" value={index} size="small" inputProps={{ 'aria-label': `Use ${unit.unit_name || `unit ${index + 1}`} as default selling unit` }} sx={{ p: 0.75, '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 } }} />
+                                                            </TableCell>
+                                                            <TableCell align="center">
+                                                                {!unit.is_base_unit && <Tooltip title={`Remove ${unit.unit_name || 'unit'}`}><IconButton size="small" aria-label={`Remove unit ${index + 1}`} onClick={() => handleRemoveUnit(index)} sx={{ borderRadius: 0.5, color: 'text.secondary', '&:hover': { color: 'error.main', bgcolor: 'action.hover' } }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>}
+                                                            </TableCell>
+                                                        </TableRow>
 
-                                            return (
-                                                <Box
-                                                    key={index}
-                                                    sx={{
-                                                        display: 'grid',
-                                                        gridTemplateColumns: unitGridColumns,
-                                                        '&:last-of-type > *': { borderBottom: 0 },
-                                                        '&:last-of-type > *:first-of-type': {
-                                                            borderBottomLeftRadius: 1,
-                                                            overflow: 'hidden',
-                                                        },
-                                                        '&:last-of-type > *:last-of-type': {
-                                                            borderBottomRightRadius: 1,
-                                                            overflow: 'hidden',
-                                                        },
-                                                    }}
-                                                >
-                                                    <Box sx={unitCellSx}>
-                                                        <TextField
-                                                            size="small"
-                                                            placeholder="Unit name"
-                                                            value={unit.unit_name}
-                                                            onChange={(event) => handleUnitChange(index, 'unit_name', event.target.value)}
-                                                            error={!!errors[`product_units.${index}.unit_name`]}
-                                                            sx={unitInputSx}
-                                                        />
-                                                    </Box>
-                                                    <Box sx={unitCellSx}>
-                                                        <TextField
-                                                            size="small"
-                                                            placeholder="Short"
-                                                            value={unit.unit_short_name}
-                                                            onChange={(event) => handleUnitChange(index, 'unit_short_name', event.target.value)}
-                                                            error={!!errors[`product_units.${index}.unit_short_name`]}
-                                                            sx={unitInputSx}
-                                                        />
-                                                    </Box>
-                                                    <Box sx={unitCellSx}>
-                                                        <TextField
-                                                            size="small"
-                                                            type="number"
-                                                            value={index === 0 ? 1 : unit.conversion_factor}
-                                                            disabled={index === 0}
-                                                            onChange={(event) => handleUnitChange(index, 'conversion_factor', event.target.value)}
-                                                            error={!!errors[`product_units.${index}.conversion_factor`]}
-                                                            inputProps={{ min: 1 }}
-                                                            sx={unitInputSx}
-                                                        />
-                                                    </Box>
-                                                    <Box sx={unitCellSx}>
-                                                        <TextField
-                                                            select
-                                                            size="small"
-                                                            value={unit.selling_price_mode}
-                                                            onChange={(event) => handleUnitChange(index, 'selling_price_mode', event.target.value)}
-                                                            error={!!errors[`product_units.${index}.selling_price_mode`]}
-                                                            sx={unitInputSx}
-                                                        >
-                                                            <MenuItem value="manual">Manual</MenuItem>
-                                                            <MenuItem value="automatic" disabled={pricingRules.selling_price?.pricing_mode !== 'automatic'}>Automatic</MenuItem>
-                                                        </TextField>
-                                                    </Box>
-                                                    <Box sx={unitCellSx}>
-                                                        <TextField
-                                                            size="small"
-                                                            type="number"
-                                                            value={sellingAutomatic ? (sellingCalculated ?? unit.selling_price) : unit.selling_price}
-                                                            disabled={sellingAutomatic}
-                                                            onChange={(event) => handleUnitChange(index, 'selling_price', event.target.value)}
-                                                            error={!!errors[`product_units.${index}.selling_price`]}
-                                                            inputProps={{ min: 0, step: '0.01' }}
-                                                            sx={unitInputSx}
-                                                        />
-                                                    </Box>
-                                                    <Box sx={unitCellSx}>
-                                                        <TextField
-                                                            select
-                                                            size="small"
-                                                            value={unit.wholesale_price_mode}
-                                                            onChange={(event) => handleUnitChange(index, 'wholesale_price_mode', event.target.value)}
-                                                            error={!!errors[`product_units.${index}.wholesale_price_mode`]}
-                                                            sx={unitInputSx}
-                                                        >
-                                                            <MenuItem value="manual">Manual</MenuItem>
-                                                            <MenuItem value="automatic" disabled={pricingRules.wholesale_price?.pricing_mode !== 'automatic'}>Automatic</MenuItem>
-                                                        </TextField>
-                                                    </Box>
-                                                    <Box sx={unitCellSx}>
-                                                        <TextField
-                                                            size="small"
-                                                            type="number"
-                                                            value={wholesaleAutomatic ? (wholesaleCalculated ?? unit.wholesale_price) : unit.wholesale_price}
-                                                            disabled={wholesaleAutomatic}
-                                                            onChange={(event) => handleUnitChange(index, 'wholesale_price', event.target.value)}
-                                                            error={!!errors[`product_units.${index}.wholesale_price`]}
-                                                            inputProps={{ min: 0, step: '0.01' }}
-                                                            sx={unitInputSx}
-                                                        />
-                                                    </Box>
-                                                    <Box sx={{ ...unitCellSx, justifyContent: 'center' }}>
-                                                        <Typography variant="caption" sx={{ fontSize: 9, lineHeight: 1, fontWeight: 800, color: index === 0 ? 'primary.main' : 'text.secondary' }}>
-                                                            {index === 0 ? 'Base' : 'Additional'}
-                                                        </Typography>
-                                                    </Box>
-                                                    <Box sx={{ ...unitCellSx, justifyContent: 'center' }}>
-                                                        <ToggleButton
-                                                            value={index}
-                                                            selected={unit.is_default_selling_unit}
-                                                            size="small"
-                                                            onClick={() => handleSetDefaultSellingUnit(index)}
-                                                            aria-label={`Use row ${index + 1} as default selling unit`}
-                                                            sx={{ width: '100%', height: 25, minHeight: '25px !important', px: 0.15, gap: 0.15, border: 0, borderRadius: 0, fontSize: 8.5, fontWeight: 800 }}
-                                                        >
-                                                            <Radio checked={unit.is_default_selling_unit} size="small" sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: 15 } }} />
-                                                            Selling
-                                                        </ToggleButton>
-                                                    </Box>
-                                                    <Box sx={{ ...unitCellSx, justifyContent: 'center' }}>
-                                                        {!unit.is_base_unit && (
-                                                            <Button color="error" size="small" onClick={() => handleRemoveUnit(index)} sx={{ minWidth: 0, height: 25, minHeight: '25px !important', px: 0.15, fontSize: 8 }}>
-                                                                Remove
-                                                            </Button>
-                                                        )}
-                                                    </Box>
-                                                </Box>
-                                            );
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                                {data.product_units.map((unit, index) => {
+                                    const rowErrors = Object.entries(errors).filter(([key]) => key.startsWith(`product_units.${index}.`));
+                                    return rowErrors.length > 0 && <Box key={index} id={`unit-errors-${index}`} role="alert" sx={{ mt: 0.75 }}>
+                                        {rowErrors.map(([key, message]) => {
+                                            const label = unitErrorLabels[key.split('.').pop()] || 'Unit';
+                                            return <Typography key={key} variant="caption" color="error" display="block">Unit {index + 1} · {String(message).replace(key, label.toLowerCase())}</Typography>;
                                         })}
-                                    </Paper>
-                                </Box>
+                                    </Box>;
+                                })}
+                                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={0.5} sx={{ mt: 0.75 }}>
+                                    <Typography variant="caption" color="text.secondary">Base qty.: 1 box of 10 tablets = 10. The base unit always equals 1.</Typography>
+                                    <Typography variant="caption" color="text.secondary">Default = preselected unit when selling.</Typography>
+                                </Stack>
                                 {errors.product_units && <Typography color="error" variant="caption">{errors.product_units}</Typography>}
                             </Box>
                         </Stack>
