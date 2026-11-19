@@ -5,6 +5,27 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Searchable stock-adjustment product picker — 20 November 2026
+
+Source patch `c4a5cf6` replaces the Product dropdown in New Stock Adjustment with
+a searchable autocomplete. It matches names, generic names and barcodes and shows
+secondary details to distinguish duplicate product names. Up to 100 matches are
+rendered while searching the full active-product list. Keyboard selection, clear
+and no-match states are supported. Processing requires a committed product choice.
+
+Changing or clearing the product, or changing branch, resets the batch selection.
+Previous batch requests are canceled and late results cannot overwrite the new
+product's batches. The existing read response includes generic name/barcode; no
+schema or stock-writing logic changed.
+
+Validation: the existing **292 tests / 1,966 assertions**, both production builds,
+two JavaScript checks and desktop/phone browser scenarios passed locally and live
+at 1440px and 390px. Browser-only fixtures exercised matches beyond the first 100
+products, duplicate names, keyboard selection, batch clearing, slow old responses,
+no matches and clearing. Zero adjustment POSTs were made; no stock quantities or
+adjustment records were changed. Private source/manifest and encrypted backups
+are retained; temporary deployment files were removed. No Git push was performed.
+
 ## Inventory In Stock filter correction — 20 November 2026
 
 Backend patch `6c016a7` requires current_stock > 0 as well as current_stock >=
