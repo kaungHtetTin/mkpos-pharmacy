@@ -117,3 +117,11 @@ receipt reconciliation. Credentials, copied sessions and password-only office
 login remain unchanged. The seven-table additive finance migration introduced
 no seeded founders, bank accounts or balances. See [FOUNDER_FINANCE.md](FOUNDER_FINANCE.md)
 and the deployment log for validation, backup sizes and rollback requirements.
+
+## Unified businesses update — 19 November 2026
+
+Source patch `66ab9ba` combines Businesses and Business accounts. Open a business
+for account editing/reset/disable, subscription controls and billing record
+modals. Eight live verification groups passed without saving customer changes.
+See BUSINESS_ADMINISTRATION.md and HOSTINGER_DEPLOYMENT.md. No schema migration
+or office authentication change was required.

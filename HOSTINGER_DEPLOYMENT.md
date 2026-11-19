@@ -5,6 +5,34 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Unified business administration — 19 November 2026
+
+Source patch `66ab9ba` is live for both pharmacy entries using the existing
+private application directory. Businesses and Business accounts now share one
+searchable directory and a business detail page with stats, paginated accounts
+and billing history, inline account/password/status forms, subscription controls,
+invoice create/edit/void, and manual payment recording/edit/review modals.
+See [BUSINESS_ADMINISTRATION.md](BUSINESS_ADMINISTRATION.md) for rules and roles.
+
+The patch reuses transactional subscription settlement and finance posting. It
+changes backend/application logic and frontend assets, with **no database schema
+migration**. The scheduler, environment, database credentials and password-only
+office login remain unchanged. Both manifests and changed source files have a
+private rollback backup; a new encrypted database backup was verified before
+cutover. Previous hashed assets remain available to existing browser sessions.
+
+Validation: **271 tests / 1,747 assertions**, both production builds, two
+JavaScript checks, nine local browser groups, and **eight live groups** passed.
+Local browser tests created synthetic development records only, exercising invoice
+editing, payment approval, voiding, account disabling, password replacement,
+suspension/reactivation and phone modals. Live tests opened forms without saving,
+verified pagination and existing record counts, owner login/billing/pricing,
+finance, mobile sizing, legacy links and the unchanged reference office app.
+Deployment counts stayed at two businesses and zero invoices, payments and paid
+periods. No live account passwords/statuses or financial records were changed.
+The deployment helper/archive were removed; private rollback backups are retained.
+No Git push was performed.
+
 ## Responsive POS catalog scrolling — 19 November 2026
 
 Frontend source `027451f` is deployed to both pharmacy public asset entries.
