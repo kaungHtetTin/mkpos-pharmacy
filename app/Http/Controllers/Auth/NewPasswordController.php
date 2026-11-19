@@ -19,7 +19,7 @@ class NewPasswordController extends Controller
         $email = is_string($r->email) ? mb_strtolower(trim($r->email)) : '';
         $token = (string) $r->route('token');
         $user = filter_var($email, FILTER_VALIDATE_EMAIL) ? User::withoutGlobalScopes()->where('email', $email)->first() : null;
-        $valid = strlen($token) <= 256 && $user && Password::broker()->tokenExists($user, $token);
+        $valid = strlen($token) <= 256 && $user && (!config('operations.office_only', false) || $user->is_platform_admin) && Password::broker()->tokenExists($user, $token);
         return Spa::render('Auth/ResetPassword', ['email' => $email, 'token' => $token, 'link_valid' => (bool) $valid]);
     }
     public function store(Request $r): RedirectResponse
@@ -34,7 +34,7 @@ class NewPasswordController extends Controller
         }]]);
         $status = DB::transaction(function () use ($r) {
             $user = User::withoutGlobalScopes()->where('email', $r->email)->lockForUpdate()->first();
-            if (!$user) {
+            if (!$user || (config('operations.office_only', false) && !$user->is_platform_admin)) {
                 return Password::INVALID_TOKEN;
             }
             return Password::reset($r->only('email', 'password', 'password_confirmation', 'token'), function ($user) use ($r) {

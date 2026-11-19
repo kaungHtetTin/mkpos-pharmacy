@@ -41,7 +41,12 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt(array_merge($this->only('email', 'password'), ['status'=>'Active']), $this->boolean('remember'))) {
+        $credentials = array_merge($this->only('email', 'password'), ['status' => 'Active']);
+        if (config('operations.office_only', false)) {
+            $credentials['is_platform_admin'] = true;
+        }
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

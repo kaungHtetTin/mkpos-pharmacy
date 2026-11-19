@@ -3,7 +3,7 @@ import AuthSplitLayout from '@/Layouts/AuthSplitLayout';
 import { Head, Link, useForm } from '@/spa';
 import { Box, Typography, TextField, Button, Checkbox as MuiCheckbox, FormControlLabel, Alert, Stack } from '@mui/material';
 
-export default function Login({ status }) {
+export default function Login({ status, office_portal = false }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -30,11 +30,11 @@ export default function Login({ status }) {
     return (
         <AuthSplitLayout
             compact
-            title="Welcome back."
-            subtitle="Sign in to keep your pharmacy moving."
+            title={office_portal ? 'Platform office' : 'Welcome back.'}
+            subtitle={office_portal ? 'Sign in with your platform office account.' : 'Sign in to keep your pharmacy moving.'}
             topBarContent={<Typography variant="body2" color="text.secondary" />}
         >
-            <Head title="Log in" />
+            <Head title={office_portal ? 'Platform office · Log in' : 'Log in'} />
 
             {status && (
                 <Alert severity="success" sx={{ mb: 1.5 }}>
@@ -104,7 +104,7 @@ export default function Login({ status }) {
                     </Stack>
                 </Stack>
             </form>
-            <Typography variant="caption" color="text.secondary" sx={{display:'block',mt:2,textAlign:'center'}}>New business owner? <Link href={route('register')}>Create a business account</Link></Typography>
+            {!office_portal && <Typography variant="caption" color="text.secondary" sx={{display:'block',mt:2,textAlign:'center'}}>New business owner? <Link href={route('register')}>Create a business account</Link></Typography>}
         </AuthSplitLayout>
     );
 }

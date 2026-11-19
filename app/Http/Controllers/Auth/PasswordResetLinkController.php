@@ -28,7 +28,11 @@ class PasswordResetLinkController extends Controller
         try {
             DB::transaction(function () use ($r, $mail) {
                 User::withoutGlobalScopes()->where('email', $r->email)->lockForUpdate()->first();
-                $status = Password::sendResetLink($r->only('email'));
+                $credentials = $r->only('email');
+                if (config('operations.office_only', false)) {
+                    $credentials['is_platform_admin'] = true;
+                }
+                $status = Password::sendResetLink($credentials);
                 if ($status === Password::RESET_LINK_SENT) {
                     $mail->sent();
                 }

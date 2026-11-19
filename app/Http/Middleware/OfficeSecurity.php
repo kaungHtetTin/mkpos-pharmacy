@@ -10,6 +10,9 @@ class OfficeSecurity
     public function handle(Request $r, Closure $next)
     {
         $u = $r->user();
+        if (config('operations.office_only', false) && $u && !$u->is_platform_admin) {
+            abort(403);
+        }
         if (!$u?->is_platform_admin || $r->is('login', 'logout')) {
             return $next($r);
         }
