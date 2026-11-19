@@ -15,7 +15,7 @@ export function BillingErrors({ errors = {} }) {
 }
 export function BillingLinks() {
     const {props}=usePage();const role=props.auth?.user?.platform_role;
-    const links=[['platform.dashboard','Overview',['owner','admin','billing','support']],['platform.businesses.index','Businesses',['owner','admin']],['platform.plans.index','Plans',['owner','billing']],['platform.billing.index','Subscriptions & payments',['owner','billing']],['platform.support.index','Support',['owner','admin','support']],['platform.audit','Audit',['owner','admin']],['platform.email.index','Email',['owner']],['platform.security.index','Security',['owner','admin','billing','support']]];
+    const links=[['platform.dashboard','Overview',['owner','admin','billing','support']],['platform.businesses.index','Businesses',['owner','admin']],['platform.plans.index','Plans',['owner','billing']],['platform.billing.index','Subscriptions & payments',['owner','billing']],['platform.support.index','Support',['owner','admin','support']],['platform.audit','Audit',['owner','admin']],['platform.email.index','Email',['owner']],...(props.office_mfa_required ? [['platform.security.index','Security',['owner','admin','billing','support']]] : [])];
     return <Stack direction="row" spacing={.5} flexWrap="wrap" useFlexGap>{links.filter(([, ,roles])=>roles.includes(role)).map(([name,label])=><Button key={name} component={Link} href={route(name)} size="small">{label}</Button>)}</Stack>;
 }
 export function BillingPager({ page }) {
