@@ -78,7 +78,8 @@ for (const [width, mode] of [[1440, 'light'], [390, 'light'], [1440, 'dark']]) {
             await table.evaluate((element) => { element.style.height = '1600px'; });
             await page.evaluate(() => window.scrollTo(0, 500));
             const progressTop = await progress.evaluate((element) => element.getBoundingClientRect().top);
-            assert(progressTop >= 48 && progressTop <= 49, `Progress stays below the app bar while scrolling: ${progressTop}`);
+            const headerBottom = await page.locator('header.MuiAppBar-root').evaluate((element) => element.getBoundingClientRect().bottom);
+            assert(progressTop >= headerBottom && progressTop <= headerBottom + 1, `Progress stays below the app bar while scrolling: ${progressTop}`);
             await table.evaluate((element) => { element.style.height = ''; });
             await page.evaluate(() => window.scrollTo(0, 0));
             assert.equal(await progress.locator('.MuiLinearProgress-bar1Indeterminate').evaluate((e) => getComputedStyle(e).animationName), 'none');

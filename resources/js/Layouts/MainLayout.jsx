@@ -1,10 +1,11 @@
-import React, { useContext, useLayoutEffect, useState } from 'react';
+import React, { useContext, useLayoutEffect, useRef, useState } from 'react';
 import { Link, usePage, router } from '@/spa';
 import PersistentShellContext from '@/contexts/PersistentShellContext';
 import { ColorModeContext } from '@/contexts/ColorModeContext';
 import SimpleIcon from '@/Components/SimpleIcon';
 import PageContainer from '@/Components/PageContainer';
 import {
+    useMediaQuery,
     TextField,
     InputAdornment,
     Collapse,
@@ -129,6 +130,19 @@ function EmbeddedPage({ children, header, shell }) {
 }
 
 function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarget }) {
+    const mobile = useMediaQuery((theme) => theme.breakpoints.down('md'));
+    const appBarRef = useRef(null);
+    const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
+    useLayoutEffect(() => {
+        const bar = appBarRef.current;
+        if (!bar) return;
+        const resize = () => document.documentElement.style.setProperty('--mkpos-appbar-height', `${bar.getBoundingClientRect().height}px`);
+        resize();
+        const observer = new ResizeObserver(resize);
+        observer.observe(bar);
+        return () => { observer.disconnect(); document.documentElement.style.removeProperty('--mkpos-appbar-height'); };
+    }, [mobile]);
+
     const { auth, flash, settings = {}, business, subscription, office_mfa_required = false, errors: pageErrors = {}, nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
     const { mode = 'light', toggleColorMode } = useContext(ColorModeContext);
     const pharmacyName = auth.user?.is_platform_admin ? 'Platform office' : settings.invoice?.pharmacy_name || 'Pharmacy POS';
@@ -375,6 +389,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
         <Box sx={{ display: 'flex', minHeight: '100vh' }}>
             <CssBaseline />
             <AppBar
+                ref={appBarRef}
                 position="fixed"
                 sx={{
                     width: { md: `calc(100% - ${desktopDrawerWidth}px)` },
@@ -452,6 +467,30 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                     },
                 }}
             >
+                {mobile ? <Box data-mobile-appbar>
+                    <Toolbar role="toolbar" aria-label="Mobile navigation" sx={{ minHeight: '56px !important', height: 56, px: '8px !important', gap: 0.25, '&& .MuiIconButton-root': { width: 44, minWidth: 44, height: 44, minHeight: 44, border: 0, bgcolor: 'transparent', borderRadius: 2 }, '&& .MuiIconButton-root svg': { width: 20, height: 20 } }}>
+                        <IconButton aria-label={__('Open navigation')} onClick={handleDrawerToggle}><SimpleIcon name="menu" size={20} /></IconButton>
+                        <Box ref={setAppBarBackTarget} id="mkpos-appbar-back" sx={{ display: 'flex', flexShrink: 0, '&:empty': { display: 'none' } }} />
+                        <Box sx={{ flex: 1, minWidth: 0, px: 0.5 }}>
+                            <Typography noWrap component="div" sx={{ fontSize: 14, fontWeight: 750, lineHeight: 1.3 }}>{__(header || selectedItem?.text || 'Overview')}</Typography>
+                            <Typography noWrap component="div" sx={{ fontSize: 10, color: 'text.secondary', lineHeight: 1.35 }}>{isPosScreen ? currentBranch?.name || pharmacyName : pharmacyName}</Typography>
+                        </Box>
+                        <IconButton aria-label={__('Open account menu')} aria-haspopup="menu" aria-controls={profileMenuAnchor ? 'appbar-account-menu' : undefined} aria-expanded={Boolean(profileMenuAnchor)} onClick={(event) => setProfileMenuAnchor(event.currentTarget)}>
+                            <Avatar src={auth.user?.image_path ? storageUrl(auth.user.image_path) : undefined} sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: 'primary.soft', color: 'primary.main', fontSize: 12, fontWeight: 700 }}>{auth.user?.name?.charAt(0).toUpperCase()}</Avatar>
+                        </IconButton>
+                        <IconButton aria-label={__('More options')} aria-haspopup="menu" aria-controls={mobileMenuAnchor ? 'mobile-appbar-options' : undefined} aria-expanded={Boolean(mobileMenuAnchor)} onClick={(event) => setMobileMenuAnchor(event.currentTarget)}><SimpleIcon name="more" size={20} /></IconButton>
+                    </Toolbar>
+                    <Box sx={{ display: 'none', '&:has(#mkpos-appbar-tools:not(:empty))': { display: 'block' }, px: 1.25, py: 0.75, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', '&& .appbar-action-group': { border: 0, p: 0, gap: 0.75, bgcolor: 'transparent', minWidth: 0, maxWidth: '100%', flexShrink: 1, flexWrap: 'wrap' }, '&& .MuiButton-root': { minHeight: 40, minWidth: 40 }, '&& .MuiSvgIcon-root': { width: 18, height: 18 }, '&& .MuiIconButton-root': { width: 44, minWidth: 44, height: 44, minHeight: 44 }, '&& .MuiOutlinedInput-root': { minHeight: 40, height: 40 }, '&& .appbar-search-close': { width: 40, minWidth: 40, height: 40, minHeight: 40 } }}>
+                        <Box ref={setAppBarTarget} id="mkpos-appbar-tools" role="region" aria-label="Mobile page tools" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0, width: '100%' }} />
+                    </Box>
+                    <Menu id="mobile-appbar-options" anchorEl={mobileMenuAnchor} open={Boolean(mobileMenuAnchor)} onClose={() => setMobileMenuAnchor(null)} slotProps={{ paper: { sx: { minWidth: 230, maxWidth: 'calc(100vw - 24px)', '& .MuiMenuItem-root': { minHeight: 44, gap: 1.25 } } } }}>
+                        <MenuItem onClick={() => { setMobileMenuAnchor(null); changeLanguage(locale === 'my' ? 'en' : 'my'); }}><SimpleIcon name="globe" size={18} />{locale === 'my' ? __('English language') : __('Myanmar language')}</MenuItem>
+                        <MenuItem onClick={() => { setMobileMenuAnchor(null); toggleColorMode(); }}><SimpleIcon name={mode === 'dark' ? 'sun' : 'moon'} size={18} />{mode === 'dark' ? __('Switch to light mode') : __('Switch to dark mode')}</MenuItem>
+                        <MenuItem onClick={() => { setMobileMenuAnchor(null); router.reload(); }}><SimpleIcon name="rotate" size={18} />{__('Refresh')}</MenuItem>
+                        {isPosScreen && accessibleBranches.length > 0 && <Divider />}
+                        {isPosScreen && accessibleBranches.map((branch) => <MenuItem key={branch.id} selected={String(branch.id) === String(currentBranchId)} onClick={() => { setMobileMenuAnchor(null); switchBranch(branch.id); }}><SimpleIcon name="store" size={18} />{branch.name}</MenuItem>)}
+                    </Menu>
+                </Box> : <>
                 <Toolbar sx={{ minHeight: '48px !important', height: 48, px: { xs: 1, md: '14px' }, gap: 1 }}>
                     <IconButton
                         color="inherit"
@@ -588,6 +627,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                         </Tooltip>
                     </Box>
                 </Toolbar>
+                </>}
             </AppBar>
             <Box
                 component="nav"
@@ -642,13 +682,13 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                     bgcolor: 'transparent',
                 }}
             >
-                <Toolbar sx={{ minHeight: '48px !important' }} />
+                <Box aria-hidden="true" sx={{ height: 'var(--mkpos-appbar-height, 48px)' }} />
                 {pageErrors.subscription && <Alert severity="error" sx={{ m: 1.5, mb: 0 }}>{Array.isArray(pageErrors.subscription) ? pageErrors.subscription.join(' ') : pageErrors.subscription}</Alert>}
                 {!auth.user?.is_platform_admin && subscription && ['trialing','grace','expired','canceled','canceling','unsubscribed'].includes(subscription.state) && <Alert severity={subscription.can_operate ? 'info' : 'warning'} sx={{ m: 1.5, mb: 0 }} action={auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) ? <Button component={Link} href={route('billing.index')} size="small">Manage billing</Button> : undefined}>Subscription: {subscription.state}. {subscription.access_until && `Access through ${new Date(subscription.access_until).toLocaleDateString()}.`} {!subscription.can_operate && 'Contact your business owner to renew.'}</Alert>}
                 {children}
             </Box>
 
-            <Menu id="appbar-account-menu" anchorEl={profileMenuAnchor} open={Boolean(profileMenuAnchor)} onClose={() => setProfileMenuAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} MenuListProps={{ 'aria-label': __('Account menu') }} slotProps={{ paper: { sx: { mt: 1, p: 0.5, width: 260, maxWidth: 'calc(100vw - 24px)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', '& .MuiMenuItem-root': { borderRadius: '7px', minHeight: 38, gap: 1, fontSize: 12 }, '& .MuiListItemIcon-root': { minWidth: '24px', color: 'inherit' } } } }}>
+            <Menu id="appbar-account-menu" anchorEl={profileMenuAnchor} open={Boolean(profileMenuAnchor)} onClose={() => setProfileMenuAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} MenuListProps={{ 'aria-label': __('Account menu') }} slotProps={{ paper: { sx: { mt: 1, p: 0.5, width: 260, maxWidth: 'calc(100vw - 24px)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', '& .MuiMenuItem-root': { borderRadius: '7px', minHeight: { xs: 44, md: 38 }, gap: 1, fontSize: 12 }, '& .MuiListItemIcon-root': { minWidth: '24px', color: 'inherit' } } } }}>
                 <Box component="li" role="presentation" sx={{ px: 1.25, py: 1 }}><Typography sx={{ fontSize: 13, fontWeight: 700, overflowWrap: 'anywhere' }}>{auth.user?.name}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary', overflowWrap: 'anywhere' }}>{auth.user?.email}</Typography>{auth.user?.roles?.length > 0 && <Typography sx={{ mt: 0.5, fontSize: 10, color: 'text.secondary' }}>{auth.user.roles.map((role) => __(role)).join(', ')}</Typography>}</Box>
                 <Divider sx={{ my: 0.5 }} />
                 {business && <Box component="li" role="presentation" sx={{ px:1.25, py:0.75 }}><Typography variant="caption" color="text.secondary">Current business</Typography><Typography sx={{fontSize:12,fontWeight:700,overflowWrap:'anywhere'}}>{business.name}</Typography></Box>}

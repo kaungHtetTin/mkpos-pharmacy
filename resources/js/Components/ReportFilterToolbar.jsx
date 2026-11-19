@@ -1,5 +1,6 @@
 import React from 'react';
-import { Badge, Box, Button, Drawer, IconButton, InputAdornment, Stack, Tooltip, Typography } from '@mui/material';
+import MobileActionOverflow from './MobileActionOverflow';
+import { Badge, Box, Button, Drawer, IconButton, InputAdornment, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import { Close as CloseIcon, FilterAlt as FilterIcon, Search as SearchIcon } from '@mui/icons-material';
 import AppBarPortal from '@/Components/AppBarPortal';
 
@@ -87,6 +88,7 @@ export default function ReportFilterToolbar({
     sx = {},
     appBar = false,
 }) {
+    const mobile = useMediaQuery((theme) => theme.breakpoints.down('md'));
     const [drawerOpen, setDrawerOpen] = React.useState(false);
     const [searchExpanded, setSearchExpanded] = React.useState(false);
     const searchWrapRef = React.useRef(null);
@@ -124,7 +126,8 @@ export default function ReportFilterToolbar({
         const label = actionLabel(action);
         return React.cloneElement(action, {
             key: action.key || `${label || 'action'}-${index}`,
-            ...(searchExpanded && label ? { title: label, 'aria-label': label } : {}),
+            ...((searchExpanded || mobile) && label ? { title: label, 'aria-label': label } : {}),
+            ...(mobile && typeof action.props.children === 'string' ? { children: <Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{action.props.children}</Box> } : {}),
         });
     };
 
@@ -160,7 +163,7 @@ export default function ReportFilterToolbar({
                             </Tooltip>
                         )}
                         {searchField && searchExpanded && (
-                            <Box ref={searchWrapRef} className="appbar-search-field" sx={{ width: { xs: 210, sm: 320, lg: 420 }, minWidth: { xs: 180, sm: 280 }, flexShrink: 1 }}>
+                            <Box ref={searchWrapRef} className="appbar-search-field" sx={{ width: mobile ? '100%' : { sm: 320, lg: 420 }, minWidth: mobile ? 0 : 280, flex: mobile ? 1 : undefined, flexShrink: 1 }}>
                                 {React.cloneElement(searchField, {
                                     fullWidth: true,
                                     size: 'small',
@@ -215,16 +218,17 @@ export default function ReportFilterToolbar({
                         )}
                         <Box
                             sx={{
-                                display: 'flex',
+                                display: mobile && searchExpanded ? 'none' : 'flex',
                                 alignItems: 'center',
                                 gap: 0.75,
                                 ml: 'auto',
+                                minWidth: 0, flexShrink: 1, maxWidth: mobile ? 140 : undefined,
                                 '& .MuiButton-root': searchExpanded ? compactActionSx : undefined,
                             }}
                         >
                             {primaryActions.map(decorateAction)}
                         </Box>
-                        {secondaryFields.length > 0 && (
+                        {secondaryFields.length > 0 && !(mobile && searchExpanded) && (
                             <Badge
                                 badgeContent={activeFilterCount}
                                 color="primary"
@@ -262,7 +266,7 @@ export default function ReportFilterToolbar({
                             </Badge>
                         )}
                         <Box className="appbar-action-group" role="toolbar" aria-label="Page tools" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, '& .MuiButton-root': searchExpanded ? compactActionSx : undefined }}>
-                            {secondaryActions.map(decorateAction)}
+                            {!(mobile && searchExpanded) && <MobileActionOverflow force={primaryActions.length > 0 || secondaryFields.length > 0}>{secondaryActions.map(decorateAction)}</MobileActionOverflow>}
                         </Box>
                     </Box>
                 </AppBarPortal>

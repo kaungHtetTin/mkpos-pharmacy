@@ -1,6 +1,7 @@
 import React from 'react';
 
 const icons = {
+    more: [['circle', { cx: 5, cy: 12, r: 1 }], ['circle', { cx: 12, cy: 12, r: 1 }], ['circle', { cx: 19, cy: 12, r: 1 }]],
     panelCollapse: [['rect', { x: 3, y: 4, width: 18, height: 16, rx: 3 }], ['path', { d: 'M9 4v16m7-12-4 4 4 4' }]],
     panelExpand: [['rect', { x: 3, y: 4, width: 18, height: 16, rx: 3 }], ['path', { d: 'M9 4v16m4-12 4 4-4 4' }]],
     chevronRight: [['path', { d: 'm9 6 6 6-6 6' }]],

@@ -49,7 +49,7 @@ export function PageLoadingState() {
 export function ContentTransition({ loading, error, children }) {
     const visible = useDelayedLoading(loading);
     return <Box aria-busy={loading} sx={{ position: 'relative', minHeight: 240 }}>
-        {visible && <Box role="status" aria-live="polite" aria-label="Loading latest data" sx={{ position: 'sticky', top: 48, height: 0, zIndex: 5, pointerEvents: 'none' }}>
+        {visible && <Box role="status" aria-live="polite" aria-label="Loading latest data" sx={{ position: 'sticky', top: 'var(--mkpos-appbar-height, 48px)', height: 0, zIndex: 5, pointerEvents: 'none' }}>
             <LinearProgress aria-label="Loading latest data" />
         </Box>}
         {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
