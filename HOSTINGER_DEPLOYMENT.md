@@ -5,6 +5,35 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Separate mobile app bar — 20 November 2026
+
+Frontend patch `e92e3ea` gives phones and tablets below the desktop breakpoint a
+dedicated header with navigation/back controls, an ellipsized page title, workspace
+or POS branch subtitle, account menu and utility menu. Page tools occupy a separate
+row only when available. Search expands across that row; primary actions stay
+visible and secondary actions use an overflow popover. Language, theme, refresh
+and POS branch choices are available through More options. Desktop action order
+and toolbar layout are retained.
+
+The overflow popover renders the original action components so links, disabled
+states, callbacks and asynchronous CSV downloads continue to work. Mobile targets
+are 40–44px, and controls fit without horizontal toolbar scrolling. A measured
+app-bar height offsets page content and the loading progress line. Viewport forms
+recalculate after toolbar-height changes so their footers remain visible.
+
+Both production builds passed. Five responsive browser scenarios passed locally
+and live at 320×780, 390×844, 768×1024, 844×390 and 1440×1000 across inventory,
+suppliers, purchases, customers, products, settings, product forms and POS. Checks
+cover header/tool geometry, form footer placement, primary actions, drawer and
+account menus, theme switching, expanded search, filters, asynchronous CSV export,
+overflow navigation and resizing between mobile and desktop without duplicate
+portal targets. Five existing login/loading/storage checks also passed. No live
+business records were submitted by these browser checks.
+
+This is a frontend-only patch; Laravel backend logic and database schema are
+unchanged. Private source/manifest and encrypted backups are retained. Temporary
+deployment files were removed; no Git push was performed.
+
 ## Business-specific price types — 20 November 2026
 
 Source patch `261dabd` adds business-owned custom price types while retaining
