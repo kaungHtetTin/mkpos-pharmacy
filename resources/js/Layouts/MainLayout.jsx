@@ -128,7 +128,7 @@ function EmbeddedPage({ children, header, shell }) {
 }
 
 function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarget }) {
-    const { auth, flash, settings = {}, business, subscription, errors: pageErrors = {}, nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
+    const { auth, flash, settings = {}, business, subscription, office_mfa_required = false, errors: pageErrors = {}, nav_counts = {}, translations = {}, locale, ziggy = {} } = usePage().props;
     const { mode = 'light', toggleColorMode } = useContext(ColorModeContext);
     const pharmacyName = auth.user?.is_platform_admin ? 'Platform office' : settings.invoice?.pharmacy_name || 'Pharmacy POS';
     const appBase = ziggy?.base || window.laravel_base || '';
@@ -305,7 +305,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
         .filter((group) => group.visibleItems.length > 0);
 
     if(auth.user?.is_platform_admin){
-        const officeItems=[['platform.dashboard','Overview','grid',['owner','admin','billing','support']],['platform.businesses.index','Businesses','store',['owner','admin']],['platform.plans.index','Plans','receipt',['owner','billing']],['platform.billing.index','Payments','wallet',['owner','billing']],['platform.support.index','Support','users',['owner','admin','support']],['platform.audit','Audit','history',['owner','admin']],['platform.email.index','Email','receipt',['owner']],['platform.security.index','Security','shieldCheck',['owner','admin','billing','support']]];
+        const officeItems=[['platform.dashboard','Overview','grid',['owner','admin','billing','support']],['platform.businesses.index','Businesses','store',['owner','admin']],['platform.plans.index','Plans','receipt',['owner','billing']],['platform.billing.index','Payments','wallet',['owner','billing']],['platform.support.index','Support','users',['owner','admin','support']],['platform.audit','Audit','history',['owner','admin']],['platform.email.index','Email','receipt',['owner']],...(office_mfa_required ? [['platform.security.index','Security','shieldCheck',['owner','admin','billing','support']]] : [])];
         visibleMenuGroups=[{label:'Overview',icon:'grid',visibleItems:officeItems.filter(([, , ,roles])=>roles.includes(auth.user.platform_role)).map(([name,text,icon])=>({key:name,text,icon,href:route(name),routePattern:name,count:0}))}];
     }
 
@@ -652,7 +652,7 @@ function MainLayoutShell({ children, header, setAppBarTarget, setAppBarBackTarge
                 {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.dashboard')} onClick={()=>setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name="shieldCheck" size={16}/></ListItemIcon>Platform office</MenuItem>}
                 {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('support.index')} onClick={()=>setProfileMenuAnchor(null)}>Support requests</MenuItem>}
                 {auth.user?.roles?.some(role=>['Owner','Root'].includes(role)) && <MenuItem component={Link} href={route('business-export.index')} onClick={()=>setProfileMenuAnchor(null)}>Business data export</MenuItem>}
-                {auth.user?.is_platform_admin && <MenuItem component={Link} href={route('platform.security.index')} onClick={()=>setProfileMenuAnchor(null)}>Office security</MenuItem>}
+                {auth.user?.is_platform_admin && office_mfa_required && <MenuItem component={Link} href={route('platform.security.index')} onClick={()=>setProfileMenuAnchor(null)}>Office security</MenuItem>}
                 <Divider sx={{ my: 0.5 }} />
                 {(auth.user?.is_platform_admin?[{...menuItems.profile,text:'My profile'}]:[{ ...menuItems.profile, text: 'My profile' }, menuItems.dashboard, menuItems.settings, menuItems.manual]).filter(canSee).map((item) => <MenuItem key={item.href} component={Link} href={item.href} onClick={() => setProfileMenuAnchor(null)}><ListItemIcon><SimpleIcon name={item.icon} size={16} /></ListItemIcon>{__(item.text)}</MenuItem>)}
                 <Divider sx={{ my: 0.5 }} />

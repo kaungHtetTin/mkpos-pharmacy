@@ -71,6 +71,22 @@ class OfficePortalTest extends TestCase
         $this->assertTrue(Password::tokenExists($u,$token));
     }
 
+    public function test_password_only_office_access_has_no_security_setup_or_challenge(): void
+    {
+        config(['operations.mfa_required' => false]);
+        app(\App\Tenancy\BusinessContext::class)->set(null);
+        $u = User::factory()->create(['is_platform_admin'=>true]);
+        $this->post('/login', ['email'=>$u->email,'password'=>'password'])->assertRedirect(route('platform.dashboard'));
+        foreach (['/platform/dashboard','/platform/businesses','/platform/plans','/platform/billing','/platform/support','/platform/audit','/platform/email','/profile'] as $path) {
+            $this->get($path, ['X-SPA'=>'true'])->assertOk()->assertJsonPath('props.office_mfa_required', false);
+        }
+        $this->withSession(['office_pending_secret'=>'unused-setup'])->get('/platform/security')->assertRedirect(route('platform.dashboard'))->assertSessionMissing('office_pending_secret');
+        foreach (['setup','enable','challenge'] as $action) {
+            $this->post('/platform/security/'.$action, [])->assertNotFound();
+        }
+        $this->assertNull($u->fresh()->office_mfa_secret);
+    }
+
     public function test_regular_business_entry_is_unchanged(): void
     {
         config(['operations.office_only'=>false]);

@@ -5,7 +5,7 @@ import SimpleIcon from '@/Components/SimpleIcon';
 import { Box, Stack, Typography } from '@mui/material';
 
 export default function AuthSplitLayout({ children, title, subtitle, topBarContent, compact = false }) {
-    const { settings = {}, ziggy = {}, office_portal = false } = usePage().props;
+    const { settings = {}, ziggy = {}, office_portal = false, office_mfa_required = false } = usePage().props;
     const pharmacyName = office_portal ? 'Pharmacy POS · Office' : (settings.invoice?.pharmacy_name || 'Pharmacy POS');
     const base = ziggy.base || window.laravel_base || '';
     const logo = !office_portal && settings.invoice?.logo_path ? `${base}/storage/${String(settings.invoice.logo_path).replace(/^\/+/, '')}` : null;
@@ -24,7 +24,7 @@ export default function AuthSplitLayout({ children, title, subtitle, topBarConte
                     {children}
                 </Box>
             </Box>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}><SimpleIcon name="shieldCheck" size={16} /><Typography variant="caption">{office_portal ? 'Office access protected by two-factor authentication' : 'Secure access for your pharmacy team'}</Typography></Stack>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}><SimpleIcon name="shieldCheck" size={16} /><Typography variant="caption">{office_portal ? (office_mfa_required ? 'Office access protected by two-factor authentication' : 'Secure access for platform office') : 'Secure access for your pharmacy team'}</Typography></Stack>
         </Stack>
         <Box sx={{ display: { xs: 'none', md: 'flex' }, m: compact ? 1.5 : 2, p: compact ? { md: 3, lg: 4 } : { md: 5, lg: 7 }, borderRadius: compact ? '16px' : '28px', bgcolor: '#EAF1E9', color: '#243B30', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
             <Box data-login-description sx={{ width: '100%', maxWidth: compact ? 390 : undefined, mx: compact ? 'auto' : 0 }}>

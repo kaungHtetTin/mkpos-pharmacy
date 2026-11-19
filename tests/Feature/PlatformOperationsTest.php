@@ -221,6 +221,7 @@ class PlatformOperationsTest extends TestCase
     }
     public function test_mfa_throttle_and_tenant_rejection(): void
     {
+        config(['operations.mfa_required' => true]);
         $this->actingAs($this->owner)->get('/platform/security')->assertForbidden();
         $this->actingAs($this->office);
         for ($i = 0; $i < 5; $i++) {

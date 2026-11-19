@@ -14,10 +14,15 @@ class OfficeSecurityController extends Controller
 {
     public function index(Request $r)
     {
+        if (!config('operations.mfa_required', false)) {
+            $r->session()->forget(['office_pending_secret', 'office_new_recovery', 'office_mfa_at', 'office_mfa_key']);
+            return redirect()->route('platform.dashboard');
+        }
         return Spa::render('Platform/Security', ['enabled' => (bool) $r->user()->office_mfa_secret, 'verified' => (bool) $r->user()->office_mfa_secret && $r->session()->get('office_mfa_at', 0) >= now()->subHours(8)->timestamp && hash_equals(hash('sha256', $r->user()->office_mfa_secret), $r->session()->get('office_mfa_key', '')), 'setup_secret' => $r->session()->get('office_pending_secret'), 'recovery_codes' => $r->session()->pull('office_new_recovery', [])]);
     }
     public function setup(Request $r)
     {
+        abort_unless(config('operations.mfa_required', false), 404);
         $r->validate(['password' => 'required|string']);
         if (!Hash::check($r->password, $r->user()->password)) {
             throw ValidationException::withMessages(['password' => 'The password is incorrect.']);
@@ -33,6 +38,7 @@ class OfficeSecurityController extends Controller
     }
     public function enable(Request $r)
     {
+        abort_unless(config('operations.mfa_required', false), 404);
         $r->validate(['code' => 'required|string']);
         $secret = $r->session()->get('office_pending_secret');
         abort_unless($secret, 409);
@@ -58,6 +64,7 @@ class OfficeSecurityController extends Controller
     }
     public function challenge(Request $r)
     {
+        abort_unless(config('operations.mfa_required', false), 404);
         $r->validate(['code' => 'required|string|max:32']);
         $u = DB::transaction(function () use ($r) {
             $u = User::withoutGlobalScopes()->lockForUpdate()->findOrFail($r->user()->id);

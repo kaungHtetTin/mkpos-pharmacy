@@ -36,6 +36,7 @@ class HandleSpaRequests
         return [
             'business' => app(\App\Tenancy\BusinessContext::class)->business()?->only(['id','name','slug','status']),
             'subscription' => ($business = app(\App\Tenancy\BusinessContext::class)->business()) ? app(\App\Billing\SubscriptionAccess::class)->summary($business) : null,
+            'office_mfa_required' => (bool) config('operations.mfa_required', false),
             'office_portal' => (bool) config('operations.office_only', false),
             'csrf_token' => csrf_token(),
             'errors' => $request->session()->get('errors')?->getBag('default')->getMessages() ?? [],
