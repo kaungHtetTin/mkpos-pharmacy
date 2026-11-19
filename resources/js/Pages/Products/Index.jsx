@@ -40,7 +40,6 @@ import {
     FormControlLabel,
     Switch,
     FormHelperText,
-    LinearProgress,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -395,7 +394,6 @@ export default function ProductIndex({ auth, products, categories, taxes, units,
                     }
                 >
                     <TableContainer aria-busy={loading} sx={{ position: 'relative' }}>
-                        {loading && <LinearProgress aria-label="Loading medicines" sx={{ position: 'absolute', top: 0, left: 0, right: 0 }} />}
                         <Table size="small">
                             <TableHead>
                                 <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'light' ? 'grey.50' : 'rgba(255, 255, 255, 0.05)' }}>

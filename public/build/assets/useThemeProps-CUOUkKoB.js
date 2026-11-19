@@ -1,1 +1,0 @@
-import{O as e,P as t,k as n}from"./spa-DE5IDPeh.js";var r=n();function i(t){let{theme:n,name:r,props:i}=t;return!n||!n.components||!n.components[r]||!n.components[r].defaultProps?i:e(n.components[r].defaultProps,i)}function a({props:e,name:n,defaultTheme:r,themeId:a}){let o=t(r);return a&&(o=o[a]||o),i({theme:o,name:n,props:e})}export{i as n,r,a as t};

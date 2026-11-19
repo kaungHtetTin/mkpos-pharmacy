@@ -1,1 +1,0 @@
-import{l as e,q as t}from"./spa-DE5IDPeh.js";var n=t(),r=e([(0,n.jsx)(`path`,{d:`m12 2-5.5 9h11z`},`0`),(0,n.jsx)(`circle`,{cx:`17.5`,cy:`17.5`,r:`4.5`},`1`),(0,n.jsx)(`path`,{d:`M3 13.5h8v8H3z`},`2`)],`Category`);export{r as t};

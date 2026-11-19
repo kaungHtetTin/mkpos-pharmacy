@@ -162,6 +162,7 @@ export const router = {
 export function SpaProvider({ initialPage, resolve, children }) {
     const [page, setPage] = useState(initialPage);
     const [PageComponent, setPageComponent] = useState(null);
+    const [pageKey, setPageKey] = useState(0);
     const [loading, setLoading] = useState(true);
     const [preservingState, setPreservingState] = useState(false);
     const [navigationError, setNavigationError] = useState('');
@@ -179,6 +180,10 @@ export function SpaProvider({ initialPage, resolve, children }) {
         loadComponent(initialPage.component).then((component) => {
             if (!active) return;
             setPageComponent(() => component);
+            setLoading(false);
+        }).catch(() => {
+            if (!active) return;
+            setNavigationError('Unable to load this page. Please retry.');
             setLoading(false);
         });
         return () => { active = false; };
@@ -199,10 +204,11 @@ export function SpaProvider({ initialPage, resolve, children }) {
         const controller = new AbortController();
         requestRef.current = controller;
         setNavigationError('');
-        // Keep mutation forms mounted while awaiting validation or a redirect.
-        // Otherwise the loading skeleton destroys their local values and the
-        // onError callback updates an unmounted form instead of showing errors.
-        setPreservingState(options.preserveState ?? !isGet);
+        // Keep the current page mounted during the request. Apply the requested
+        // form-state behavior only after a successful response, so validation
+        // errors can still update the mounted form.
+        const shouldPreserveState = options.preserveState ?? !isGet;
+        setPreservingState(shouldPreserveState);
         setLoading(true);
         options.onStart?.();
         emit('start', { url: target, method });
@@ -253,6 +259,11 @@ export function SpaProvider({ initialPage, resolve, children }) {
             const finalUrl = normalizeUrl(response.url || payload.url || target);
             if (!isGet || finalUrl !== target) window.history.replaceState({}, '', finalUrl);
 
+            // Retain the visible page while waiting, then honor form-reset semantics
+            // when a successful navigation does not request preserved state.
+            if (!shouldPreserveState || payload.component !== pageRef.current.component) {
+                setPageKey((key) => key + 1);
+            }
             pageRef.current = payload;
             setPage(payload);
             setPageComponent(() => component);
@@ -298,7 +309,7 @@ export function SpaProvider({ initialPage, resolve, children }) {
 
     return (
         <SpaContext.Provider value={context}>
-            {children({ PageComponent, page, loading, preservingState, navigationError })}
+            {children({ PageComponent, pageKey, page, loading, preservingState, navigationError })}
         </SpaContext.Provider>
     );
 }

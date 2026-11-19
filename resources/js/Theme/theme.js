@@ -804,7 +804,28 @@ export const getTheme = (mode, primaryColor = '#176B5B') => {
                 },
             },
             MuiSkeleton: {
-                styleOverrides: { root: { borderRadius: 5 } },
+                defaultProps: { animation: 'pulse' },
+                styleOverrides: {
+                    root: {
+                        borderRadius: 4,
+                        backgroundColor: isDark ? alpha('#ffffff', 0.07) : alpha(primaryColor, 0.055),
+                        '&.MuiSkeleton-pulse': {
+                            animationDuration: '1.8s',
+                            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                        },
+                    },
+                },
+            },
+            MuiLinearProgress: {
+                styleOverrides: {
+                    root: { height: 2, borderRadius: 2, backgroundColor: alpha(primaryColor, isDark ? 0.12 : 0.06) },
+                    bar: {
+                        backgroundColor: alpha(primaryColor, isDark ? 0.65 : 0.45),
+                        '@media (prefers-reduced-motion: reduce)': { animation: 'none', transition: 'none' },
+                    },
+                    bar1Indeterminate: { '@media (prefers-reduced-motion: reduce)': { width: '35%', transform: 'none' } },
+                    bar2Indeterminate: { '@media (prefers-reduced-motion: reduce)': { display: 'none' } },
+                },
             },
             MuiSvgIcon: {
                 styleOverrides: {
