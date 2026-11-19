@@ -406,7 +406,7 @@ class FounderFinanceTest extends TestCase
         $audit = $this->get('/platform/audit', ['X-SPA' => 'true'])->assertOk()->json('props');
         $this->assertFalse(collect($audit['entries']['data'])->contains(fn($row) => str_starts_with($row['action'], 'finance.')));
         $this->assertFalse(collect($audit['actions'])->contains(fn($action) => str_starts_with($action, 'finance.')));
-        $activity = $this->get('/platform/businesses', ['X-SPA' => 'true'])->assertOk()->json('props.recent_activity');
+        $activity = $this->get('/platform/businesses', ['X-SPA' => 'true'])->assertOk()->json('props.businesses.data');
         foreach ($activity as $row) {
             $this->assertArrayNotHasKey('properties', $row);
         }

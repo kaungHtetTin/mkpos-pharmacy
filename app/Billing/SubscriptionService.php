@@ -25,9 +25,9 @@ class SubscriptionService
         return $subscription;
     }
 
-    public function invoice(Business $business, SubscriptionPlan $plan, string $requestKey, ?User $actor = null): SubscriptionInvoice
+    public function invoice(Business $business, SubscriptionPlan $plan, string $requestKey, ?User $actor = null, ?string $dueDate = null): SubscriptionInvoice
     {
-        return DB::transaction(function () use ($business,$plan,$requestKey,$actor) {
+        return DB::transaction(function () use ($business,$plan,$requestKey,$actor,$dueDate) {
             Business::whereKey($business->id)->lockForUpdate()->firstOrFail();
             $existing = SubscriptionInvoice::where('business_id',$business->id)->where('request_key',$requestKey)->first();
             if ($existing) {
@@ -41,7 +41,7 @@ class SubscriptionService
             $invoice = SubscriptionInvoice::create([
                 'business_id'=>$business->id,'plan_id'=>$plan->id,'number'=>'SUB-'.now()->format('Ymd').'-'.Str::upper(Str::random(10)),
                 'request_key'=>$requestKey,'amount_minor'=>$plan->amount_minor,'currency'=>$plan->currency,'plan_snapshot'=>$plan->snapshot(),
-                'status'=>'open','due_at'=>now()->addDays(config('billing.renewal_notice_days')),
+                'status'=>'open','due_at'=>$dueDate ? $dueDate.' 23:59:59' : now()->addDays(config('billing.renewal_notice_days')),
             ]);
             PlatformAudit::record('billing.invoice_created',$actor,$business->id,['invoice_id'=>$invoice->id,'amount_minor'=>$invoice->amount_minor,'currency'=>$invoice->currency]);
             if ($invoice->amount_minor === 0) $this->settle($invoice,$actor);
@@ -49,11 +49,12 @@ class SubscriptionService
         });
     }
 
-    public function submit(SubscriptionInvoice $invoice, User $user, array $data, ?UploadedFile $receipt = null): SubscriptionPayment
+    public function submit(SubscriptionInvoice $invoice, User $user, array $data, ?UploadedFile $receipt = null, ?User $officeActor = null): SubscriptionPayment
     {
+        if ($officeActor) abort_unless(\App\Operations\OfficeAccess::allows($officeActor, 'billing'), 403);
         $uploaded = null;
         try {
-            return DB::transaction(function () use ($invoice,$user,$data,$receipt,&$uploaded) {
+            return DB::transaction(function () use ($invoice,$user,$data,$receipt,$officeActor,&$uploaded) {
                 Business::whereKey($invoice->business_id)->lockForUpdate()->firstOrFail();
                 $invoice = SubscriptionInvoice::whereKey($invoice->id)->lockForUpdate()->firstOrFail();
                 $existing = SubscriptionPayment::where('business_id',$invoice->business_id)->where('request_key',$data['request_key'])->first();
@@ -71,7 +72,7 @@ class SubscriptionService
                     'amount_minor'=>$invoice->amount_minor,'currency'=>$invoice->currency,'method'=>$data['method'],'reference'=>trim($data['reference']),
                     'reference_hash'=>$hash,'payment_date'=>$data['payment_date'],'receipt_path'=>$uploaded,'status'=>'pending',
                 ]);
-                PlatformAudit::record('billing.payment_submitted',$user,$invoice->business_id,['invoice_id'=>$invoice->id,'payment_id'=>$payment->id]);
+                PlatformAudit::record('billing.payment_submitted',$officeActor ?? $user,$invoice->business_id,['invoice_id'=>$invoice->id,'payment_id'=>$payment->id,'submitted_for'=>$user->id]);
                 return $payment;
             });
         } catch (\Throwable $e) {

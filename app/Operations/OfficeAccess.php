@@ -13,7 +13,7 @@ final class OfficeAccess
         return in_array($area, match ($user->platform_role) {
             'owner' => ['dashboard', 'businesses', 'billing', 'plans', 'support', 'audit', 'email', 'users', 'admins', 'calendar', 'reports', 'payment-methods', 'health', 'finance', 'bank-books', 'founders'],
             'admin' => ['dashboard', 'businesses', 'support', 'audit', 'users', 'health'],
-            'billing' => ['dashboard', 'billing', 'plans', 'calendar', 'reports', 'payment-methods', 'finance', 'bank-books', 'founders'],
+            'billing' => ['dashboard', 'businesses', 'billing', 'plans', 'calendar', 'reports', 'payment-methods', 'finance', 'bank-books', 'founders'],
             'support' => ['dashboard', 'support'],
             default => [],
         }, true);

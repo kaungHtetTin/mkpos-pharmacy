@@ -66,7 +66,7 @@ class OfficeFeatureExpansionTest extends TestCase
             $this->office->forceFill(['platform_role' => $role])->save();
             $this->actingAs($this->office);
             foreach ($areas as $i => $url) {
-                $this->get($url)->assertStatus($rights[$i] ? 200 : 403);
+                $this->get($url)->assertStatus($rights[$i] ? ($url === '/platform/users' ? 302 : 200) : 403);
             }
         }
     }
@@ -115,8 +115,8 @@ class OfficeFeatureExpansionTest extends TestCase
     public function test_account_search_business_filter_and_private_fields(): void
     {
         $this->actingAs($this->office);
-        $this->spaGet('/platform/users?business_id=' . $this->a->id)->assertJsonCount(1, 'props.accounts.data')->assertJsonPath('props.accounts.data.0.email', $this->owner->email)->assertJsonMissingPath('props.accounts.data.0.password');
-        $this->spaGet('/platform/users?q=' . urlencode($this->other->email))->assertJsonCount(1, 'props.accounts.data')->assertJsonPath('props.accounts.data.0.business_id', $this->b->id);
+        $this->spaGet('/platform/businesses/' . $this->a->id)->assertJsonCount(1, 'props.members')->assertJsonPath('props.members.0.email', $this->owner->email)->assertJsonMissingPath('props.members.0.password');
+        $this->spaGet('/platform/businesses?q=' . urlencode($this->other->email))->assertJsonCount(1, 'props.businesses.data')->assertJsonPath('props.businesses.data.0.id', $this->b->id);
     }
     public function test_account_updates_revoke_sessions_and_cannot_promote_or_move_tenant(): void
     {

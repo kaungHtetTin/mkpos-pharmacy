@@ -1,79 +1,84 @@
 import React, { useState } from 'react';
 import { Link, useForm } from '@/spa';
-import { Box, Button, Chip, MenuItem, Stack, TableCell, TableRow, Tabs, Tab, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Chip, Divider, FormControlLabel, MenuItem, Stack, TableCell, TableRow, Tabs, Tab, TextField, Typography } from '@mui/material';
 import { OfficePage, OfficeTable, OfficeDialog } from '@/Components/OfficeUi';
 import StatCardGrid from '@/Components/StatCardGrid';
-import { BillingStatus, BillingUsage, billingDate, billingMoney } from '@/Components/BillingUi';
-export default function BusinessDetail({
-  auth,
-  record,
-  subscription,
-  usage,
-  members = [],
-  branches = [],
-  invoices = [],
-  payments = [],
-  activity = [],
-  support = [],
-  billing_visible,
-  can_extend_trial
-}) {
-  const [tab, setTab] = useState('overview'),
-    [edit, setEdit] = useState(false),
-    [trial, setTrial] = useState(false);
-  const details = useForm({
-      name: record.name,
-      slug: record.slug,
-      status: record.status
-    }),
-    extend = useForm({
-      days: 7,
-      note: ''
-    });
-  return <OfficePage auth={auth} title={record.name} description={`${record.slug} · Created ${billingDate(record.created_at)}`} actions={<Stack direction="row" gap={.5} flexWrap="wrap"><Button component={Link} href={route('platform.businesses.index')}>All businesses</Button><Button onClick={() => setEdit(true)} variant="outlined">Edit business</Button>{billing_visible && <Button component={Link} href={route('platform.billing.index', {
-      business_id: record.id
-    })}>Open billing</Button>}</Stack>}>
- <Stack direction="row" gap={1} alignItems="center"><Chip size="small" label={record.status} /><BillingStatus value={subscription.state} /><Typography variant="body2">{subscription.plan?.name || 'No plan'} · Access through {billingDate(subscription.access_until)}</Typography></Stack>
- <BillingUsage usage={usage} plan={subscription.plan} />
- <Tabs value={tab} onChange={(e, v) => setTab(v)} variant="scrollable" scrollButtons="auto">{[['overview', 'Overview'], ['branches', 'Branches'], ['accounts', 'Accounts'], ...(billing_visible ? [['billing', 'Billing history']] : []), ['activity', 'Activity'], ['support', 'Support']].map(([v, l]) => <Tab key={v} value={v} label={l} />)}</Tabs>
- {tab === 'overview' && <Stack spacing={1.5}><StatCardGrid items={[{
-        label: 'Branches',
-        value: branches.length
-      }, {
-        label: 'Active accounts',
-        value: usage.users
-      }, {
-        label: 'Medicines',
-        value: usage.products
-      }]} /><Typography variant="body2">Automatic renewal: {subscription.auto_renew ? 'Enabled' : 'Disabled'}. {subscription.next_period ? `Next paid period ends ${billingDate(subscription.next_period.ends_at)}.` : ''}</Typography>{can_extend_trial && <Button variant="outlined" onClick={() => setTrial(true)} sx={{
-        alignSelf: 'flex-start'
-      }}>Extend trial</Button>}<Typography variant="subtitle2">Owners and primary contacts</Typography>{members.filter(u => u.roles.some(x => ['Owner', 'Root'].includes(x))).map(u => <Stack key={u.id} direction="row" gap={1} flexWrap="wrap"><Typography variant="body2" fontWeight={600}>{u.name}</Typography><Typography variant="body2" color="text.secondary">{u.email}</Typography><Chip size="small" label={u.status} /></Stack>)}</Stack>}
- {tab === 'branches' && <OfficeTable headings={['Branch', 'Contact', 'Address', 'Status']} empty={!branches.length}>{branches.map(b => <TableRow key={b.id}><TableCell>{b.name}</TableCell><TableCell>{b.email || b.phone || '—'}</TableCell><TableCell>{b.address || '—'}</TableCell><TableCell>{b.status}</TableCell></TableRow>)}</OfficeTable>}
- {tab === 'accounts' && <Stack spacing={1}><Button component={Link} href={route('platform.users.index', {
-        business_id: record.id
-      })} sx={{
-        alignSelf: 'flex-start'
-      }}>Manage business accounts</Button><Typography variant="caption" color="text.secondary">Showing up to 100 accounts. Open account management for the full directory and password resets.</Typography><OfficeTable headings={['Name', 'Email', 'Roles', 'Account', 'Membership']} empty={!members.length}>{members.map(u => <TableRow key={u.id}><TableCell>{u.name}</TableCell><TableCell>{u.email}</TableCell><TableCell>{u.roles.join(', ') || '—'}</TableCell><TableCell>{u.status}</TableCell><TableCell>{u.membership_status}</TableCell></TableRow>)}</OfficeTable></Stack>}
- {tab === 'billing' && billing_visible && <Stack spacing={1.5}><Typography variant="subtitle2">Recent invoices</Typography><OfficeTable headings={['Invoice', 'Amount', 'Status', 'Date']} empty={!invoices.length}>{invoices.map(i => <TableRow key={i.id}><TableCell>{i.number}</TableCell><TableCell>{billingMoney(i.amount_minor, i.currency)}</TableCell><TableCell><BillingStatus value={i.status} /></TableCell><TableCell>{billingDate(i.created_at)}</TableCell></TableRow>)}</OfficeTable><Typography variant="subtitle2">Recent payments</Typography><OfficeTable headings={['Reference', 'Amount', 'Status', 'Date']} empty={!payments.length}>{payments.map(p => <TableRow key={p.id}><TableCell>{p.reference}</TableCell><TableCell>{billingMoney(p.amount_minor, p.currency)}</TableCell><TableCell><BillingStatus value={p.status} /></TableCell><TableCell>{billingDate(p.created_at)}</TableCell></TableRow>)}</OfficeTable></Stack>}
- {tab === 'activity' && <OfficeTable headings={['Action', 'Actor', 'Date']} empty={!activity.length}>{activity.map(a => <TableRow key={a.id}><TableCell>{a.action}</TableCell><TableCell>{a.actor?.name || 'System'}</TableCell><TableCell>{billingDate(a.created_at)}</TableCell></TableRow>)}</OfficeTable>}
- {tab === 'support' && <OfficeTable headings={['Subject', 'Status', 'Created']} empty={!support.length}>{support.map(t => <TableRow key={t.id}><TableCell><Link href={route('platform.support.show', t.id)}>{t.subject}</Link></TableCell><TableCell>{t.status}</TableCell><TableCell>{billingDate(t.created_at)}</TableCell></TableRow>)}</OfficeTable>}
- <OfficeDialog open={edit} title="Edit business" form={details} onClose={() => setEdit(false)} onSubmit={e => {
-      e.preventDefault();
-      details.put(route('platform.businesses.details', record.id), {
-        onSuccess: () => setEdit(false)
-      });
-    }}>{[['name', 'Business name'], ['slug', 'Business slug']].map(([k, l]) => <TextField key={k} required label={l} value={details.data[k]} onChange={e => details.setData(k, e.target.value)} error={!!details.errors[k]} helperText={details.errors[k]} />)}<TextField select label="Business status" value={details.data.status} onChange={e => details.setData('status', e.target.value)}><MenuItem value="Active">Active</MenuItem><MenuItem value="Suspended">Suspended</MenuItem></TextField></OfficeDialog>
- <OfficeDialog open={trial} title="Extend trial" form={extend} onClose={() => setTrial(false)} submit="Extend trial" onSubmit={e => {
-      e.preventDefault();
-      extend.post(route('platform.businesses.trial', record.id), {
-        onSuccess: () => {
-          setTrial(false);
-          extend.reset();
-        }
-      });
-    }}><Typography variant="body2">Available before the first paid period. Existing paid invoices and business status stay unchanged.</Typography><TextField required label="Extra trial days" type="number" value={extend.data.days} onChange={e => extend.setData('days', e.target.value)} inputProps={{
-        min: 1,
-        max: 365
-      }} /><TextField required multiline minRows={2} label="Reason for extension" value={extend.data.note} onChange={e => extend.setData('note', e.target.value)} /></OfficeDialog>
- </OfficePage>;
+import { BillingStatus, BillingUsage, BillingPager, billingDate, billingMoney } from '@/Components/BillingUi';
+
+const dateValue = value => value ? String(value).slice(0,10) : '';
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const newKey = () => crypto.randomUUID();
+const methods = [['bank_transfer','Bank transfer'],['mobile_wallet','Mobile wallet'],['cash','Cash'],['other','Other']];
+
+export default function BusinessDetail({ auth, record, subscription, usage, members = [], members_page, owner_contacts = [], branches = [], invoices_page, payments_page, billing_summary, plans = [], activity = [], support = [], billing_visible, accounts_manageable, can_extend_trial }) {
+    const initialTab = new URLSearchParams(window.location.search).get('tab');
+    const [tab,setTab] = useState(['overview','accounts','branches','billing','activity','support'].includes(initialTab) ? initialTab : 'overview');
+    const [dialog,setDialog] = useState(null);
+    const details = useForm({name:record.name,slug:record.slug,status:record.status});
+    const trial = useForm({days:7,note:''});
+    const renewal = useForm({auto_renew:!!subscription.auto_renew,note:''});
+    const account = useForm({name:'',email:'',status:'Active'});
+    const password = useForm({password:'',password_confirmation:'',note:''});
+    const invoice = useForm({plan_id:'',request_key:'',price:'',due_at:today(),note:''});
+    const payment = useForm({request_key:'',method:'bank_transfer',reference:'',payment_date:today(),approve:false,confirmed:false,note:''});
+    const decision = useForm({decision:'reject',confirmed:false,note:'',reason:''});
+    const invoices = invoices_page?.data || [], payments = payments_page?.data || [];
+    const close = () => { if(dialog?.type==='password') password.reset(); setDialog(null); };
+    const finish = form => ({preserveScroll:true,onSuccess:()=>{close();form.reset();}});
+    const endpoint = (name,id) => route(`platform.businesses.${name}`,id ? {business:record.id,...id} : record.id);
+    const open = (type,row) => {
+        ({details,trial,renewal,account,password,invoice,payment,decision}[type] || decision).clearErrors();
+        if(type==='details') details.setData({name:record.name,slug:record.slug,status:record.status});
+        if(type==='renewal') renewal.setData({auto_renew:!!subscription.auto_renew,note:''});
+        if(type==='account') account.setData({name:row.name,email:row.email,status:row.status});
+        if(type==='password') password.reset();
+        if(type==='invoice') invoice.setData({plan_id:row?.plan_id || plans[0]?.id || '',request_key:newKey(),price:row ? (row.amount_minor/100).toFixed(2) : '',due_at:dateValue(row?.due_at) || today(),note:''});
+        if(type==='payment') payment.setData({request_key:newKey(),method:row?.method || 'bank_transfer',reference:row?.reference || '',payment_date:dateValue(row?.payment_date) || today(),approve:false,confirmed:false,note:''});
+        if(['approve','reject','void'].includes(type)) {decision.clearErrors();decision.setData({decision:type==='approve'?'approve':'reject',confirmed:false,note:'',reason:''});}
+        setDialog({type,row});
+    };
+    const field = (form,key,label,props={}) => <TextField required fullWidth size="small" label={label} value={form.data[key]} onChange={e=>form.setData(key,e.target.value)} error={!!form.errors[key]} helperText={form.errors[key]} {...props}/>;
+    const note = form => field(form,'note','Reason / internal note',{multiline:true,minRows:2,inputProps:{maxLength:500}});
+    const billingLink = <Button onClick={()=>setTab('billing')}>Billing history</Button>;
+    return <OfficePage auth={auth} title={record.name} description={`${record.slug} · Created ${billingDate(record.created_at)}`} actions={<Stack direction="row" gap={.5} flexWrap="wrap"><Button component={Link} href={route('platform.businesses.index')}>All businesses</Button>{accounts_manageable&&<Button variant="outlined" onClick={()=>open('details')}>Edit business</Button>}{billing_visible&&<Button variant="contained" onClick={()=>open('renewal')}>Subscription controls</Button>}</Stack>}>
+        <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap"><Chip size="small" color={record.status==='Active'?'success':'warning'} label={record.status}/><BillingStatus value={subscription.state}/><Typography variant="body2" fontWeight={600}>{subscription.plan?.name || 'No plan'}</Typography><Typography variant="body2" color="text.secondary">Access through {billingDate(subscription.access_until)}</Typography></Stack>
+        {record.status!=='Active'&&<Alert severity="warning">This business is suspended. Business operations are blocked until it is reactivated. Billing history is retained.</Alert>}
+        <StatCardGrid items={[{label:'Branches',value:usage.branches},{label:'Active memberships',value:usage.users},{label:'Medicines',value:usage.products},...(billing_visible?[{label:'Open invoices',value:billing_summary?.open || 0},{label:'Payments to review',value:billing_summary?.pending || 0},{label:'Overdue invoices',value:billing_summary?.overdue || 0}]:[])]}/>
+        <Tabs value={billing_visible || tab!=='billing' ? tab : 'overview'} onChange={(e,v)=>setTab(v)} variant="scrollable" scrollButtons="auto" aria-label="Business detail sections">{[['overview','Overview'],['accounts','Accounts'],['branches','Branches'],...(billing_visible?[['billing','Billing history']]:[]),['activity','Activity'],['support','Support']].map(([v,l])=><Tab key={v} value={v} label={l}/>)}</Tabs>
+        {tab==='overview'&&<Stack spacing={1.5}>
+            <Typography variant="subtitle2">Business contacts</Typography>
+            {owner_contacts.map(u=><Stack key={u.id} direction="row" alignItems="center" flexWrap="wrap" gap={1}><Box sx={{minWidth:200}}><Typography variant="body2" fontWeight={600}>{u.name}</Typography><Typography variant="body2" color="text.secondary">{u.email}</Typography></Box><Chip size="small" label={u.status}/>{accounts_manageable&&<><Button size="small" onClick={()=>open('account',u)}>Edit account</Button><Button size="small" onClick={()=>open('password',u)}>Reset password</Button></>}</Stack>)}
+            <Divider/><Typography variant="subtitle2">Subscription & usage</Typography><BillingUsage usage={usage} plan={subscription.plan}/>
+            <Typography variant="body2">Automatic renewal: {subscription.auto_renew?'Enabled':'Disabled'} · Trial ends {billingDate(subscription.trial_ends_at)}{subscription.next_period ? ` · Next paid period ends ${billingDate(subscription.next_period.ends_at)}` : ''}</Typography>
+            {billing_visible&&<><Stack direction="row" gap={1} flexWrap="wrap"><Button variant="outlined" onClick={()=>open('invoice')}>Create billing record</Button>{can_extend_trial&&<Button onClick={()=>open('trial')}>Extend trial</Button>}{billingLink}</Stack><Typography variant="subtitle2">Verified subscription collections</Typography><Stack direction="row" gap={2} flexWrap="wrap">{billing_summary?.collections?.length ? billing_summary.collections.map(c=><Typography key={c.currency} fontWeight={600}>{billingMoney(Number(c.amount_minor),c.currency)}</Typography>):<Typography variant="body2" color="text.secondary">No approved payments yet.</Typography>}</Stack></>}
+        </Stack>}
+        {tab==='accounts'&&<Stack spacing={1}><Typography variant="body2" color="text.secondary">Each account belongs to this business. Disabling an account or resetting its password signs out existing sessions.</Typography><OfficeTable headings={['Account','Roles','Account status','Membership','Actions']} empty={!members.length}>{members.map(u=><TableRow key={u.id}><TableCell><Typography variant="body2" fontWeight={600}>{u.name}</Typography><Typography variant="caption">{u.email}</Typography></TableCell><TableCell>{u.roles.join(', ') || '—'}</TableCell><TableCell><Chip size="small" label={u.status} color={u.status==='Active'?'success':'default'}/></TableCell><TableCell>{u.membership_status}</TableCell><TableCell>{accounts_manageable&&<Stack direction="row" flexWrap="wrap"><Button size="small" onClick={()=>open('account',u)}>Edit / disable</Button><Button size="small" onClick={()=>open('password',u)}>Reset password</Button></Stack>}</TableCell></TableRow>)}</OfficeTable><BillingPager page={members_page}/></Stack>}
+        {tab==='branches'&&<OfficeTable headings={['Branch','Contact','Address','Status']} empty={!branches.length}>{branches.map(b=><TableRow key={b.id}><TableCell>{b.name}</TableCell><TableCell>{b.email || b.phone || '—'}</TableCell><TableCell>{b.address || '—'}</TableCell><TableCell>{b.status}</TableCell></TableRow>)}</OfficeTable>}
+        {tab==='billing'&&billing_visible&&<Stack spacing={1.5}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} flexWrap="wrap"><Typography variant="subtitle2">Invoices</Typography><Button variant="contained" onClick={()=>open('invoice')}>Create billing record</Button></Stack>
+            <Typography variant="caption" color="text.secondary">Edit open invoices before payment submission. Remove an invoice by voiding it with a reason. Paid records remain in history.</Typography>
+            <OfficeTable headings={['Invoice / plan','Amount','Status','Due / period','Actions']} empty={!invoices.length}>{invoices.map(i=><TableRow key={i.id}><TableCell><Typography variant="body2" fontWeight={600}>{i.number}</Typography><Typography variant="caption">{i.plan_snapshot?.name}</Typography>{i.void_reason&&<Typography variant="caption" display="block">{i.void_reason}</Typography>}</TableCell><TableCell>{billingMoney(i.amount_minor,i.currency)}</TableCell><TableCell><BillingStatus value={i.status}/></TableCell><TableCell>{dateValue(i.due_at)}{i.period_ends_at&&<Typography variant="caption" display="block">Paid through {billingDate(i.period_ends_at)}</Typography>}</TableCell><TableCell>{i.status==='open'&&<Stack direction="row" flexWrap="wrap"><Button size="small" disabled={!!i.payments_count} onClick={()=>open('invoice',i)}>Edit</Button><Button size="small" disabled={!!i.pending_payments_count} onClick={()=>open('payment',{invoice:i})}>Record payment</Button><Button size="small" color="error" disabled={!!i.pending_payments_count} onClick={()=>open('void',i)}>Void</Button></Stack>}</TableCell></TableRow>)}</OfficeTable><BillingPager page={invoices_page} extra={{tab:'billing'}}/>
+            <Typography variant="subtitle2">Payments</Typography><OfficeTable headings={['Reference / invoice','Amount','Status','Payment date','Actions']} empty={!payments.length}>{payments.map(p=><TableRow key={p.id}><TableCell><Typography variant="body2">{p.reference}</Typography><Typography variant="caption">{p.invoice?.number} · {p.method.replaceAll('_',' ')}</Typography>{p.review_note&&<Typography variant="caption" display="block">{p.review_note}</Typography>}</TableCell><TableCell>{billingMoney(p.amount_minor,p.currency)}</TableCell><TableCell><BillingStatus value={p.status}/></TableCell><TableCell>{dateValue(p.payment_date)}</TableCell><TableCell><Stack direction="row" flexWrap="wrap">{p.has_receipt&&<Button size="small" component="a" href={route('platform.billing.receipt',p.id)} target="_blank" rel="noreferrer">Receipt</Button>}{p.status==='pending'&&<><Button size="small" onClick={()=>open('payment',p)}>Edit</Button><Button size="small" onClick={()=>open('approve',p)}>Approve</Button><Button size="small" color="error" onClick={()=>open('reject',p)}>Reject</Button></>}</Stack></TableCell></TableRow>)}</OfficeTable><BillingPager page={payments_page} extra={{tab:'billing'}}/>
+        </Stack>}
+        {tab==='activity'&&<OfficeTable headings={['Action','Actor','Date']} empty={!activity.length}>{activity.map(a=><TableRow key={a.id}><TableCell>{a.action}</TableCell><TableCell>{a.actor?.name || 'System'}</TableCell><TableCell>{billingDate(a.created_at)}</TableCell></TableRow>)}</OfficeTable>}
+        {tab==='support'&&<OfficeTable headings={['Subject','Status','Created']} empty={!support.length}>{support.map(t=><TableRow key={t.id}><TableCell><Link href={route('platform.support.show',t.id)}>{t.subject}</Link></TableCell><TableCell>{t.status}</TableCell><TableCell>{billingDate(t.created_at)}</TableCell></TableRow>)}</OfficeTable>}
+        <OfficeDialog open={dialog?.type==='details'} title="Edit business" form={details} onClose={close} onSubmit={e=>{e.preventDefault();details.put(endpoint('details'),finish(details));}}>{field(details,'name','Business name')}{field(details,'slug','Business slug')}<TextField select size="small" label="Business status" value={details.data.status} onChange={e=>details.setData('status',e.target.value)}><MenuItem value="Active">Active</MenuItem><MenuItem value="Suspended">Suspended</MenuItem></TextField><Typography variant="caption">Suspending blocks business operations across branches. Reactivating preserves the existing subscription dates.</Typography></OfficeDialog>
+        <OfficeDialog open={dialog?.type==='account'} title="Edit business account" form={account} onClose={close} onSubmit={e=>{e.preventDefault();account.put(route('platform.users.update',dialog.row.id),finish(account));}}>{field(account,'name','Account name')}{field(account,'email','Email address',{type:'email'})}<TextField select size="small" label="Account status" value={account.data.status} onChange={e=>account.setData('status',e.target.value)}><MenuItem value="Active">Active</MenuItem><MenuItem value="Inactive">Inactive — disabled</MenuItem></TextField><Typography variant="caption">Changes to email or status revoke browser and cashier sessions. The account remains assigned to this business.</Typography></OfficeDialog>
+        <OfficeDialog open={dialog?.type==='password'} title={`Reset password · ${dialog?.row?.name || ''}`} submit="Replace password" form={password} onClose={close} onSubmit={e=>{e.preventDefault();password.put(route('platform.users.password',dialog.row.id),finish(password));}}><Alert severity="warning">This replaces the password and signs out browser and cashier sessions. Share the new password privately.</Alert>{field(password,'password','New password',{type:'password',autoComplete:'new-password',helperText:password.errors.password || 'At least 12 characters.'})}{field(password,'password_confirmation','Confirm new password',{type:'password',autoComplete:'new-password'})}{note(password)}</OfficeDialog>
+        <OfficeDialog open={dialog?.type==='renewal'} title="Subscription controls" form={renewal} onClose={close} onSubmit={e=>{e.preventDefault();renewal.put(endpoint('subscription'),finish(renewal));}}><Typography variant="body2">{subscription.plan?.name || 'No plan'} · {subscription.state} · Access through {billingDate(subscription.access_until)}</Typography><FormControlLabel control={<Checkbox checked={renewal.data.auto_renew} onChange={e=>renewal.setData('auto_renew',e.target.checked)}/>} label="Enable automatic renewal invoices"/>{note(renewal)}<Typography variant="caption">Turning renewal off preserves the paid period and removes renewal grace. To change plan, create an invoice for the desired plan and approve its payment.</Typography><Stack direction="row" gap={1} flexWrap="wrap"><Button onClick={()=>open('invoice')}>Create invoice / change plan</Button>{can_extend_trial&&<Button onClick={()=>open('trial')}>Extend trial</Button>}</Stack></OfficeDialog>
+        <OfficeDialog open={dialog?.type==='trial'} title="Extend trial" submit="Extend trial" form={trial} onClose={close} onSubmit={e=>{e.preventDefault();trial.post(endpoint('trial'),finish(trial));}}>{field(trial,'days','Extra trial days',{type:'number',inputProps:{min:1,max:365}})}{note(trial)}<Typography variant="caption">Available before the first paid period. Maximum trial end is 365 days from today.</Typography></OfficeDialog>
+        <OfficeDialog open={dialog?.type==='invoice'} title={dialog?.row?'Edit billing record':'Create billing record'} form={invoice} onClose={close} submit={dialog?.row?'Save invoice':'Create invoice'} onSubmit={e=>{e.preventDefault();dialog.row ? invoice.put(endpoint('invoices.update',{invoice:dialog.row.id}),finish(invoice)) : invoice.post(endpoint('invoices.store'),finish(invoice));}}>
+            {dialog?.row?<><Typography variant="body2">{dialog.row.number} · {dialog.row.currency}</Typography>{field(invoice,'price','Invoice amount',{inputMode:'decimal'})}</>:<TextField required select size="small" label="Subscription plan" value={invoice.data.plan_id} onChange={e=>invoice.setData('plan_id',e.target.value)}>{plans.map(p=><MenuItem key={p.id} value={p.id}>{p.name} · {billingMoney(p.amount_minor,p.currency)} / {p.interval_months===12?'year':'month'}</MenuItem>)}</TextField>}
+            {!plans.length&&!dialog?.row&&<Alert severity="info">Create an active paid plan in Plans before issuing an invoice.</Alert>}{field(invoice,'due_at','Due date',{type:'date',InputLabelProps:{shrink:true}})}{note(invoice)}<Typography variant="caption">An approved payment grants the plan period and posts the receipt to the financial book. A zero-price plan is settled automatically.</Typography>
+        </OfficeDialog>
+        <OfficeDialog open={dialog?.type==='payment'} title={dialog?.row?.id?'Edit pending payment':'Record payment'} form={payment} submit={dialog?.row?.id?'Save payment':'Record payment'} onClose={close} onSubmit={e=>{e.preventDefault();dialog.row.id ? payment.put(endpoint('payments.update',{payment:dialog.row.id}),finish(payment)) : payment.post(endpoint('payments.store',{invoice:dialog.row.invoice.id}),finish(payment));}}>
+            {dialog?.row?.invoice&&<Typography variant="body2">{dialog.row.invoice.number}{dialog.row.invoice.amount_minor!==undefined?` · ${billingMoney(dialog.row.invoice.amount_minor,dialog.row.invoice.currency)}`:''}</Typography>}
+            <TextField select size="small" label="Payment method" value={payment.data.method} onChange={e=>payment.setData('method',e.target.value)}>{methods.map(([v,l])=><MenuItem key={v} value={v}>{l}</MenuItem>)}</TextField>{field(payment,'reference','Payment reference')}{field(payment,'payment_date','Payment date',{type:'date',InputLabelProps:{shrink:true},inputProps:{max:today()}})}{note(payment)}
+            {!dialog?.row?.id&&<><FormControlLabel control={<Checkbox checked={payment.data.approve} onChange={e=>payment.setData('approve',e.target.checked)}/>} label="Approve payment immediately"/>{payment.data.approve&&<FormControlLabel control={<Checkbox checked={payment.data.confirmed} onChange={e=>payment.setData('confirmed',e.target.checked)}/>} label="I verified that the funds were received"/>}</>}
+        </OfficeDialog>
+        <OfficeDialog open={['approve','reject','void'].includes(dialog?.type)} title={dialog?.type==='void'?'Void billing record':dialog?.type==='approve'?'Approve payment':'Reject payment'} form={decision} onClose={close} submit={dialog?.type==='void'?'Void invoice':dialog?.type==='approve'?'Approve payment':'Reject payment'} onSubmit={e=>{e.preventDefault();dialog.type==='void' ? decision.post(endpoint('invoices.void',{invoice:dialog.row.id}),finish(decision)) : decision.post(endpoint('payments.review',{payment:dialog.row.id}),finish(decision));}}>
+            <Typography variant="body2">{dialog?.type==='void'?'The invoice remains in billing history marked void.':dialog?.type==='approve'?'Approval activates the subscription period and posts one verified receipt.':'The payment remains in history. The business may submit a corrected payment.'}</Typography>
+            {dialog?.type==='void'?field(decision,'reason','Reason for void',{multiline:true,minRows:2}):note(decision)}{dialog?.type==='approve'&&<FormControlLabel control={<Checkbox checked={decision.data.confirmed} onChange={e=>decision.setData('confirmed',e.target.checked)}/>} label="I verified that the funds were received"/>}
+        </OfficeDialog>
+    </OfficePage>;
 }

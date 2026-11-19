@@ -381,6 +381,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/payment-methods', [\App\Http\Controllers\Platform\PaymentMethodController::class,'index'])->name('payment-methods.index');
         Route::post('/payment-methods', [\App\Http\Controllers\Platform\PaymentMethodController::class,'store'])->name('payment-methods.store');
         Route::put('/payment-methods/{method}', [\App\Http\Controllers\Platform\PaymentMethodController::class,'update'])->name('payment-methods.update');
+        Route::put('/businesses/{business}/subscription', [\App\Http\Controllers\Platform\BusinessBillingController::class,'renewal'])->middleware('throttle:office-finance-write')->name('businesses.subscription');
+        Route::post('/businesses/{business}/invoices', [\App\Http\Controllers\Platform\BusinessBillingController::class,'storeInvoice'])->middleware('throttle:office-finance-write')->name('businesses.invoices.store');
+        Route::put('/businesses/{business}/invoices/{invoice}', [\App\Http\Controllers\Platform\BusinessBillingController::class,'updateInvoice'])->middleware('throttle:office-finance-write')->name('businesses.invoices.update');
+        Route::post('/businesses/{business}/invoices/{invoice}/void', [\App\Http\Controllers\Platform\BusinessBillingController::class,'voidInvoice'])->middleware('throttle:office-finance-write')->name('businesses.invoices.void');
+        Route::post('/businesses/{business}/invoices/{invoice}/payments', [\App\Http\Controllers\Platform\BusinessBillingController::class,'storePayment'])->middleware('throttle:office-finance-write')->name('businesses.payments.store');
+        Route::put('/businesses/{business}/payments/{payment}', [\App\Http\Controllers\Platform\BusinessBillingController::class,'updatePayment'])->middleware('throttle:office-finance-write')->name('businesses.payments.update');
+        Route::post('/businesses/{business}/payments/{payment}/review', [\App\Http\Controllers\Platform\BusinessBillingController::class,'reviewPayment'])->middleware('throttle:office-finance-write')->name('businesses.payments.review');
         Route::get('/businesses/{business}', [\App\Http\Controllers\Platform\DirectoryController::class,'show'])->name('businesses.show');
         Route::put('/businesses/{business}/details', [\App\Http\Controllers\Platform\DirectoryController::class,'update'])->name('businesses.details');
         Route::post('/businesses/{business}/trial', [\App\Http\Controllers\Platform\DirectoryController::class,'extendTrial'])->name('businesses.trial');

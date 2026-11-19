@@ -18,8 +18,8 @@ class AccountController extends Controller
     public function users(Request $r)
     {
         $f = $this->filters($r);
-        $q = DB::table('users as u')->join('business_memberships as m', 'm.user_id', '=', 'u.id')->join('businesses as b', 'b.id', '=', 'm.business_id')->where('u.is_platform_admin', false)->when($f['q'] ?? null, fn($q, $v) => $q->where(fn($q) => $q->where('u.name', 'like', '%' . $v . '%')->orWhere('u.email', 'like', '%' . $v . '%')->orWhere('b.name', 'like', '%' . $v . '%')))->when($f['status'] ?? null, fn($q, $v) => $q->where('u.status', $v))->when($f['business_id'] ?? null, fn($q, $v) => $q->where('b.id', $v));
-        return Spa::render('Platform/Accounts', ['mode' => 'users', 'filters' => $f, 'accounts' => $q->orderBy('u.name')->paginate(25, ['u.id', 'u.name', 'u.email', 'u.status', 'u.created_at', 'b.id as business_id', 'b.name as business_name', 'm.status as membership_status'])->withQueryString()]);
+        if (!empty($f['business_id'])) return redirect()->route('platform.businesses.show', ['business' => $f['business_id'], 'tab' => 'accounts']);
+        return redirect()->route('platform.businesses.index', array_filter(['q' => $f['q'] ?? null]));
     }
     public function admins(Request $r)
     {
