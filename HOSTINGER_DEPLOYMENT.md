@@ -5,6 +5,36 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Direct owner subscription screenshot requests — 20 November 2026
+
+Source patch `0d3dc80` replaces owner invoice creation with direct plan/payment
+screenshot submission. Owners see all active configured destinations and select
+one by name/account details. A private JPG/PNG/WebP screenshot up to 5 MB is
+required; transaction reference is optional. Payment dates follow Myanmar time.
+Requests atomically create/reuse internal billing records and await office
+approval; access and finance receipts change only after approval. Request keys
+prevent duplicates and pending requests cannot be submitted twice. Existing
+quoted renewal terms are preserved. Type is removed from office payment-method
+forms/listings; operator review shows the chosen destination name.
+
+One additive migration adds nullable destination ID/snapshot fields to payments.
+Existing destinations, payment history, subscription dates and prices are
+preserved. Rollback restores source/manifests while retaining the additive
+columns; never drop columns after customer requests are written. Private source
+and encrypted database/media backups were taken before migration. MFA, scheduler
+and environment remain unchanged. At cutover there were two businesses, one
+existing invoice, zero payments and zero paid periods; no live requests, images
+or financial transactions were created by validation.
+
+Validation: **288 tests / 1,945 assertions**, both production builds, two
+JavaScript checks, six local browser groups and four live groups passed.
+Local checks exercised actual image upload, selected-method snapshot, required
+file validation, pending status, private access and office approval for the
+correct MMK plan period. Live checks opened/canceled forms with browser-only
+fixtures, verified every active real destination is listed, mandatory screenshot
+and phone sizing, existing history and finance. Temporary deployment files were
+removed; rollback backups are retained. No Git push was performed.
+
 ## Left-aligned purchase inputs — 20 November 2026
 
 Frontend patch `bc6194d` left-aligns all editable inputs in the purchase wizard,
