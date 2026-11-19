@@ -5,6 +5,33 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## MMK-only platform office — 19 November 2026
+
+Source patch `75040af` makes MMK the fixed currency for new plans, invoices,
+FOC grants, bank books and finance entries. Finance/founder statements default
+to MMK, forms have read-only currency fields, and controllers plus billing/ledger
+services reject new foreign-currency records. Owner billing offers MMK plans.
+Whole-kyat amounts omit unnecessary .00 while existing exact minor-unit storage
+and fractional accounting remain unchanged. Historical foreign-currency records
+are never relabeled, exchanged or merged.
+
+A guarded, repeatable command normalized the zero-price system trial and eligible
+zero-value trial snapshots to MMK without changing trial dates or features. No
+schema migration, environment change, scheduler change or business POS currency
+setting change was required. An encrypted backup and source/manifests rollback
+were retained before cutover.
+
+Validation: **279 tests / 1,855 assertions**, a targeted normalization recheck,
+both production builds, two JavaScript checks, four local browser groups and
+**five live groups** passed. A token-protected comparison against the encrypted
+predeployment SQL backup verified byte-identical rows for all three existing
+bank books, finance entries/receipts, invoices/payments and subscription periods.
+There were no financial transactions before or after deployment. The initial
+inspection's USD finance view omitted the existing MMK books; the backup-based
+comparison verified the full tables independently of that UI filter. No pricing
+or nonzero balances were converted. Temporary deployment files were removed.
+No Git push was performed.
+
 ## Complimentary plan grants — 19 November 2026
 
 Source patch `ad89ebe` adds Subscription controls → Grant plan FOC. Office
