@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
@@ -6,26 +7,33 @@ use App\Models\{Business, User};
 use App\Services\Businesses\ProvisionBusiness;
 use App\Support\Spa;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{DB,Hash};
+use Illuminate\Support\Facades\{DB, Hash};
 use Illuminate\Validation\Rules\Password;
-
 class BusinessController extends Controller
 {
-    public function index(Request $request) { $search=$request->validate(['q'=>'nullable|string|max:100'])['q']??null; return Spa::render('Platform/Businesses', ['recent_activity'=>\App\Models\PlatformActivityLog::with(['actor:id,name','business:id,name'])->latest('created_at')->limit(20)->get(), 'query'=>$search,'businesses'=>Business::when($search,fn($q)=>$q->where('name','like','%'.$search.'%'))->withCount(['memberships'])->orderBy('name')->paginate(20,['id','name','slug','status','created_at'])->withQueryString()]); }
+    public function index(Request $request)
+    {
+        $search = $request->validate(['q' => 'nullable|string|max:100'])['q'] ?? null;
+        return Spa::render('Platform/Businesses', ['recent_activity' => \App\Models\PlatformActivityLog::with(['actor:id,name', 'business:id,name'])->latest('created_at')->limit(20)->get(['id', 'actor_id', 'business_id', 'action', 'created_at']), 'query' => $search, 'businesses' => Business::when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))->withCount(['memberships'])->orderBy('name')->paginate(20, ['id', 'name', 'slug', 'status', 'created_at'])->withQueryString()]);
+    }
     public function store(Request $request, ProvisionBusiness $provision)
     {
-        $data=$request->validate(['name'=>'required|string|max:150','slug'=>'required|alpha_dash:ascii|lowercase|max:100|unique:businesses,slug','owner_name'=>'required|string|max:255','owner_email'=>'required|email|lowercase|max:255|unique:users,email','owner_password'=>['required','string',Password::min(12)],'currency_symbol'=>'required|string|max:8']);
-        DB::transaction(function () use ($data,$provision,$request) {
-            $owner=User::create(['name'=>$data['owner_name'],'email'=>$data['owner_email'],'password'=>Hash::make($data['owner_password'])]);
-            $business=$provision->create($data,$owner);
-            \App\Support\PlatformAudit::record('business.created',$request->user(),$business->id,['owner_id'=>$owner->id]);
+        $data = $request->validate(['name' => 'required|string|max:150', 'slug' => 'required|alpha_dash:ascii|lowercase|max:100|unique:businesses,slug', 'owner_name' => 'required|string|max:255', 'owner_email' => 'required|email|lowercase|max:255|unique:users,email', 'owner_password' => ['required', 'string', Password::min(12)], 'currency_symbol' => 'required|string|max:8']);
+        DB::transaction(function () use ($data, $provision, $request) {
+            $owner = User::create(['name' => $data['owner_name'], 'email' => $data['owner_email'], 'password' => Hash::make($data['owner_password'])]);
+            $business = $provision->create($data, $owner);
+            \App\Support\PlatformAudit::record('business.created', $request->user(), $business->id, ['owner_id' => $owner->id]);
         });
-        return redirect()->back()->with('success','Business created.');
+        return redirect()->back()->with('success', 'Business created.');
     }
     public function update(Request $request, Business $business)
     {
-        $data=$request->validate(['status'=>'required|in:Active,Suspended']);
-        DB::transaction(function()use($business,$data,$request){ $previous=$business->status;$business->update($data);\App\Support\PlatformAudit::record('business.status_changed',$request->user(),$business->id,['from'=>$previous,'to'=>$data['status']]); });
-        return redirect()->back()->with('success','Business status updated.');
+        $data = $request->validate(['status' => 'required|in:Active,Suspended']);
+        DB::transaction(function () use ($business, $data, $request) {
+            $previous = $business->status;
+            $business->update($data);
+            \App\Support\PlatformAudit::record('business.status_changed', $request->user(), $business->id, ['from' => $previous, 'to' => $data['status']]);
+        });
+        return redirect()->back()->with('success', 'Business status updated.');
     }
 }

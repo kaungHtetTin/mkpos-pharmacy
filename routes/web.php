@@ -357,6 +357,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/business-members', [\App\Http\Controllers\BusinessController::class,'members'])->name('business-members.index');
     Route::put('/business-members/{user}', [\App\Http\Controllers\BusinessController::class,'updateMember'])->name('business-members.update');
     Route::middleware(['platform.admin',\App\Http\Middleware\OfficeSecurity::class])->prefix('platform')->name('platform.')->group(function () {
+        Route::get('/finance', [\App\Http\Controllers\Platform\FinanceController::class,'index'])->name('finance');
+        Route::get('/finance/export', [\App\Http\Controllers\Platform\FinanceController::class,'export'])->middleware('throttle:office-finance-export')->name('finance.export');
+        Route::post('/finance/entries', [\App\Http\Controllers\Platform\FinanceController::class,'store'])->middleware('throttle:office-finance-write')->name('finance.store');
+        Route::post('/finance/entries/{entry}/void', [\App\Http\Controllers\Platform\FinanceController::class,'void'])->name('finance.void');
+        Route::put('/finance/receipts/{receipt}/book', [\App\Http\Controllers\Platform\FinanceController::class,'assign'])->name('finance.assign');
+        Route::get('/founders', [\App\Http\Controllers\Platform\FinanceController::class,'founders'])->name('founders.index');
+        Route::put('/founders', [\App\Http\Controllers\Platform\FinanceController::class,'saveFounders'])->name('founders.save');
+        Route::get('/bank-books', [\App\Http\Controllers\Platform\FinanceController::class,'books'])->name('bank-books.index');
+        Route::post('/bank-books', [\App\Http\Controllers\Platform\FinanceController::class,'saveBook'])->name('bank-books.store');
+        Route::put('/bank-books/{book}', [\App\Http\Controllers\Platform\FinanceController::class,'saveBook'])->name('bank-books.update');
         Route::get('/users', [\App\Http\Controllers\Platform\AccountController::class,'users'])->name('users.index');
         Route::put('/users/{account}', [\App\Http\Controllers\Platform\AccountController::class,'updateUser'])->name('users.update');
         Route::put('/users/{account}/password', [\App\Http\Controllers\Platform\AccountController::class,'passwordUser'])->middleware('throttle:10,1')->name('users.password');

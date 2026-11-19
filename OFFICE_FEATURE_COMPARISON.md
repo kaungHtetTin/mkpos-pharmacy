@@ -28,7 +28,7 @@ existing data model and office roles; the reference app itself was not modified.
 | Shop distribution map | Deferred: Pharmacy POS businesses do not have verified map coordinates or a geocoding service. Branch addresses are available in business details. |
 | Marketplace, ecommerce and product/shop reviews | Deferred: these depend on storefront and marketplace systems that this pharmacy platform does not currently have. |
 | AI usage, wallet/top-ups, skills and agents | Deferred: these depend on separate AI services and billing contracts. No fabricated AI balances or integrations were introduced. |
-| Financial book, bank reconciliation and founders | Deferred: separate accounting requirements; approved subscription collections are available now. |
+| Financial book, bank books and founders | Added founder capital/profit statements, editable future shares, bank books, transfers, expenses, allocations, payouts, reversals and CSV. Approved subscription receipts post automatically. External bank feeds and formal bank reconciliation remain separate. |
 | Tutorial publishing, release management and custom branding | Deferred: require content/release workflows beyond the current office administration scope. Existing app help and deployment procedures remain. |
 | Telegram support | Deferred: requires channel credentials and an explicit messaging integration. No messages were sent. |
 | Detailed user analytics and error-report ingestion | Deferred: requires an event/consent/retention design and client ingestion; the added reports expose actual account/business growth and the health page actual failed-job counts. |
@@ -83,3 +83,5 @@ Before activation, private backups saved the app, both entries and SQL. The
 additive migration and a fresh encrypted backup were verified. The scheduler now
 targets the active release; all unrelated jobs remain. Temporary files return
 HTTP 404. No Git push was performed.
+
+Founder finance is documented in [FOUNDER_FINANCE.md](FOUNDER_FINANCE.md).

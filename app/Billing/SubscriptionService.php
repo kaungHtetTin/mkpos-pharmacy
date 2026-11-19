@@ -91,7 +91,10 @@ class SubscriptionService
             if ($payment->status !== 'pending') $this->invalid('payment','This payment has already been reviewed.');
             if ($invoice->status !== 'open') $this->invalid('invoice','This invoice is no longer open.');
             $payment->update(['status'=>$approve?'approved':'rejected','reviewed_by'=>$reviewer->id,'reviewed_at'=>now(),'review_note'=>$note]);
-            if ($approve) $this->settle($invoice,$reviewer);
+            if ($approve) {
+                $this->settle($invoice,$reviewer);
+                app(\App\Finance\PlatformLedger::class)->recordReceipt($payment);
+            }
             PlatformAudit::record($approve?'billing.payment_approved':'billing.payment_rejected',$reviewer,$payment->business_id,['invoice_id'=>$invoice->id,'payment_id'=>$payment->id]);
             return $payment->fresh();
         });
