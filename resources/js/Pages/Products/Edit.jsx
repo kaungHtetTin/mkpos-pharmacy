@@ -433,7 +433,7 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
                                         '&& .MuiTableCell-root': { p: 0, height: 40, borderRight: '1px solid', borderBottom: '1px solid', borderColor: 'divider', verticalAlign: 'middle' },
                                         '&& .MuiTableCell-head': { px: 1, py: 1, height: 'auto', bgcolor: 'action.hover', color: 'text.secondary', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' },
                                         '&& .MuiTableCell-root:last-child': { borderRight: 0 },
-                                        '&& tbody .MuiTableCell-root:focus-within, && tbody .MuiTableCell-root:has(.Mui-error)': { boxShadow: 'none', bgcolor: 'transparent' },
+                                        '&& tbody .MuiTableCell-root:focus-within, && tbody .MuiTableCell-root:has(.Mui-error)': { boxShadow: 'none !important', bgcolor: 'transparent' },
                                         '&& tbody tr:hover': { bgcolor: 'transparent' },
                                         '&& tbody tr:focus-within > th': { bgcolor: 'action.hover' },
                                         '&&& .unit-name-cell': { position: 'sticky !important', left: 0, zIndex: 3, bgcolor: (theme) => `${theme.palette.background.paper} !important`, boxShadow: (theme) => `1px 0 0 ${theme.palette.divider}` },
