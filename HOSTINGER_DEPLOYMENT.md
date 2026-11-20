@@ -7,7 +7,8 @@ No Git push was needed for this archive deployment.
 
 ## Business payment methods — 20 November 2026
 
-Settings → Payment Methods manages each business’s custom names and availability.
+Release `40fe59e` is live. Settings → Payment Methods manages each business’s
+custom names and availability.
 Cash and Banking are permanent defaults; additional names are non-cash methods.
 Settings → POS & Branch Devices can select any active method as the default.
 Renaming or disabling a method preserves names already recorded on sales,
@@ -30,7 +31,13 @@ worker uses cashier-shell-v8, retaining business-scoped local queues and caches.
 
 Validation: 322 backend tests / 2,196 assertions; phone and desktop Settings/POS
 checks and a synthetic offline cashier queue scenario; five existing responsive
-mobile POS scenarios. Live deployment verification will be recorded after publishing.
+mobile POS scenarios. The three custom-method browser scenarios also passed live
+with intercepted writes. A separate read-only live check confirmed the real Settings,
+POS, Returns, Receivables and Cash Sessions pages load without JavaScript errors
+and agree on Cash/Banking defaults. Deployment verified unchanged operational
+amounts and historical payment-name checksums. Private encrypted/source backups
+are retained. Temporary deployment files return 404 after removal; business and
+office login pages return 200. No Git push was performed.
 
 ## Mobile business-owner POS flow — 20 November 2026
 
