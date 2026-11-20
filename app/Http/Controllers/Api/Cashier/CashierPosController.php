@@ -251,7 +251,7 @@ class CashierPosController extends Controller
 
         $validated = $request->validate([
             'search' => 'nullable|string|max:255',
-            'payment_method' => 'nullable|in:Cash,Card,Mobile,Wallet',
+            'payment_method' => ['nullable', 'string', 'max:60'],
             'payment_status' => 'nullable|in:Paid,Partial,Due',
             'from_date' => 'nullable|date',
             'to_date' => 'nullable|date|after_or_equal:from_date',
@@ -357,7 +357,7 @@ class CashierPosController extends Controller
 
         $validated = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
-            'payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
+            'payment_method' => \App\Services\BusinessPaymentMethods::validation(),
             'payment_status' => 'required|in:Paid,Credit,Partial,Due',
             'due_date' => 'nullable|required_if:payment_status,Credit|date_format:Y-m-d',
             'amount_received' => 'required|numeric|min:0',
@@ -864,6 +864,8 @@ class CashierPosController extends Controller
             'cash_return_received' => $returnReceived,
             'cash_return_paid' => $returnPaid,
             'net_cash_sales' => $cashReceived - $changeGiven + $returnReceived - $returnPaid,
+            'payment_totals' => $paymentTotals->map(fn ($total) => (float) $total)->all(),
+            'banking_sales_total' => (float) ($paymentTotals['Banking'] ?? 0),
             'cash_sales_total' => (float) ($paymentTotals['Cash'] ?? 0),
             'card_sales_total' => (float) ($paymentTotals['Card'] ?? 0),
             'mobile_sales_total' => (float) ($paymentTotals['Mobile'] ?? 0),
@@ -889,6 +891,7 @@ class CashierPosController extends Controller
             'cash_return_received' => $totals['cash_return_received'],
             'cash_return_paid' => $totals['cash_return_paid'],
             'net_cash_sales' => $totals['net_cash_sales'],
+            'payment_totals' => $totals['payment_totals'],
             'cash_sales_total' => $totals['cash_sales_total'],
             'card_sales_total' => $totals['card_sales_total'],
             'mobile_sales_total' => $totals['mobile_sales_total'],
@@ -917,6 +920,8 @@ class CashierPosController extends Controller
 
         $settings = [
             'price_types' => \App\Services\PriceTypes::choices(),
+            'payment_methods' => \App\Services\BusinessPaymentMethods::active(),
+            'default_payment_method' => \App\Services\BusinessPaymentMethods::default(),
             'pharmacy_name'       => Setting::get('invoice.pharmacy_name', config('app.name')),
             'receipt_header'      => Setting::get('invoice.receipt_header', ''),
             'receipt_footer'      => Setting::get('invoice.receipt_footer', ''),

@@ -47,7 +47,7 @@ class SaleSyncService
             'customer_id' => 'nullable|exists:customers,id',
             'cash_session_id' => 'nullable|exists:cash_sessions,id',
             'invoice_number' => 'nullable|string|max:255|unique:sales,invoice_number',
-            'payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
+            'payment_method' => \App\Services\BusinessPaymentMethods::validation(),
             'payment_status' => 'required|in:Paid,Credit,Partial,Due',
             'due_date' => 'nullable|required_if:payment_status,Credit|date_format:Y-m-d',
             'amount_received' => 'required|numeric|min:0',

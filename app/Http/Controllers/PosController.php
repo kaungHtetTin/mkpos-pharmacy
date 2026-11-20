@@ -34,11 +34,11 @@ class PosController extends Controller
 
         return Spa::render('POS/Index', [
             'pageTitle' => 'POS Interface',
-            'paymentMethods' => ['Cash', 'Card', 'Mobile', 'Wallet'],
+            'paymentMethods' => \App\Services\BusinessPaymentMethods::active(),
             'paymentStatuses' => ['Paid', 'Credit'],
             'posDefaults' => [
                 'default_view' => Setting::get('pos.default_view', 'table'),
-                'default_payment_method' => Setting::get('pos.default_payment_method', 'Cash'),
+                'default_payment_method' => \App\Services\BusinessPaymentMethods::default(),
                 'auto_print_receipt' => Setting::get('pos.auto_print_receipt', '0') === '1',
                 'barcode_focus' => Setting::get('pos.barcode_focus', '1') === '1',
                 'show_generic_first' => Setting::get('pos.show_generic_first', '0') === '1',
@@ -352,7 +352,7 @@ class PosController extends Controller
         $validated = $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
             'amount_received' => 'nullable|numeric|min:0|max:999999999999.99',
-            'payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
+            'payment_method' => \App\Services\BusinessPaymentMethods::validation(),
             'payment_status' => 'required|in:Paid,Credit,Partial,Due',
             'due_date' => 'nullable|required_if:payment_status,Credit|date_format:Y-m-d|after_or_equal:today',
             'sale_channel' => 'nullable|string|max:30',
@@ -904,6 +904,8 @@ class PosController extends Controller
             'cash_return_received' => $returnReceived,
             'cash_return_paid' => $returnPaid,
             'net_cash_sales' => $cashReceivedTotal - $changeGivenTotal + $returnReceived - $returnPaid,
+            'payment_totals' => $paymentTotals->map(fn ($total) => (float) $total)->all(),
+            'non_cash_sales_total' => (float) $paymentTotals->except('Cash')->sum(),
             'cash_sales_total' => (float) ($paymentTotals['Cash'] ?? 0),
             'card_sales_total' => (float) ($paymentTotals['Card'] ?? 0),
             'mobile_sales_total' => (float) ($paymentTotals['Mobile'] ?? 0),
@@ -930,6 +932,7 @@ class PosController extends Controller
             'cash_return_received' => (float) $totals['cash_return_received'],
             'cash_return_paid' => (float) $totals['cash_return_paid'],
             'net_cash_sales' => (float) $totals['net_cash_sales'],
+            'payment_totals' => $totals['payment_totals'],
             'cash_sales_total' => (float) $totals['cash_sales_total'],
             'card_sales_total' => (float) $totals['card_sales_total'],
             'mobile_sales_total' => (float) $totals['mobile_sales_total'],

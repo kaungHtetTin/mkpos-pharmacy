@@ -47,7 +47,8 @@ export default function AmountReceivable({
     auth,
     branches = [],
     filters = {},
-    paymentMethods = ['Cash', 'Card', 'Mobile', 'Wallet'],
+    paymentMethods = ['Cash', 'Banking'],
+    historicalPaymentMethods = paymentMethods,
     summary = {},
     sales = {},
 }) {
@@ -137,7 +138,7 @@ export default function AmountReceivable({
         reset();
         setReceiveData({
             amount: Number(sale.receivable_amount || 0).toFixed(2),
-            payment_method: sale.payment_method || 'Cash',
+            payment_method: paymentMethods.includes(sale.payment_method) ? sale.payment_method : 'Cash',
         });
         setReceiveOpen(true);
     };
@@ -217,7 +218,7 @@ export default function AmountReceivable({
                             <InputLabel>{__('Method')}</InputLabel>
                             <Select value={paymentMethod} label={__('Method')} onChange={(event) => setPaymentMethod(event.target.value)}>
                                 <MenuItem value="all">{__('All methods')}</MenuItem>
-                                {paymentMethods.map((method) => (
+                                {historicalPaymentMethods.map((method) => (
                                     <MenuItem key={method} value={method}>{__(method)}</MenuItem>
                                 ))}
                             </Select>

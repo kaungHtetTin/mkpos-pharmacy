@@ -85,12 +85,12 @@ class CustomerCreditTest extends TestCase
         $this->assertEquals(60, Customer::withCreditSummary()->findOrFail($this->customer->id)->current_balance);
     }
 
-    public function test_non_cash_credit_records_upfront_payment_and_paid_card_records_full_total(): void
+    public function test_non_cash_credit_records_upfront_payment_and_paid_banking_records_full_total(): void
     {
-        $this->post('/pos/checkout', $this->payload(['payment_method' => 'Card', 'amount_received' => 25]))
+        $this->post('/pos/checkout', $this->payload(['payment_method' => 'Banking', 'amount_received' => 25]))
             ->assertRedirect()->assertSessionHasNoErrors();
         $this->assertEquals(25, Sale::firstOrFail()->amount_received);
-        $this->post('/pos/checkout', $this->payload(['payment_method' => 'Card', 'payment_status' => 'Paid']))
+        $this->post('/pos/checkout', $this->payload(['payment_method' => 'Banking', 'payment_status' => 'Paid']))
             ->assertRedirect()->assertSessionHasNoErrors();
         $paid = Sale::where('payment_status', 'Paid')->firstOrFail();
         $this->assertEquals(100, $paid->amount_received);

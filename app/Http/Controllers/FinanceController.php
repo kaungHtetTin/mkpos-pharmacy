@@ -225,7 +225,7 @@ class FinanceController extends Controller
             }
         }
 
-        if (in_array($filters['payment_method'], ['Cash', 'Card', 'Mobile', 'Wallet'], true)) {
+        if ($filters['payment_method'] !== 'all' && $filters['payment_method'] !== '') {
             $baseQuery->where('sales.payment_method', $filters['payment_method']);
         }
 
@@ -314,7 +314,8 @@ class FinanceController extends Controller
             'filters' => array_merge($filters, [
                 'branch_id' => $branchScope['all'] ? 'all' : $branchScope['branch_id'],
             ]),
-            'paymentMethods' => ['Cash', 'Card', 'Mobile', 'Wallet'],
+            'paymentMethods' => \App\Services\BusinessPaymentMethods::active(),
+            'historicalPaymentMethods' => \App\Services\BusinessPaymentMethods::history(),
             'summary' => $summary,
             'sales' => $sales,
         ]);
@@ -324,7 +325,7 @@ class FinanceController extends Controller
     {
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01|max:999999999999.99',
-            'payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
+            'payment_method' => \App\Services\BusinessPaymentMethods::validation(),
         ]);
 
         $user = $request->user();

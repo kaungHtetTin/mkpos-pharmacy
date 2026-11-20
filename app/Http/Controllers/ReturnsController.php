@@ -99,6 +99,7 @@ class ReturnsController extends Controller
             'branches' => $branches,
             'filters' => $request->only(['type', 'status', 'branch_id']),
             'settlementSummary' => $settlementSummary,
+            'paymentMethods' => \App\Services\BusinessPaymentMethods::active(),
         ]);
     }
 
@@ -255,7 +256,7 @@ class ReturnsController extends Controller
             'items.*.quantity' => 'required|numeric|min:0|max:999999.99',
             'items.*.foc_quantity' => 'nullable|numeric|min:0|max:999999.99',
             'items.*.restock' => 'nullable|boolean',
-            'payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
+            'payment_method' => \App\Services\BusinessPaymentMethods::validation(),
             'payment_reference' => 'nullable|string|max:255',
         ]);
 
@@ -283,7 +284,7 @@ class ReturnsController extends Controller
     {
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01|max:999999999999.99',
-            'payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
+            'payment_method' => \App\Services\BusinessPaymentMethods::validation(),
             'reference_number' => 'required_unless:payment_method,Cash|nullable|string|max:255',
             'notes' => 'nullable|string|max:2000',
         ]);

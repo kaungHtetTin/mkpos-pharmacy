@@ -42,7 +42,7 @@ import {
     Search as SearchIcon,
 } from '@mui/icons-material';
 
-export default function ReturnsIndex({ auth, returns, branches, filters, settlementSummary }) {
+export default function ReturnsIndex({ auth, returns, branches, filters, settlementSummary, paymentMethods = ['Cash', 'Banking'] }) {
     const [open, setOpen] = useState(false);
     const [lookupLoading, setLookupLoading] = useState(false);
     const [lookupError, setLookupError] = useState('');
@@ -199,7 +199,7 @@ export default function ReturnsIndex({ auth, returns, branches, filters, settlem
             setData((current) => ({
                 ...current,
                 reference_id: payload.id,
-                payment_method: data.type === 'Customer' && ['Cash', 'Card', 'Mobile', 'Wallet'].includes(payload.payment_method)
+                payment_method: data.type === 'Customer' && paymentMethods.includes(payload.payment_method)
                     ? payload.payment_method
                     : current.payment_method,
                 payment_reference: '',
@@ -465,7 +465,7 @@ export default function ReturnsIndex({ auth, returns, branches, filters, settlem
                                         <FormControl fullWidth size="small" error={!!errors.payment_method}>
                                             <InputLabel>Refund method</InputLabel>
                                             <Select value={data.payment_method} label="Refund method" onChange={(e) => setData('payment_method', e.target.value)}>
-                                                {['Cash', 'Card', 'Mobile', 'Wallet'].map((method) => <MenuItem key={method} value={method}>{method}</MenuItem>)}
+                                                {paymentMethods.map((method) => <MenuItem key={method} value={method}>{method}</MenuItem>)}
                                             </Select>
                                         </FormControl>
                                         {data.payment_method !== 'Cash' && <TextField size="small" label="Payment reference" value={data.payment_reference} onChange={(e) => setData('payment_reference', e.target.value)} error={!!errors.payment_reference} helperText={errors.payment_reference} required fullWidth />}
@@ -704,7 +704,7 @@ export default function ReturnsIndex({ auth, returns, branches, filters, settlem
                         <Alert severity="info">Record this only after the payment has actually occurred. Cash payments require an open shift at this branch.</Alert>
                         <Typography variant="body2">Remaining: {(Number(selectedReturn?.settlement_due || 0) - Number(selectedReturn?.settlement_paid || 0)).toFixed(2)}</Typography>
                         <TextField label="Amount" type="number" value={settlementAmount} onChange={(e) => setSettlementAmount(e.target.value)} inputProps={{ min: 0.01, max: Number(selectedReturn?.settlement_due || 0) - Number(selectedReturn?.settlement_paid || 0), step: 0.01 }} fullWidth required />
-                        <FormControl fullWidth><InputLabel>Payment method</InputLabel><Select value={settlementMethod} label="Payment method" onChange={(e) => setSettlementMethod(e.target.value)}>{['Cash', 'Card', 'Mobile', 'Wallet'].map((method) => <MenuItem key={method} value={method}>{method}</MenuItem>)}</Select></FormControl>
+                        <FormControl fullWidth><InputLabel>Payment method</InputLabel><Select value={settlementMethod} label="Payment method" onChange={(e) => setSettlementMethod(e.target.value)}>{paymentMethods.map((method) => <MenuItem key={method} value={method}>{method}</MenuItem>)}</Select></FormControl>
                         <TextField label="Payment reference" value={settlementReference} onChange={(e) => setSettlementReference(e.target.value)} required={settlementMethod !== 'Cash'} fullWidth />
                     </Stack>
                 </DialogContent>

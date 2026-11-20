@@ -1562,6 +1562,9 @@ class ReportsController extends Controller
             ->withSum(['sales as cash_sales_total' => function ($q) {
                 $q->where('status', '!=', 'Voided')->where('payment_method', 'Cash');
             }], 'grand_total')
+            ->withSum(['sales as non_cash_sales_total' => function ($q) {
+                $q->where('status', '!=', 'Voided')->where('payment_method', '!=', 'Cash');
+            }], 'grand_total')
             ->withSum(['sales as card_sales_total' => function ($q) {
                 $q->where('status', '!=', 'Voided')->where('payment_method', 'Card');
             }], 'grand_total')
@@ -1607,6 +1610,7 @@ class ReportsController extends Controller
                     'cash_return_paid' => $returnPaid,
                     'net_cash_sales' => $netCash,
                     'cash_sales_total' => (float) ($session->cash_sales_total ?? 0),
+                    'non_cash_sales_total' => (float) ($session->non_cash_sales_total ?? 0),
                     'card_sales_total' => (float) ($session->card_sales_total ?? 0),
                     'mobile_sales_total' => (float) ($session->mobile_sales_total ?? 0),
                     'wallet_sales_total' => (float) ($session->wallet_sales_total ?? 0),
@@ -1638,6 +1642,7 @@ class ReportsController extends Controller
             ->selectRaw('COUNT(*) as sale_count')
             ->selectRaw('COALESCE(SUM(grand_total), 0) as total_sales')
             ->selectRaw('COALESCE(SUM(CASE WHEN payment_method = "Cash" THEN grand_total ELSE 0 END), 0) as cash_sales_total')
+            ->selectRaw('COALESCE(SUM(CASE WHEN payment_method != "Cash" THEN grand_total ELSE 0 END), 0) as non_cash_sales_total')
             ->selectRaw('COALESCE(SUM(CASE WHEN payment_method = "Card" THEN grand_total ELSE 0 END), 0) as card_sales_total')
             ->selectRaw('COALESCE(SUM(CASE WHEN payment_method = "Mobile" THEN grand_total ELSE 0 END), 0) as mobile_sales_total')
             ->selectRaw('COALESCE(SUM(CASE WHEN payment_method = "Wallet" THEN grand_total ELSE 0 END), 0) as wallet_sales_total')
@@ -1706,6 +1711,7 @@ class ReportsController extends Controller
             ->get();
 
         return Spa::render('Reports/CashSessions', [
+            'paymentBreakdown' => Sale::query()->whereIn('cash_session_id', (clone $baseQuery)->select('cash_sessions.id'))->where('status', '!=', 'Voided')->selectRaw('payment_method, SUM(grand_total) as total')->groupBy('payment_method')->pluck('total', 'payment_method'),
             'branches' => $branches,
             'filters' => [
                 'branch_id' => $branchScope['mode'] === 'all' ? 'all' : $branchScope['branch_id'],
@@ -1720,6 +1726,7 @@ class ReportsController extends Controller
                 'opening_amount_total' => (float) ($summary?->opening_amount_total ?? 0),
                 'sale_count' => (int) ($paymentSummary?->sale_count ?? 0),
                 'cash_sales_total' => (float) ($paymentSummary?->cash_sales_total ?? 0),
+                'non_cash_sales_total' => (float) ($paymentSummary?->non_cash_sales_total ?? 0),
                 'card_sales_total' => (float) ($paymentSummary?->card_sales_total ?? 0),
                 'mobile_sales_total' => (float) ($paymentSummary?->mobile_sales_total ?? 0),
                 'wallet_sales_total' => (float) ($paymentSummary?->wallet_sales_total ?? 0),

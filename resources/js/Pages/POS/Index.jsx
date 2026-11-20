@@ -2231,6 +2231,7 @@ export default function PosIndex({
                                     exclusive
                                     fullWidth
                                     value={data.payment_method}
+                                    sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1, '& .MuiToggleButton-root': { minHeight: 44, minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: '6px !important', overflowWrap: 'anywhere' } }}
                                     onChange={(e, next) => {
                                         if (next) setData('payment_method', next);
                                     }}
@@ -2369,12 +2370,7 @@ export default function PosIndex({
                                         {__('Sales by payment method')}
                                     </Typography>
                                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.75 }}>
-                                        {[
-                                            [__('Cash'), activeSession?.cash_sales_total],
-                                            [__('Card'), activeSession?.card_sales_total],
-                                            [__('Mobile'), activeSession?.mobile_sales_total],
-                                            [__('Wallet'), activeSession?.wallet_sales_total],
-                                        ].map(([label, value]) => (
+                                        {Object.entries(activeSession?.payment_totals || { Cash: activeSession?.cash_sales_total, Banking: 0 }).map(([label, value]) => (
                                             <Paper key={label} variant="outlined" sx={{ p: 1 }}>
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{label}</Typography>
                                                 <Typography variant="body2" sx={{ fontWeight: 800 }}>{currencySymbol}{Number(value || 0).toFixed(2)}</Typography>
@@ -2569,6 +2565,7 @@ export default function PosIndex({
                                     exclusive
                                     fullWidth
                                     value={data.payment_method}
+                                    sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1, '& .MuiToggleButton-root': { minHeight: 44, minWidth: 0, border: '1px solid', borderColor: 'divider', borderRadius: '6px !important', overflowWrap: 'anywhere' } }}
                                     onChange={(e, next) => {
                                         if (next) setData('payment_method', next);
                                     }}

@@ -5,6 +5,33 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Business payment methods — 20 November 2026
+
+Settings → Payment Methods manages each business’s custom names and availability.
+Cash and Banking are permanent defaults; additional names are non-cash methods.
+Settings → POS & Branch Devices can select any active method as the default.
+Renaming or disabling a method preserves names already recorded on sales,
+customer repayments and refunds. Disabling a selected default falls back to Cash.
+
+Owner desktop/mobile checkout, cashier checkout, offline sync, customer collections
+and return settlements validate against the current business’s active list.
+Unsynced sales using a disabled method remain rejected for review rather than
+silently changing their payment method; retries for already-synced sales remain
+idempotent. Cash drawer calculations continue to count only Cash. Shift summaries
+show actual recorded method names, and financial reports include all non-cash
+methods plus historical names in receivable filters. Supplier purchase payments
+and platform subscription payment destinations are unchanged.
+
+Migration 2026_11_20_000004 widens payment_method in sales, customer_payments and
+return_settlements to VARCHAR(60); it does not rewrite existing payment names or
+amounts. Definitions use business-scoped settings. Rollback can restore previous
+source/manifests while retaining the compatible widened columns. The cashier
+worker uses cashier-shell-v8, retaining business-scoped local queues and caches.
+
+Validation: 322 backend tests / 2,196 assertions; phone and desktop Settings/POS
+checks and a synthetic offline cashier queue scenario; five existing responsive
+mobile POS scenarios. Live deployment verification will be recorded after publishing.
+
 ## Mobile business-owner POS flow — 20 November 2026
 
 Frontend patch `5289eb4` is live. Phones and tablets below the desktop breakpoint

@@ -328,6 +328,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index')->middleware('permission:manage_settings');
         Route::get('/manual', [ManualController::class, 'index'])->name('manual.index');
+        Route::patch('/settings/payment-methods', [SettingsController::class, 'updatePaymentMethods'])->name('settings.payment-methods.update')->middleware('permission:manage_settings');
         Route::patch('/settings/pos-behavior', [SettingsController::class, 'updatePosBehavior'])->name('settings.pos-behavior.update')->middleware('permission:manage_settings');
         Route::patch('/settings/branch-preferences', [SettingsController::class, 'updateBranchPreferences'])->name('settings.branch-preferences.update')->middleware('permission:manage_settings');
         Route::post('/settings/general', [SettingsController::class, 'updateGeneral'])->name('settings.general.update')->middleware('permission:manage_settings');

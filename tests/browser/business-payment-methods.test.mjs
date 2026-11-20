@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import { chromium } from 'playwright-core';
+const { POS_BASE_URL: base, POS_TEST_EMAIL: email, POS_TEST_PASSWORD: password, POS_SCREENSHOT_DIR: screenshots } = process.env;
+const enabled = base && email && password;
+const medicine={id:'qa-payment-product',name:'QA Payment Medicine',generic_name:'Checkout test',stock_quantity:20,discount_percentage:0,total_tax_rate:0,tax_method:'Exclusive',units:[{id:'qa-pu',unit_id:'qa-unit',name:'Piece',short_name:'pcs',unit_name:'Piece',unit_short_name:'pcs',conversion_factor:1,is_base_unit:true,is_default_selling_unit:true,selling_price:100,wholesale_price:80}]};
+for(const width of [390,1440]) {
+ test(`business payment configuration and checkout ${width}px`,{skip:!enabled,timeout:90000},async()=>{
+  const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
+  const page=await browser.newPage({viewport:{width,height:900},serviceWorkers:'block'});page.setDefaultTimeout(15000);
+  const runtimeErrors=[];page.on('pageerror',e=>runtimeErrors.push(e.message));let rows=[],configurationWrites=0,otherWrites=0;
+  try {
+   await page.goto(base+'/login');await page.getByLabel('Email',{exact:true}).fill(email);await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Log in',exact:true}).click();await page.waitForURL('**/dashboard');
+   const fixture=async(path,modify)=>{const response=await page.goto(base+path),html=await response.text(),pattern=/(<script id="spa-page" type="application\/json">)([\s\S]*?)(<\/script>)/,match=html.match(pattern);assert(match);const data=JSON.parse(match[2]);modify(data.props);const pathname=new URL(base+path).pathname;await page.route(u=>u.pathname===pathname,async r=>{if(r.request().method()!=='GET')return r.continue();return r.fulfill(r.request().headers()['x-spa']==='true'?{json:data}:{contentType:'text/html',body:html.replace(pattern,(_,a,c,d)=>a+JSON.stringify(data).replaceAll('<','\\u003c')+d)});});await page.goto(base+path);return data;};
+   const settings=await fixture('/settings?section=payments',p=>{p.initial_section='payments';p.custom_payment_methods=[];p.paymentMethods=['Cash','Banking'];});
+   await page.route('**/settings/payment-methods',async r=>{configurationWrites++;const match=r.request().postData().match(/name="methods"\r\n\r\n([\s\S]*?)\r\n--/);assert(match,'Methods are serialized even for an empty list');rows=JSON.parse(match[1]);const response=structuredClone(settings);response.props.custom_payment_methods=rows;response.props.paymentMethods=['Cash','Banking',...rows.filter(m=>m.is_active).map(m=>m.name)];await r.fulfill({json:response});});
+   // Any unrelated writes are blocked, including actual sales.
+   await page.route('**/pos/checkout',async r=>{otherWrites++;await r.abort();});
+   await page.getByRole('button',{name:'Add payment method',exact:true}).click();await page.getByLabel('Payment method 1',{exact:true}).fill('KBZ Pay');await page.getByRole('button',{name:'Save Payment Methods',exact:true}).click();await page.getByRole('button',{name:'Save Payment Methods',exact:true}).waitFor();await page.waitForFunction(()=>![...document.querySelectorAll('button')].some(e=>e.textContent==='Saving…'));
+   assert.equal(rows[0].name,'KBZ Pay');assert(await page.getByRole('button',{name:'Save Payment Methods',exact:true}).isDisabled(),'Saved settings are clean');
+   await page.getByRole('button',{name:'Add payment method',exact:true}).click();await page.getByLabel('Payment method 2',{exact:true}).fill('Wave Pay');if(width<981)await page.getByRole('button',{name:'More page actions',exact:true}).click();await page.getByRole('button',{name:'Discard',exact:true}).click();if(width<981)await page.keyboard.press('Escape');assert.equal(await page.getByLabel('Payment method 2',{exact:true}).count(),0,'Discard restores the last saved methods');
+   if(screenshots){await fs.mkdir(screenshots,{recursive:true});await page.screenshot({path:`${screenshots}/payment-settings-${width}.png`,fullPage:true});}
+   await page.route('**/pos/catalog*',r=>r.fulfill({json:{data:[medicine],meta:{current_page:1,last_page:1,total:1}}}));await page.route('**/pos/products*',r=>r.fulfill({json:[medicine]}));
+   await fixture('/pos',p=>{p.paymentMethods=['Cash','Banking','KBZ Pay'];p.activeSession={id:'qa-session',opening_amount:0,opened_at:new Date().toISOString()};p.posDefaults={...p.posDefaults,default_view:'grid',barcode_focus:false,auto_print_receipt:false};});
+   if(width<981){await page.getByRole('button',{name:'Add QA Payment Medicine',exact:true}).click();await page.getByRole('button',{name:'Review cart',exact:true}).click();await page.getByRole('button',{name:/Continue to payment/}).click();await page.getByRole('button',{name:'Banking',exact:true}).click();await page.getByRole('button',{name:'KBZ Pay',exact:true}).click();assert.equal(await page.getByLabel('Cash received',{exact:true}).count(),0);assert(await page.getByRole('button',{name:/Complete sale/}).isEnabled());}
+   else {await page.getByText('QA Payment Medicine',{exact:true}).click();await page.getByRole('button',{name:'Checkout',exact:true}).click();const dialog=page.getByRole('dialog',{name:'Payment',exact:true});await dialog.getByRole('button',{name:'KBZ Pay',exact:true}).click();assert.equal(await dialog.getByLabel('Cash received',{exact:true}).count(),0);assert(await dialog.getByRole('button',{name:'Complete Sale',exact:true}).isEnabled());}
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.equal(configurationWrites,1);assert.equal(otherWrites,0);assert.deepEqual(runtimeErrors,[]);
+   if(screenshots)await page.screenshot({path:`${screenshots}/custom-payment-checkout-${width}.png`});
+  } catch(error) { console.error(width,error.message); if(screenshots){await fs.mkdir(screenshots,{recursive:true});await page.screenshot({path:`${screenshots}/failure-${width}.png`,fullPage:true}).catch(()=>{});} throw error; } finally {await browser.close();}
+ });
+}
+
+test('cashier custom payment methods remain available offline and queue their selected name',{skip:!enabled,timeout:60000},async()=>{
+ const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
+ const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'allow'});page.setDefaultTimeout(15000);
+ const profile={id:'qa-payment-user',business_id:'qa-payment-business',current_branch_id:'qa-payment-branch',name:'QA Cashier',business:{id:'qa-payment-business',name:'QA Pharmacy'},subscription:{access_until:'2099-01-01',plan:{features:{cashier:true,offline_sync:true}}}};
+ let writes=0,offline=false;const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ try {
+  await page.addInitScript(profile=>{localStorage.setItem('pharmacy.cashier.token','qa-fixture-token');localStorage.setItem('pharmacy.cashier.profile',JSON.stringify(profile));},profile);
+  await page.route('**/api/**',async r=>{if(offline)return r.abort('internetdisconnected');const path=new URL(r.request().url()).pathname;if(r.request().method()!=='GET'){writes++;return r.fulfill({status:422,json:{message:'QA: operational writes blocked'}});}let json={};if(path.endsWith('/account/profile'))json=profile;else if(path.endsWith('/user/access'))json={permission_slugs:['process_sale']};else if(path.endsWith('/cashier/products'))json=[medicine];else if(path.endsWith('/cashier/sessions/active'))json={id:'qa-session',opened_at:'2026-11-20T00:00:00Z',total_sales:0};else if(path.endsWith('/cashier/receipt-settings'))json={pharmacy_name:'QA Pharmacy',currency_symbol:'MMK',payment_methods:['Cash','Banking','KBZ Pay'],default_payment_method:'Banking'};else if(path.endsWith('/cashier/customers'))json=[];await r.fulfill({json});});
+  await page.goto(base+'/cashier/');await page.locator('.product-card__main').click();await page.evaluate(()=>navigator.serviceWorker.ready);await page.reload();await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));offline=true;await page.context().setOffline(true);await page.reload();await page.getByRole('button',{name:/View cart with/}).click();await page.getByRole('button',{name:'Checkout',exact:true}).click();await page.getByRole('button',{name:'Banking',exact:true}).waitFor();assert((await page.getByRole('button',{name:'Banking',exact:true}).getAttribute('class')).includes('active'),'The business default is cached');await page.getByRole('button',{name:'KBZ Pay',exact:true}).click();await page.getByRole('button',{name:'Save offline',exact:true}).click();
+  await page.waitForFunction(()=>Object.keys(localStorage).some(key=>key.endsWith('.pending-sales')&&JSON.parse(localStorage.getItem(key)||'[]').length===1));const method=await page.evaluate(()=>{const key=Object.keys(localStorage).find(key=>key.endsWith('.pending-sales'));return JSON.parse(localStorage.getItem(key))[0].payment_method;});assert.equal(method,'KBZ Pay');assert.equal(writes,0);assert.deepEqual(errors,[]);
+  if(screenshots){await fs.mkdir(screenshots,{recursive:true});await page.screenshot({path:`${screenshots}/cashier-payment-offline.png`});}
+ }finally{await browser.close();}
+});

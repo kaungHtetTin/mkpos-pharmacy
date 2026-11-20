@@ -16,7 +16,7 @@ class SettingsController extends Controller
 
         $posBehavior = [
             'default_view' => Setting::get('pos.default_view', 'table'),
-            'default_payment_method' => Setting::get('pos.default_payment_method', 'Cash'),
+            'default_payment_method' => \App\Services\BusinessPaymentMethods::default(),
             'barcode_focus' => Setting::get('pos.barcode_focus', '1') === '1',
             'show_generic_first' => Setting::get('pos.show_generic_first', '0') === '1',
         ];
@@ -75,6 +75,8 @@ class SettingsController extends Controller
             'pricing_rules' => \App\Models\PricingRule::orderBy('sort_order')->orderBy('name')->get(),
             'price_changes' => \App\Tenancy\BusinessQuery::table('price_changes')->orderByDesc('id')->limit(30)->get(),
             'pos_behavior' => $posBehavior,
+            'paymentMethods' => \App\Services\BusinessPaymentMethods::active(),
+            'custom_payment_methods' => \App\Services\BusinessPaymentMethods::custom(),
             'branch_preferences' => $branchPreferences,
             'active_branch' => request()->user()->activeBranch()->select('id', 'name')->first()
                 ?? request()->user()->branch()->select('id', 'name')->first(),
@@ -154,7 +156,7 @@ class SettingsController extends Controller
     {
         $validated = $request->validate([
             'default_view' => 'required|in:table,grid',
-            'default_payment_method' => 'required|in:Cash,Card,Mobile,Wallet',
+            'default_payment_method' => \App\Services\BusinessPaymentMethods::validation(),
             'barcode_focus' => 'required|boolean',
             'show_generic_first' => 'required|boolean',
         ]);
@@ -165,6 +167,29 @@ class SettingsController extends Controller
         Setting::set('pos.show_generic_first', $validated['show_generic_first'] ? '1' : '0');
 
         return redirect()->back()->with('success', 'POS behavior settings updated successfully.');
+    }
+
+    public function updatePaymentMethods(Request $request)
+    {
+        $rows = $request->input('methods');
+        if (is_string($rows)) $rows = json_decode($rows, true) ?? $rows;
+        if (is_array($rows)) {
+            $request->merge(['methods' => array_map(fn ($row) => is_array($row)
+                ? [...$row, 'name' => is_string($row['name'] ?? null) ? trim($row['name']) : ($row['name'] ?? null)] : $row, $rows)]);
+        }
+        $validated = $request->validate([
+            'methods' => 'present|array|list|max:30',
+            'methods.*' => 'required|array:name,is_active',
+            'methods.*.name' => ['bail', 'required', 'string', 'max:60', 'distinct:ignore_case', 'not_regex:/[\x00-\x1F\x7F]/', function ($attribute, $value, $fail) {
+                if (in_array(mb_strtolower($value), ['cash', 'banking'], true)) $fail('Cash and Banking are permanent defaults. Use another name.');
+            }],
+            'methods.*.is_active' => 'required|boolean',
+        ]);
+        Setting::set('pos.payment_methods', json_encode(array_map(fn ($row) => ['name' => $row['name'], 'is_active' => (bool) $row['is_active']], $validated['methods']), JSON_UNESCAPED_UNICODE));
+        if (!in_array(Setting::get('pos.default_payment_method', 'Cash'), \App\Services\BusinessPaymentMethods::active(), true)) {
+            Setting::set('pos.default_payment_method', 'Cash');
+        }
+        return redirect()->back()->with('success', 'Business payment methods updated.');
     }
 
     public function updateBranchPreferences(Request $request)
