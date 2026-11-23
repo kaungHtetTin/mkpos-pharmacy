@@ -92,6 +92,7 @@ export default function PosIndex({
     const [searchLoading, setSearchLoading] = useState(false);
     const [cameraLookupLoading, setCameraLookupLoading] = useState(false);
     const cameraLookupRef = useRef(null);
+    const addProductRef = useRef(null);
     const [scanError, setScanError] = useState('');
     const [resultsView, setResultsView] = useState(behavior.default_view === 'grid' ? 'grid' : 'table');
     const [catalogCategories, setCatalogCategories] = useState([]);
@@ -475,7 +476,7 @@ export default function PosIndex({
         return () => { active = false; observer.disconnect(); };
     }, [catalogPage, catalogHasMore, catalogLoading, catalogError, searchQuery, selectedCategoryId, resultsView, isSmallScreen, mobileStep]);
 
-    useEffect(() => () => cameraLookupRef.current?.abort(), [branchId]);
+    useEffect(() => () => cameraLookupRef.current?.abort(), [branchId, mobileStep, isSmallScreen]);
 
     const handleBarcodeScan = async (barcode, options = {}) => {
         setScanError('');
@@ -487,7 +488,7 @@ export default function PosIndex({
             }
             const product = await response.json();
             if (options.signal?.aborted) return null;
-            return addProductToCart(product) ? getProductDisplayName(product) : null;
+            return addProductRef.current(product) ? getProductDisplayName(product) : null;
         } catch (error) {
             if (error.name !== 'AbortError') setScanError(`${__('Barcode scan failed')}: ${barcode}`);
             return null;
@@ -565,6 +566,8 @@ export default function PosIndex({
         });
         return true;
     };
+
+    addProductRef.current = addProductToCart;
 
     const updateCartLine = (id, patch) => {
         setCart((prev) =>

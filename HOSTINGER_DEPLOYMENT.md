@@ -14,6 +14,8 @@ supported, with a dynamically loaded @zxing/browser decoder otherwise. Recognize
 codes close the camera and call the existing branch/business-scoped /pos/scan
 lookup, adding the medicine once without changing catalog search or category.
 Success, unknown-code, stock and permission feedback keep the current cart intact.
+Cart navigation waits for an in-flight camera lookup. The add callback uses the
+latest cart and price type, and changing step/branch cancels a pending lookup.
 Known aggregate stock limits apply before adding another selling unit.
 
 Camera tracks stop on close, recognition, unmount or page backgrounding. Late
@@ -21,10 +23,10 @@ permission grants after dismissal are stopped immediately. Permission errors,
 busy/missing cameras and unsupported/insecure contexts offer retry/manual search.
 The camera action is absent from the desktop layout. Images are not uploaded.
 
-Both production builds pass. Five scanner browser scenarios cover native decode,
+Both production builds pass. Six scanner browser scenarios cover native decode,
 real EAN-13 decoding from a generated camera stream without BarcodeDetector,
 permission denial/retry, close/late-grant cleanup, manual fallback, unknown codes,
-stock limits, single-add behavior and desktop exclusion. Five existing responsive
+stock limits, single-add behavior, desktop exclusion and slow-lookup price changes. Five existing responsive
 POS workflow scenarios pass. Laravel backend, database schema, cashier PWA assets
 and its worker are unchanged. Live verification will be recorded after publishing.
 
