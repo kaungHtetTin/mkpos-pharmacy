@@ -25,6 +25,7 @@
         "@emotion/styled": "^11.14.1",
         "@mui/icons-material": "^7.3.9",
         "@mui/material": "^7.3.9",
+        "@zxing/browser": "^0.2.1",
         "recharts": "^3.8.0"
     }
 }

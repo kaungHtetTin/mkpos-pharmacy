@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Autocomplete, Box, Button, Chip, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, InputAdornment, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
-import { Add, ArrowBack, CheckCircleOutline, Close, ExpandMore, PrintOutlined, Remove, Search, ShoppingCartOutlined } from '@mui/icons-material';
+import { Add, ArrowBack, CheckCircleOutline, Close, ExpandMore, PrintOutlined, Remove, Search, ShoppingCartOutlined, PhotoCameraOutlined } from '@mui/icons-material';
+import CameraBarcodeScanner from './CameraBarcodeScanner';
 import { unitPrice, priceTypeName } from '@/Utils/priceTypes';
 
 const panel = { p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper' };
@@ -9,6 +10,8 @@ export default function MobilePosWorkspace({ step, onStep, catalog, order, payme
     const [units, setUnits] = useState({});
     const [expanded, setExpanded] = useState(null);
     const [pendingType, setPendingType] = useState(null);
+    const [cameraOpen, setCameraOpen] = useState(false);
+    const [scanNotice, setScanNotice] = useState('');
     const [clearOpen, setClearOpen] = useState(false);
     const headingRef = useRef(null);
     const money = (amount) => `${currency}${Number(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -54,6 +57,7 @@ export default function MobilePosWorkspace({ step, onStep, catalog, order, payme
     </Stack>;
 
     return <Box data-mobile-pos sx={{ px: 1.25, pt: 1.25, pb: 'calc(104px + env(safe-area-inset-bottom, 0px))', minWidth: 0, '& .MuiButton-root': { minHeight: 44 }, '& .MuiIconButton-root': { minWidth: 44, minHeight: 44 }, '& .MuiOutlinedInput-root': { minHeight: 44 } }}>
+        {scanNotice && step === 'products' && <Alert severity="success" onClose={() => setScanNotice('')} sx={{ mb: 1.25 }}>{scanNotice}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 1.25 }}>{error}</Alert>}
         {Object.values(errors).flat().length > 0 && <Alert severity="error" sx={{ mb: 1.25 }}>{[...new Set(Object.values(errors).flat())].join(' ')}</Alert>}
         {step !== 'complete' && <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.25 }}>
@@ -64,7 +68,7 @@ export default function MobilePosWorkspace({ step, onStep, catalog, order, payme
 
         {step === 'products' && <>
             <Box sx={{ position: 'sticky', top: 'var(--mkpos-appbar-height, 48px)', zIndex: 4, bgcolor: 'background.default', pb: 1.25, pt: 0.5 }}>
-                <TextField fullWidth inputRef={catalog.searchRef} placeholder="Search medicine or scan barcode" value={catalog.query} onChange={(e) => catalog.onQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); catalog.onScan(); } }} InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>, endAdornment: catalog.query && <InputAdornment position="end"><IconButton aria-label="Clear product search" onClick={() => catalog.onQuery('')}><Close fontSize="small" /></IconButton></InputAdornment> }} inputProps={{ 'aria-label': 'Search products' }} />
+                <TextField fullWidth inputRef={catalog.searchRef} placeholder="Search medicine or scan barcode" value={catalog.query} onChange={(e) => catalog.onQuery(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); catalog.onScan(); } }} InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>, endAdornment: <InputAdornment position="end">{catalog.query && <IconButton aria-label="Clear product search" onClick={() => catalog.onQuery('')}><Close fontSize="small" /></IconButton>}<IconButton aria-label="Scan barcode with camera" disabled={catalog.cameraLoading} onClick={() => { setScanNotice(''); setCameraOpen(true); }}><PhotoCameraOutlined fontSize="small" /></IconButton></InputAdornment> }} inputProps={{ 'aria-label': 'Search products' }} />
                 <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                     <TextField select fullWidth size="small" label="Price type" value={order.priceType} onChange={(e) => selectType(e.target.value)}>{order.types.map((type) => <MenuItem key={type.code} value={type.code}>{type.name}</MenuItem>)}</TextField>
                     <TextField select fullWidth size="small" label="Category" value={catalog.category} onChange={(e) => catalog.onCategory(e.target.value)}><MenuItem value="">All categories</MenuItem>{catalog.categories.map((category) => <MenuItem key={category.id} value={String(category.id)}>{category.name}</MenuItem>)}</TextField>
@@ -152,6 +156,7 @@ export default function MobilePosWorkspace({ step, onStep, catalog, order, payme
             {step !== 'products' && <IconButton aria-label={step === 'cart' ? 'Back to products' : 'Back to cart'} disabled={processing} onClick={() => go(step === 'cart' ? 'products' : 'cart')}><ArrowBack /></IconButton>}
             {step === 'products' ? <><Box aria-live="polite" sx={{ flex: 1, minWidth: 0 }}><Typography variant="caption" color="text.secondary">{count} units in cart</Typography><Typography variant="subtitle1" fontWeight={800}>{money(order.totals.grandTotal)}</Typography></Box><Button variant="contained" startIcon={<ShoppingCartOutlined />} onClick={() => go('cart')}>Review cart</Button></> : step === 'cart' ? <Button key="review-to-payment" type="button" variant="contained" fullWidth disabled={blocked} onClick={(event) => { event.preventDefault(); order.session ? go('checkout') : actions.shift(); }}>{order.session ? `Continue to payment · ${money(order.totals.grandTotal)}` : 'Start shift to continue'}</Button> : <Button key="confirm-payment" type="submit" form="mobile-pos-payment" variant="contained" fullWidth disabled={blocked || invalidCreditPayment || !order.session || (payment.paidCash && payment.shortage > 0)}>{processing ? 'Completing sale…' : `Complete sale · ${money(order.totals.grandTotal)}`}</Button>}
         </Paper>}
+        <CameraBarcodeScanner open={cameraOpen && step === 'products'} onClose={() => setCameraOpen(false)} onDetected={async (barcode) => { setCameraOpen(false); const name = await catalog.onCameraScan(barcode); if (name) setScanNotice(`${name} added to cart`); }} onManualSearch={() => window.setTimeout(() => catalog.searchRef.current?.focus(), 250)} />
         <Dialog open={Boolean(pendingType)} onClose={() => setPendingType(null)} maxWidth="xs" fullWidth><DialogTitle>Change price type?</DialogTitle><DialogContent>Apply {priceTypeName(pendingType,order.types)} prices to every item in this cart? Missing prices must be resolved before payment.</DialogContent><DialogActions><Button onClick={() => setPendingType(null)}>Cancel</Button><Button onClick={() => { actions.priceType(pendingType); setPendingType(null); }}>Apply prices</Button></DialogActions></Dialog>
         <Dialog open={clearOpen} onClose={() => setClearOpen(false)} maxWidth="xs" fullWidth><DialogTitle>Clear this cart?</DialogTitle><DialogContent>All items will be removed. No sale will be recorded.</DialogContent><DialogActions><Button onClick={() => setClearOpen(false)}>Keep cart</Button><Button color="error" onClick={() => { actions.clear(); setClearOpen(false); }}>Clear cart</Button></DialogActions></Dialog>
     </Box>;

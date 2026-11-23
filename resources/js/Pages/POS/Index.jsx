@@ -90,6 +90,8 @@ export default function PosIndex({
     const [searchResults, setSearchResults] = useState([]);
     const [cart, setCart] = useState([]);
     const [searchLoading, setSearchLoading] = useState(false);
+    const [cameraLookupLoading, setCameraLookupLoading] = useState(false);
+    const cameraLookupRef = useRef(null);
     const [scanError, setScanError] = useState('');
     const [resultsView, setResultsView] = useState(behavior.default_view === 'grid' ? 'grid' : 'table');
     const [catalogCategories, setCatalogCategories] = useState([]);
@@ -473,34 +475,53 @@ export default function PosIndex({
         return () => { active = false; observer.disconnect(); };
     }, [catalogPage, catalogHasMore, catalogLoading, catalogError, searchQuery, selectedCategoryId, resultsView, isSmallScreen, mobileStep]);
 
-    const handleBarcodeScan = async (barcode) => {
+    useEffect(() => () => cameraLookupRef.current?.abort(), [branchId]);
+
+    const handleBarcodeScan = async (barcode, options = {}) => {
         setScanError('');
         try {
-            const response = await fetch(route('pos.scan', { barcode }));
+            const response = await fetch(route('pos.scan', { barcode }), { signal: options.signal });
             if (!response.ok) {
-                setScanError(`${__('Barcode not found')}: ${barcode}`);
-                return;
+                setScanError(response.status === 404 ? `${__('Barcode not found')}: ${barcode}` : __('Barcode scan failed. Please try again.'));
+                return null;
             }
             const product = await response.json();
-            addProductToCart(product);
-        } catch {
-            setScanError(`${__('Barcode scan failed')}: ${barcode}`);
+            if (options.signal?.aborted) return null;
+            return addProductToCart(product) ? getProductDisplayName(product) : null;
+        } catch (error) {
+            if (error.name !== 'AbortError') setScanError(`${__('Barcode scan failed')}: ${barcode}`);
+            return null;
         }
+    };
+
+    const handleCameraScan = async (barcode) => {
+        cameraLookupRef.current?.abort();
+        const controller = new AbortController();
+        cameraLookupRef.current = controller;
+        setCameraLookupLoading(true);
+        try { return await handleBarcodeScan(barcode, { signal: controller.signal }); }
+        finally { if (cameraLookupRef.current === controller) setCameraLookupLoading(false); }
     };
 
     const addProductToCart = (product, chosenUnit = null) => {
         if (isOutOfStock(product)) {
             setScanError(`${product?.name || __('Product')}: ${__('Out of stock')}`);
-            return;
+            return false;
         }
 
         const units = product?.units || [];
         const preferredUnit = chosenUnit || units.find((u) => u.is_default_selling_unit) || units.find((u) => u.is_base_unit) || units[0];
 
-        if (preferredUnit && resolveUnitPrice(preferredUnit, salePriceType) === null) { setScanError('Price not set. Set this unit price or explicitly select Retail.'); return; }
+        if (preferredUnit && resolveUnitPrice(preferredUnit, salePriceType) === null) { setScanError('Price not set. Set this unit price or explicitly select Retail.'); return false; }
         if (!preferredUnit) {
             setScanError(__('Selected product has no units configured.'));
-            return;
+            return false;
+        }
+
+        const requested = cart.filter((line) => line.product_id === product.id).reduce((sum, line) => sum + resolveRequestedBaseQuantity(line), 0);
+        if (requested + Number(preferredUnit.conversion_factor || 1) > Number(product.stock_quantity || 0)) {
+            setScanError(`${product.name}: ${__('Cart quantity exceeds available stock.')}`);
+            return false;
         }
 
         setCart((prev) => {
@@ -542,6 +563,7 @@ export default function PosIndex({
                 },
             ];
         });
+        return true;
     };
 
     const updateCartLine = (id, patch) => {
@@ -1046,7 +1068,7 @@ export default function PosIndex({
                 {isSmallScreen ? <MobilePosWorkspace
                     step={mobileStep} onStep={setMobileStep} currency={currencySymbol} receipt={mobileReceipt}
                     error={scanError || displayError} processing={processing} errors={errors} creditDetails={creditDetails}
-                    catalog={{ products: searchResults, categories: catalogCategories, category: selectedCategoryId, onCategory: setSelectedCategoryId, query: searchQuery, onQuery: setSearchQuery, onScan: () => fetchSearch({ autoAddFromBarcode: true, clearInputAfterSearch: true }), searchRef: searchInputRef, endRef: catalogEndRef, loading: searchLoading || catalogLoading, error: catalogError || scanError, footer: catalogFooter, name: getProductDisplayName }}
+                    catalog={{ cameraLoading: cameraLookupLoading, onCameraScan: handleCameraScan, products: searchResults, categories: catalogCategories, category: selectedCategoryId, onCategory: setSelectedCategoryId, query: searchQuery, onQuery: setSearchQuery, onScan: () => fetchSearch({ autoAddFromBarcode: true, clearInputAfterSearch: true }), searchRef: searchInputRef, endRef: catalogEndRef, loading: searchLoading || catalogLoading, error: catalogError || scanError, footer: catalogFooter, name: getProductDisplayName }}
                     order={{ lines: cart, totals, priceType: salePriceType, types: priceTypes, session: hasActiveSession, stockIssue: hasStockIssue, requested: resolveRequestedBaseQuantity, lineTotal: resolveDiscountedLineTotal }}
                     payment={{ data, set: setData, methods: paymentMethods || [], customer: selectedCustomer, customers: customerOptions, customersLoading: customerLoading, customerQuery: customerSearchInput, onCustomerQuery: setCustomerSearchInput, onCustomer: (customer) => { setSelectedCustomer(customer); setCustomerSearchInput(customer?.name || ''); if (customer?.preferred_price_type && priceTypes.some((type) => type.code===customer.preferred_price_type)) changeSalePriceType(customer.preferred_price_type); }, paidCash: isPaidCashSale, shortage: cashShortageValue, change: changeDueValue }}
                     actions={{ add: addProductToCart, update: updateCartLine, remove: removeCartLine, clear: () => setCart([]), priceType: changeSalePriceType, shift: () => setShiftDialogOpen(true), newCustomer: openNewCustomer, submit, print: printSaleReceipt, newSale: () => { setMobileReceipt(null); changeSalePriceType('retail'); setMobileStep('products'); } }}
