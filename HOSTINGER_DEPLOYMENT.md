@@ -7,7 +7,8 @@ No Git push was needed for this archive deployment.
 
 ## Mobile POS camera barcode scanning — 24 November 2026
 
-The small-screen owner POS search field now includes a camera action. It requests
+Frontend patch `dd48a7f` is live. The small-screen owner POS search field now
+includes a camera action. It requests
 camera access only when opened, prefers the rear camera and processes frames on
 the device. Native BarcodeDetector is used when common linear formats are
 supported, with a dynamically loaded @zxing/browser decoder otherwise. Recognized
@@ -26,9 +27,13 @@ The camera action is absent from the desktop layout. Images are not uploaded.
 Both production builds pass. Six scanner browser scenarios cover native decode,
 real EAN-13 decoding from a generated camera stream without BarcodeDetector,
 permission denial/retry, close/late-grant cleanup, manual fallback, unknown codes,
-stock limits, single-add behavior, desktop exclusion and slow-lookup price changes. Five existing responsive
-POS workflow scenarios pass. Laravel backend, database schema, cashier PWA assets
-and its worker are unchanged. Live verification will be recorded after publishing.
+stock limits, single-add behavior, desktop exclusion and slow-lookup price changes.
+Five existing responsive POS workflow scenarios pass. Laravel backend, database schema, cashier PWA assets
+and its worker are unchanged. All six scanner scenarios also pass on the live
+site using simulated streams and intercepted lookups, including actual EAN-13
+decoding by the fallback library. The live Permissions-Policy permits same-origin
+camera access while denying microphone access. Encrypted/source backups are
+retained. No Git push was performed.
 
 ## Wider desktop POS cart — 24 November 2026
 
