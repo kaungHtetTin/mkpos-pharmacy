@@ -5,6 +5,27 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## POS selector retention after checkout — 24 November 2026
+
+Checkout no longer clears the table-view product results, search text or catalog
+pagination. The previous table-only reset emptied the selector and did not trigger
+another fetch when search/category values were unchanged. Confirmed sales now
+reset the cart and payment state while refreshing the current search or all
+loaded catalog pages in the background. Existing products remain visible during
+refresh and after refresh failures; Retry refreshes the loaded pages. Category
+and search selections are retained. An unconfirmed response keeps the cart open.
+
+The mobile Cart → Payment button is explicitly non-submit, cancels the click’s
+default action and has a different React key from Complete sale. This prevents
+React from reusing its DOM node as a submit control during the same click when
+Banking or another immediately payable method is selected.
+
+Both builds pass. Five targeted browser scenarios cover desktop table/grid,
+search/category retention, loaded-page retention, delayed/failed stock refresh,
+retry, unconfirmed checkout and mobile explicit-confirmation behavior. Laravel
+backend logic, database schema and cashier PWA assets are unchanged. Live
+verification will be recorded after deployment.
+
 ## Business payment methods — 20 November 2026
 
 Release `40fe59e` is live. Settings → Payment Methods manages each business’s

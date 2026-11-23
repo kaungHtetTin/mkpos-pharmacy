@@ -387,7 +387,7 @@ export default function PosIndex({
         }
     };
 
-    const fetchCatalog = async ({ categoryId, page, append }) => {
+    const fetchCatalog = async ({ categoryId, page, append, refreshLoaded = false }) => {
         if (append && catalogLoadingRef.current) return;
         const { controller, requestId } = startProductRequest();
         catalogLoadingRef.current = true;
@@ -396,18 +396,24 @@ export default function PosIndex({
         setCatalogError('');
         setCatalogLoading(true);
         try {
-            const response = await fetch(route('pos.catalog', { category_id: categoryId || null, page, per_page: 30 }), { signal: controller.signal });
-            if (!response.ok) throw new Error('Product catalog failed');
-            const payload = await response.json();
+            // Refresh every loaded page without emptying the selector or moving back to page one.
+            const pages = refreshLoaded ? Array.from({ length: page }, (_, index) => index + 1) : [page];
+            const payloads = await Promise.all(pages.map(async (pageNumber) => {
+                const response = await fetch(route('pos.catalog', { category_id: categoryId || null, page: pageNumber, per_page: 30 }), { signal: controller.signal });
+                if (!response.ok) throw new Error('Product catalog failed');
+                const payload = await response.json();
+                if (!Array.isArray(payload?.data) || !payload?.meta) throw new Error('Invalid product catalog');
+                return payload;
+            }));
             if (requestId !== productRequestRef.current) return;
-            if (!Array.isArray(payload?.data) || !payload?.meta) throw new Error('Invalid product catalog');
-            const meta = payload.meta;
+            const products = payloads.flatMap((payload) => payload.data);
+            const meta = payloads[payloads.length - 1].meta;
             setCatalogHasMore(Number(meta.current_page) < Number(meta.last_page));
             setCatalogPage(Number(meta.current_page || page));
             setSearchResults((prev) => {
-                if (!append) return payload.data;
+                if (!append) return products;
                 const ids = new Set(prev.map((product) => product.id));
-                return [...prev, ...payload.data.filter((product) => !ids.has(product.id))];
+                return [...prev, ...products.filter((product) => !ids.has(product.id))];
             });
         } catch (error) {
             if (error.name !== 'AbortError' && requestId === productRequestRef.current) {
@@ -934,18 +940,12 @@ export default function PosIndex({
             preserveScroll: true,
             onSuccess: async (page) => {
                 const receipt = page?.props?.flash?.sale_receipt;
-                if (isSmallScreen && !receipt) { setScanError(page?.props?.flash?.error || 'Sale was not confirmed. Your cart has been kept.'); return; }
+                if (!receipt) { setScanError(page?.props?.flash?.error || 'Sale was not confirmed. Your cart has been kept.'); return; }
                 if (isSmallScreen) setMobileReceipt(receipt);
                 if (receipt && behavior.auto_print_receipt) {
                     await printSaleReceipt(receipt);
                 }
                 setCart([]);
-                if (resultsView === 'table') {
-                    setCatalogPage(1);
-                    setCatalogHasMore(false);
-                    setSearchResults([]);
-                    setSearchQuery('');
-                }
                 if (!silentPrintFallbackRef.current) {
                     setScanError('');
                 }
@@ -959,7 +959,8 @@ export default function PosIndex({
                 setData('sale_channel', salePriceType);
                 setPaymentDialogOpen(false);
                 setMobileStep(isSmallScreen ? 'complete' : 'products');
-                if (isSmallScreen) fetchCatalog({ categoryId: selectedCategoryId, page: 1, append: false });
+                if (searchQuery.trim()) fetchSearch();
+                else fetchCatalog({ categoryId: selectedCategoryId, page: catalogPage, append: false, refreshLoaded: true });
                 setCustomerSectionExpanded(false);
                 if (behavior.barcode_focus) {
                     setTimeout(() => searchInputRef.current?.focus(), 100);
@@ -1020,7 +1021,7 @@ export default function PosIndex({
         <Stack spacing={0.5} alignItems="center" aria-live="polite" sx={{ py: 0.75 }}>
             {catalogError && <Typography variant="caption" color="error">{catalogError}</Typography>}
             {catalogLoading && <Typography variant="caption" color="text.secondary">{__('Loading more products...')}</Typography>}
-            {!catalogLoading && (catalogError || catalogHasMore) && <Button size="small" onClick={() => fetchCatalog({ categoryId: selectedCategoryId, page: catalogHasMore ? catalogPage + 1 : 1, append: catalogHasMore })}>
+            {!catalogLoading && (catalogError || catalogHasMore) && <Button size="small" onClick={() => fetchCatalog({ categoryId: selectedCategoryId, page: catalogError ? catalogPage : catalogPage + 1, append: !catalogError, refreshLoaded: Boolean(catalogError) })}>
                 {catalogError ? __('Retry loading products') : __('Load more products')}
             </Button>}
             {!catalogLoading && !catalogError && !catalogHasMore && searchResults.length > 0 && <Typography variant="caption" color="text.secondary">{__('All products loaded.')}</Typography>}
