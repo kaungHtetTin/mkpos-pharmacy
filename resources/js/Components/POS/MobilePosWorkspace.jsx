@@ -38,6 +38,7 @@ export default function MobilePosWorkspace({ step, onStep, catalog, order, payme
         window.scrollTo(0, 0);
         if (step !== 'products') headingRef.current?.focus({ preventScroll: true });
     }, [step]);
+    useEffect(() => { if (!order.lines.length) setScanNotice(''); }, [order.lines.length]);
     const selectType = (code) => {
         if (code === order.priceType) return;
         if (order.lines.length) setPendingType(code);
