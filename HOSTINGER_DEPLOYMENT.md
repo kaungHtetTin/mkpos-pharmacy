@@ -7,12 +7,15 @@ No Git push was needed for this archive deployment.
 
 ## Wider desktop POS cart — 24 November 2026
 
-The desktop POS split now allocates 40% to product selection and 60% to the cart,
+Frontend patch `3cf45ce` is live. The desktop POS split now allocates 40% to
+product selection and 60% to the cart,
 replacing the previous 52%/48% split. The change applies from the desktop breakpoint;
 the separate mobile workflow is unchanged. Both production builds pass. Browser
 measurements at 1024px, 1440px and 1920px confirm the 40/60 split and no horizontal
 page overflow; the 390px mobile layout remains separate. No backend, database or
-cashier PWA changes are included. Live verification will be recorded after publishing.
+cashier PWA changes are included. The same four width checks passed live, with
+cart widths of 458px, 708px and 996px respectively. Encrypted/source rollback
+backups are retained. No Git push was performed.
 
 ## POS selector retention after checkout — 24 November 2026
 
