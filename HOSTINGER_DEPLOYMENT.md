@@ -7,7 +7,8 @@ No Git push was needed for this archive deployment.
 
 ## POS selector retention after checkout — 24 November 2026
 
-Checkout no longer clears the table-view product results, search text or catalog
+Frontend patch `18c80ed` is live. Checkout no longer clears the table-view
+product results, search text or catalog
 pagination. The previous table-only reset emptied the selector and did not trigger
 another fetch when search/category values were unchanged. Confirmed sales now
 reset the cart and payment state while refreshing the current search or all
@@ -24,7 +25,10 @@ Both builds pass. Five targeted browser scenarios cover desktop table/grid,
 search/category retention, loaded-page retention, delayed/failed stock refresh,
 retry, unconfirmed checkout and mobile explicit-confirmation behavior. Laravel
 backend logic, database schema and cashier PWA assets are unchanged. Live
-verification will be recorded after deployment.
+verification passed the same five scenarios with intercepted sales, including
+zero payment submissions when entering the mobile Payment step. Encrypted and
+source/manifest rollback backups are retained. Temporary deployment files return
+404 after removal; both login pages return 200. No Git push was performed.
 
 ## Business payment methods — 20 November 2026
 
