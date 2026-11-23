@@ -1099,7 +1099,7 @@ export default function PosIndex({
                         minHeight: 0,
                     }}
                 >
-                    <Paper className="pos-catalog" sx={{ borderRadius: '12px', border: '1px solid', borderColor: 'divider', p: { xs: 1.5, md: 1.5 }, flex: { xs: '1 1 auto', md: '1 1 52%' }, width: '100%', height: { md: '100%' }, display: { xs: mobileStep === 'products' ? 'flex' : 'none', md: 'flex' }, flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: { md: 'hidden' } }}>
+                    <Paper className="pos-catalog" sx={{ borderRadius: '12px', border: '1px solid', borderColor: 'divider', p: { xs: 1.5, md: 1.5 }, flex: { xs: '1 1 auto', md: '1 1 40%' }, width: '100%', height: { md: '100%' }, display: { xs: mobileStep === 'products' ? 'flex' : 'none', md: 'flex' }, flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: { md: 'hidden' } }}>
                         <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 1.5, gap: 0.5, minHeight: 38, flexWrap: 'wrap' }}>
                             <Box sx={{ display: 'grid', placeItems: 'center', width: 32, height: 32, borderRadius: '9px', bgcolor: 'primary.soft', color: 'primary.main' }}><ScanIcon sx={{ fontSize: 19 }} /></Box>
                             <Typography variant="subtitle2" sx={{ fontSize: { md: 15 }, fontWeight: 700 }}>
@@ -1535,7 +1535,7 @@ export default function PosIndex({
                         </Box>
                     </Paper>
 
-                    <Paper className="pos-order" sx={{ borderRadius: '12px', border: '1px solid', borderColor: 'divider', p: { xs: 1.5, md: 0 }, flex: { xs: '1 1 auto', md: '1 1 48%' }, width: '100%', height: { md: '100%' }, display: { xs: mobileStep === 'cart' ? 'flex' : 'none', md: 'flex' }, flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: { md: 'hidden' } }}>
+                    <Paper className="pos-order" sx={{ borderRadius: '12px', border: '1px solid', borderColor: 'divider', p: { xs: 1.5, md: 0 }, flex: { xs: '1 1 auto', md: '1 1 60%' }, width: '100%', height: { md: '100%' }, display: { xs: mobileStep === 'cart' ? 'flex' : 'none', md: 'flex' }, flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: { md: 'hidden' } }}>
                         <Stack
                             direction="row"
                             alignItems="center"

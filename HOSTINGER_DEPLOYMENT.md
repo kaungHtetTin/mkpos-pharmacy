@@ -5,6 +5,15 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Wider desktop POS cart — 24 November 2026
+
+The desktop POS split now allocates 40% to product selection and 60% to the cart,
+replacing the previous 52%/48% split. The change applies from the desktop breakpoint;
+the separate mobile workflow is unchanged. Both production builds pass. Browser
+measurements at 1024px, 1440px and 1920px confirm the 40/60 split and no horizontal
+page overflow; the 390px mobile layout remains separate. No backend, database or
+cashier PWA changes are included. Live verification will be recorded after publishing.
+
 ## POS selector retention after checkout — 24 November 2026
 
 Frontend patch `18c80ed` is live. Checkout no longer clears the table-view
