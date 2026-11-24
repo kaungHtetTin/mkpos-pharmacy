@@ -7,7 +7,8 @@ No Git push was needed for this archive deployment.
 
 ## Product tax-method descriptions — 24 November 2026
 
-Product create/edit forms share a TaxMethodField with descriptions in both menu
+Frontend patch `e2fbe8b` is live. Product create/edit forms share a TaxMethodField
+with descriptions in both menu
 options and selected-method help below the input. Exclusive explains that tax is
 added to the selling price (example at 5%: 1,000 → 1,050); Inclusive explains that
 tax is included (example at 5%: 1,000 → 1,000). These are explicitly illustrative
@@ -18,7 +19,9 @@ The legacy product-list modal uses the same field for consistency.
 Both production builds pass. Read-only checks cover create and edit at 1440px and
 390px, menu descriptions, selected help/examples, preserved selector values and
 helper text fitting its field. Laravel backend/database and cashier PWA assets
-are unchanged. Deployment target: pharmacypos.pwarmyar.com. Live verification is pending.
+are unchanged. Deployment target: pharmacypos.pwarmyar.com. All four form/viewport
+checks also passed live using read-only fixture data, with no operational writes.
+Encrypted/source backups are retained. No Git push was performed.
 
 ## POS selector table without horizontal scrolling — 24 November 2026
 
