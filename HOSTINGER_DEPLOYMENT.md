@@ -7,7 +7,8 @@ No Git push was needed for this archive deployment.
 
 ## POS selector table without horizontal scrolling — 24 November 2026
 
-The product-selection table now shows Product, Stock and Add; its barcode column
+Frontend patch `4415ced` is live. The product-selection table now shows
+Product, Stock and Add; its barcode column
 was removed. A fixed table layout fills the selector width, with compact Stock/Add
 columns and wrapping medicine names, including unbroken names. Selector empty and
 loading/footer rows span three columns. Vertical browsing/infinite loading and
@@ -18,7 +19,10 @@ confirm selector scrollWidth equals clientWidth and all cells/Add controls fit,
 including long English/Myanmar names and large stock quantities. Add works and
 out-of-stock controls remain disabled. No backend/database or cashier PWA changes.
 Deployment target: pharmacypos.pwarmyar.com, confirmed by the user; the screenshot’s
-pharmacy.mkposmyanmar.com site is not modified. Live verification is pending.
+pharmacy.mkposmyanmar.com site is not modified. The same four width checks pass
+live: scrollWidth equals clientWidth at every size, with all Add controls visible.
+No operational records were created. Encrypted/source rollback backups are retained.
+No Git push was performed.
 
 ## Appearance removed from Settings — 24 November 2026
 
