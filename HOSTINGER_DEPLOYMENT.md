@@ -5,6 +5,21 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## POS selector table without horizontal scrolling — 24 November 2026
+
+The product-selection table now shows Product, Stock and Add; its barcode column
+was removed. A fixed table layout fills the selector width, with compact Stock/Add
+columns and wrapping medicine names, including unbroken names. Selector empty and
+loading/footer rows span three columns. Vertical browsing/infinite loading and
+barcode search/scanning remain available; cart and product barcode data are kept.
+
+Both builds pass. Read-only fixture checks at 1024px, 1280px, 1440px and 1920px
+confirm selector scrollWidth equals clientWidth and all cells/Add controls fit,
+including long English/Myanmar names and large stock quantities. Add works and
+out-of-stock controls remain disabled. No backend/database or cashier PWA changes.
+Deployment target: pharmacypos.pwarmyar.com, confirmed by the user; the screenshot’s
+pharmacy.mkposmyanmar.com site is not modified. Live verification is pending.
+
 ## Appearance removed from Settings — 24 November 2026
 
 Frontend patch `8a8f194` is live. The owner Settings page no longer lists or

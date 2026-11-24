@@ -1331,12 +1331,12 @@ export default function PosIndex({
                         </Typography>
 
                         {resultsView === 'table' ? (
-                            <TableContainer ref={catalogScrollRef} data-pos-catalog onScroll={handleCatalogScroll} sx={{ mt: 0.75, flex: 1, minHeight: 0, overflow: 'auto', scrollbarGutter: 'stable' }}>
-                                <Table size="small">
+                            <TableContainer ref={catalogScrollRef} data-pos-catalog onScroll={handleCatalogScroll} sx={{ mt: 0.75, flex: 1, minHeight: 0, overflowX: 'hidden', overflowY: 'auto', scrollbarGutter: 'stable' }}>
+                                <Table size="small" aria-label="POS product selection" sx={{ width: '100%', minWidth: 0, tableLayout: 'fixed', '& .MuiTableCell-root': { minWidth: 0 }, '& .MuiTableCell-root:last-child': { minWidth: 0, px: 0.5 } }}>
+                                    <colgroup><col /><col style={{ width: 72 }} /><col style={{ width: 56 }} /></colgroup>
                                     <TableHead>
                                         <TableRow sx={{ bgcolor: (theme) => theme.palette.mode === 'light' ? 'grey.50' : 'rgba(255, 255, 255, 0.05)' }}>
                                             <TableCell sx={{ fontWeight: 700 }}>{__('Product')}</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>{__('Barcode')}</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }} align="right">
                                                 {__('Stock')}
                                             </TableCell>
@@ -1357,19 +1357,14 @@ export default function PosIndex({
                                                 sx={outOfStock ? { bgcolor: 'error.lighter' } : undefined}
                                             >
                                                 <TableCell>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
                                                         {getProductDisplayName(p)}
-                                                    </Typography>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {p.barcode || '-'}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell align="right" sx={{ fontWeight: 700 }}>
                                                     <Typography
                                                         variant="body2"
-                                                        sx={{ fontWeight: 700, color: outOfStock ? 'error.main' : 'inherit' }}
+                                                        sx={{ fontWeight: 700, overflowWrap: 'anywhere', color: outOfStock ? 'error.main' : 'inherit' }}
                                                     >
                                                         {p.stock_quantity}
                                                     </Typography>
@@ -1389,14 +1384,14 @@ export default function PosIndex({
                                         )})}
                                         {searchResults.length === 0 && (
                                             <TableRow>
-                                                <TableCell colSpan={4} align="center" sx={{ py: 2 }}>
+                                                <TableCell colSpan={3} align="center" sx={{ py: 2 }}>
                                                     <Typography variant="body2" color="text.secondary italic">
                                                         {__('Search products or scan a barcode to add items.')}
                                                     </Typography>
                                                 </TableCell>
                                             </TableRow>
                                         )}
-                                        <TableRow><TableCell colSpan={4} sx={{ py: 0 }}><Box ref={catalogEndRef} data-pos-catalog-end>{catalogFooter}</Box></TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={3} sx={{ py: 0 }}><Box ref={catalogEndRef} data-pos-catalog-end>{catalogFooter}</Box></TableCell></TableRow>
                                     </TableBody>
                                 </Table>
                             </TableContainer>
