@@ -7,12 +7,15 @@ No Git push was needed for this archive deployment.
 
 ## Appearance removed from Settings — 24 November 2026
 
-The owner Settings page no longer lists or renders the Appearance section. Its
+Frontend patch `8a8f194` is live. The owner Settings page no longer lists or
+renders the Appearance section. Its
 unused form state and icon import were removed. Existing ?section=appearance
 links fall back to Business Profile on desktop and mobile. Existing theme values
 and all backend endpoints/schema are unchanged. Both production builds pass;
 read-only browser checks confirm removal, fallback and navigation to other
-Settings sections at 1440px and 390px. Live verification will be recorded after publishing.
+Settings sections at 1440px and 390px. The same read-only checks passed live,
+with no operational writes. Encrypted/source rollback backups are retained.
+No Git push was performed.
 
 ## Mobile POS camera barcode scanning — 24 November 2026
 
