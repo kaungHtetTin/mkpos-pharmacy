@@ -1,3 +1,4 @@
+import TaxMethodField from '@/Components/TaxMethodField';
 import React, { useState, useEffect, useRef } from 'react';
 import MainLayout from '@/Layouts/MainLayout';
 import CategorySelect from '@/Components/CategorySelect';
@@ -734,17 +735,7 @@ export default function ProductIndex({ auth, products, categories, taxes, units,
                                             <FormHelperText>{errors.tax_ids || errors.tax_id}</FormHelperText>
                                         )}
                                     </FormControl>
-                                    <FormControl fullWidth size="small" required>
-                                        <InputLabel>Tax Method</InputLabel>
-                                        <Select
-                                            value={data.tax_method}
-                                            label="Tax Method"
-                                            onChange={e => setData('tax_method', e.target.value)}
-                                        >
-                                            <MenuItem value="Exclusive">Exclusive</MenuItem>
-                                            <MenuItem value="Inclusive">Inclusive</MenuItem>
-                                        </Select>
-                                    </FormControl>
+                                    <TaxMethodField value={data.tax_method} onChange={(value) => setData('tax_method', value)} error={errors.tax_method} />
                                     <TextField
                                         label="Min Stock Level"
                                         fullWidth

@@ -5,6 +5,21 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Product tax-method descriptions — 24 November 2026
+
+Product create/edit forms share a TaxMethodField with descriptions in both menu
+options and selected-method help below the input. Exclusive explains that tax is
+added to the selling price (example at 5%: 1,000 → 1,050); Inclusive explains that
+tax is included (example at 5%: 1,000 → 1,000). These are explicitly illustrative
+examples. Stored Inclusive/Exclusive values, defaults and tax calculations are
+unchanged. Validation errors and screen-reader help associations are supported.
+The legacy product-list modal uses the same field for consistency.
+
+Both production builds pass. Read-only checks cover create and edit at 1440px and
+390px, menu descriptions, selected help/examples, preserved selector values and
+helper text fitting its field. Laravel backend/database and cashier PWA assets
+are unchanged. Deployment target: pharmacypos.pwarmyar.com. Live verification is pending.
+
 ## POS selector table without horizontal scrolling — 24 November 2026
 
 Frontend patch `4415ced` is live. The product-selection table now shows

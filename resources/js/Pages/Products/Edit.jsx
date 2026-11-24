@@ -1,3 +1,4 @@
+import TaxMethodField from '@/Components/TaxMethodField';
 import AdditionalUnitPrices from '@/Components/AdditionalUnitPrices';
 import ViewportPanel from '@/Components/ViewportPanel';
 import React from 'react';
@@ -359,13 +360,7 @@ export default function ProductEdit({ auth, product = null, categories, taxes, u
                                         </Select>
                                         {errors.tax_ids && <FormHelperText>{errors.tax_ids}</FormHelperText>}
                                     </FormControl>
-                                    <FormControl fullWidth size="small" required>
-                                        <InputLabel>Tax Method</InputLabel>
-                                        <Select value={data.tax_method} label="Tax Method" onChange={e => setData('tax_method', e.target.value)}>
-                                            <MenuItem value="Exclusive">Exclusive</MenuItem>
-                                            <MenuItem value="Inclusive">Inclusive</MenuItem>
-                                        </Select>
-                                    </FormControl>
+                                    <TaxMethodField value={data.tax_method} onChange={(value) => setData('tax_method', value)} error={errors.tax_method} />
                                     <TextField
                                         fullWidth
                                         size="small"
