@@ -8,7 +8,6 @@ import PointOfSale from '@mui/icons-material/PointOfSale';
 import ReceiptLong from '@mui/icons-material/ReceiptLong';
 import QrCode2 from '@mui/icons-material/QrCode2';
 import NotificationsActive from '@mui/icons-material/NotificationsActive';
-import Palette from '@mui/icons-material/Palette';
 import Pricing from './Pricing';
 import PriceChange from '@mui/icons-material/PriceChange';
 import Save from '@mui/icons-material/Save';
@@ -25,7 +24,6 @@ const sections = [
     ['receipts', 'Receipts & Invoices', 'Tax, numbering and receipt content', ReceiptLong],
     ['labels', 'Labels & Barcodes', 'Medicine label layout and content', QrCode2],
     ['alerts', 'Inventory Alerts', 'Expiry and low-stock behavior', NotificationsActive],
-    ['appearance', 'Appearance', 'Organization accent color', Palette],
 ];
 
 function SectionHeader({ title, description, scope }) {
@@ -70,9 +68,8 @@ export default function Settings({ auth, pos_behavior = {}, branch_preferences =
     const receipts = useForm({ pharmacy_name: invoice.pharmacy_name ?? '', logo: null, default_tax_id: invoice.default_tax_id ?? '', receipt_header: invoice.receipt_header ?? '', receipt_footer: invoice.receipt_footer ?? '', invoice_prefix: invoice.invoice_prefix ?? 'S', enable_tax: invoice.enable_tax ?? true });
     const label = useForm({ width: labels.width ?? 40, height: labels.height ?? 30, labels_per_row: labels.labels_per_row ?? 1, show_pharmacy_name: !!labels.show_pharmacy_name, show_product_name: !!labels.show_product_name, show_generic_name: !!labels.show_generic_name, show_price: !!labels.show_price, show_expiry: !!labels.show_expiry, show_batch: !!labels.show_batch, font_size: labels.font_size ?? 8, barcode_height: labels.barcode_height ?? 10, symbology: labels.symbology ?? 'CODE_128' });
     const alerts = useForm({ expiry_alert_days: notifications.expiry_alert_days ?? 90 });
-    const appearance = useForm({ expiry_alert_days: notifications.expiry_alert_days ?? 90, low_stock_sound: !!branch_preferences.low_stock_sound, pharmacy_name: invoice.pharmacy_name ?? '', logo: null, theme_primary_color: localization.theme_primary_color ?? '#176B5B' });
-    const forms = { business, regional, pos, payments: paymentForm, receipts, labels: label, alerts, appearance };
-    const anyDirty = pricingDirty || [business, regional, pos, paymentForm, branch, receipts, label, alerts, appearance].some((form) => form.isDirty);
+    const forms = { business, regional, pos, payments: paymentForm, receipts, labels: label, alerts };
+    const anyDirty = pricingDirty || [business, regional, pos, paymentForm, branch, receipts, label, alerts].some((form) => form.isDirty);
 
     useEffect(() => {
         const warn = (event) => { if (anyDirty) { event.preventDefault(); event.returnValue = ''; } };
@@ -126,7 +123,6 @@ export default function Settings({ auth, pos_behavior = {}, branch_preferences =
 
                 {section === 'alerts' && panel(<><SectionHeader title={__('Inventory Alerts')} description={__('Define when staff are warned about expiring stock.')} scope={__('Organization-wide')} /><TextField type="number" {...fp(alerts, 'expiry_alert_days')} onChange={(e) => alerts.setData('expiry_alert_days', Number(e.target.value))} label={__('Expiry Alert Days')} sx={{ maxWidth: 360 }} /><Alert severity="info" sx={{ mt: 2 }}>{__('Low-stock sound is configured per branch under POS & Branch Devices.')}</Alert><Actions form={alerts} label={__('Save Inventory Alerts')} save={() => alerts.patch(route('settings.notifications.update'))} /></>)}
 
-                {section === 'appearance' && panel(<><SectionHeader title={__('Appearance')} description={__('Set the organization accent color used throughout the application.')} scope={__('Organization-wide')} /><Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}><TextField type="color" size="small" label={__('Accent Color')} value={appearance.data.theme_primary_color} onChange={(e) => appearance.setData('theme_primary_color', e.target.value.toUpperCase())} InputLabelProps={{ shrink: true }} sx={{ width: 120 }} /><TextField {...fp(appearance, 'theme_primary_color')} label={__('HEX Color')} sx={{ maxWidth: 260 }} /><Box sx={{ width: 44, height: 44, bgcolor: appearance.data.theme_primary_color, border: '1px solid', borderColor: 'divider' }} /></Stack><Actions form={appearance} label={__('Save Appearance')} save={() => appearance.patch(route('settings.appearance.update'))} /></>)}
             </Box>
         </Box>
     </MainLayout>;

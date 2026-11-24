@@ -5,6 +5,15 @@ PHP 8.4.27. The deployed application source is commit `518087c`, including found
 owner self-registration and the Phase 3 platform operations/security features. HTTP redirects to HTTPS.
 No Git push was needed for this archive deployment.
 
+## Appearance removed from Settings — 24 November 2026
+
+The owner Settings page no longer lists or renders the Appearance section. Its
+unused form state and icon import were removed. Existing ?section=appearance
+links fall back to Business Profile on desktop and mobile. Existing theme values
+and all backend endpoints/schema are unchanged. Both production builds pass;
+read-only browser checks confirm removal, fallback and navigation to other
+Settings sections at 1440px and 390px. Live verification will be recorded after publishing.
+
 ## Mobile POS camera barcode scanning — 24 November 2026
 
 Frontend patch `dd48a7f` is live. The small-screen owner POS search field now
